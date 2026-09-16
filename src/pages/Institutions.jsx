@@ -50,7 +50,9 @@ export default function Institutions() {
     );
   }, [rows, q]);
 
-  if (loading) return <Loading label="Reading all survey responses..." />;
+  // Do not allow a failed initial request to mask its error screen with the
+  // full-page spinner.
+  if (loading && !error) return <Loading label="Reading all survey responses..." />;
 
   return (
     <div className="space-y-6">

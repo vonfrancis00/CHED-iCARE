@@ -3,8 +3,11 @@ import { demoDashboard, demoInstitutions } from "../data/demoData";
 
 const API_URL = import.meta.env.VITE_SHEET_API_URL?.trim();
 const API_ACCESS_CODE = import.meta.env.VITE_SHEET_API_ACCESS_CODE?.trim();
-const API_TIMEOUT_MS = 90000;
+// A missing/deleted Apps Script deployment otherwise leaves route navigation
+// looking frozen for a long time.  Fail soon enough to show the retry panel.
+const API_TIMEOUT_MS = 25000;
 const CLIENT_CACHE_MS = 15 * 1000;
+const SURVEY_CACHE_MS = 5 * 60 * 1000;
 const TRANSIENT_RETRY_ATTEMPTS = 2;
 const responseCache = new Map();
 const pendingRequests = new Map();
@@ -21,7 +24,8 @@ async function request(action, params = {}) {
   const canCache = action !== "clearDashboardCache";
   if (canCache && pendingRequests.has(cacheKey)) return pendingRequests.get(cacheKey);
   const cached = responseCache.get(cacheKey);
-  if (canCache && cached && Date.now() - cached.createdAt < CLIENT_CACHE_MS) {
+  const cacheDuration = action === "getSurveyResponses" ? SURVEY_CACHE_MS : CLIENT_CACHE_MS;
+  if (canCache && cached && Date.now() - cached.createdAt < cacheDuration) {
     return cached.promise;
   }
 
@@ -97,7 +101,7 @@ async function fetchJsonOnce_(url, action) {
 
   if (!response.ok) {
     const hint = response.status === 404
-      ? " The Apps Script deployment or its temporary Google response URL is unavailable. If retrying does not resolve it, redeploy the web app and update VITE_SHEET_API_URL with its /exec URL."
+      ? " The data service could not return these records. Please retry."
       : "";
     const error = new Error(`API request failed: ${response.status}.${hint}`);
     error.status = response.status;
@@ -150,7 +154,8 @@ async function demoResponse_(action, source = "demo") {
 }
 
 export const getDashboardData = (params = {}) => request("getDashboardData", params);
-export const getInstitutions = (params = {}) => request("getInstitutions", params);
-// Both pages use the same dataset; share cached and in-flight requests.
-export const getSurveyResponses = (params = {}) => request("getInstitutions", params);
+// Both pages use the full survey dataset. Use its working endpoint and share
+// cached and in-flight requests so navigating between them does not reload it.
+export const getInstitutions = (params = {}) => request("getSurveyResponses", params);
+export const getSurveyResponses = (params = {}) => request("getSurveyResponses", params);
 export const clearDashboardCache = () => request("clearDashboardCache");
