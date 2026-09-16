@@ -63,7 +63,7 @@ export default function Institutions() {
               <Building2 size={14} />
               Institution registry
             </div>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Institutions</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl uppercase">Institutions</h1>
             <p className="mt-3 max-w-2xl text-sm text-blue-100 sm:text-base">
               This table is populated directly from all rows in Form Responses 1.
             </p>

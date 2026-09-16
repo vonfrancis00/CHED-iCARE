@@ -5,7 +5,7 @@ export default function SoloParentChart({ data = [] }) {
   const safeData = Array.isArray(data) ? data : [];
 
   return (
-    <ChartCard title="Solo parent statistics" subtitle="Reported female and male counts" className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/80">
+    <ChartCard title="Solo Parent Statistics" subtitle="Reported female and male counts" className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/80">
       <div className="h-[340px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={safeData} margin={{ top: 12, right: 12, left: 4, bottom: 20 }}>

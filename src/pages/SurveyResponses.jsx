@@ -59,7 +59,7 @@ export default function SurveyResponses() {
               <Database size={14} />
               Raw data
             </div>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Survey Responses</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl uppercase">Survey Responses</h1>
             <p className="mt-3 max-w-2xl text-sm text-blue-100 sm:text-base">
               Survey responses from the connected Google Sheet.
             </p>

@@ -28,7 +28,7 @@ export default function Dashboard() {
       </div>
       <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
-          <h1 className="page-title">Childcare Development Overview</h1>
+          <h1 className="page-title font-extrabold uppercase">Childcare Development Overview</h1>
           <p className="mt-1 text-sm text-slate-500">Values are calculated from the actual Form Responses 1 sheet.</p>
         </div>
         <div className="rounded-xl bg-teal-50 px-4 py-2 text-xs font-medium text-teal-800">
