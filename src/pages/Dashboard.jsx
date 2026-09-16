@@ -7,7 +7,6 @@ import ProgramStatusChart from "../components/dashboard/ProgramStatusChart";
 import RegionalChart from "../components/dashboard/RegionalChart";
 import SoloParentChart from "../components/dashboard/SoloParentChart";
 import OCCChart from "../components/dashboard/OCCChart";
-import RecentResponses from "../components/dashboard/RecentResponses";
 import { Building2, Baby, Users, FileCheck, MapPin } from "lucide-react";
 
 export default function Dashboard() {
@@ -51,7 +50,6 @@ export default function Dashboard() {
         <OCCChart data={occOffices} />
       </div>
 
-      <RecentResponses data={data.responses} />
     </div>
   );
 }

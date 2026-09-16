@@ -47,7 +47,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
       <aside id="main-sidebar" aria-label="Main navigation" onKeyDown={(event) => { if (event.key === "Escape") onClose(); }} className={`sidebar${mobileOpen ? " is-mobile-open" : ""}`}>
         <header className="sidebar-brand">
           <img src="/ched-logo.png" alt="CHED logo" />
-          <div className="sidebar-label sidebar-brand-copy"><small>CHED Monitoring</small><strong>Childcare Dashboard</strong></div>
+          <div className="sidebar-label sidebar-brand-copy"><small>CHED iCARE Program</small><strong>Monitoring Dashboard</strong></div>
           <button type="button" className="sidebar-close" onClick={onClose} aria-label="Close navigation"><X size={20} /></button>
         </header>
         <nav className="sidebar-nav" aria-label="Dashboard sections">

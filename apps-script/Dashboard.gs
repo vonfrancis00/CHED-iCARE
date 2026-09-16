@@ -20,7 +20,8 @@ const H = {
 
   institution: "Name of Institution",
   campus: "Name of Institution Campus",
-  address: "Address of Campus"
+  address: "Address of Campus",
+  region: "Region"
 };
 
 function getDashboardData() {
@@ -140,29 +141,13 @@ function getSurveyResponses() {
 function buildLocationDistribution_(rows) {
   const counts = {};
   rows.forEach(row => {
-    const location = String(headerValue_(row, H.address) || "").trim();
-    const group = location ? guessLocationGroup_(location) : "Blank address";
+    const group = String(headerValue_(row, H.region) ?? "").trim() || "Not specified";
     counts[group] = (counts[group] || 0) + 1;
   });
 
   return Object.entries(counts)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
-}
-
-function guessLocationGroup_(address) {
-  const t = address.toUpperCase();
-  const groups = [
-    ["NCR", "NCR"], ["METRO MANILA", "NCR"],
-    ["CALABARZON", "Region IV-A"], ["REGION IV-A", "Region IV-A"],
-    ["CENTRAL LUZON", "Region III"], ["REGION III", "Region III"],
-    ["CENTRAL VISAYAS", "Region VII"], ["REGION VII", "Region VII"],
-    ["WESTERN VISAYAS", "Region VI"], ["REGION VI", "Region VI"],
-    ["DAVAO", "Region XI"], ["REGION XI", "Region XI"],
-    ["CAGAYAN VALLEY", "Region II"], ["REGION II", "Region II"]
-  ];
-  const match = groups.find(([needle]) => t.includes(needle));
-  return match ? match[1] : "Other / Unmapped";
 }
 
 function getOCCOfficeGroups_() {

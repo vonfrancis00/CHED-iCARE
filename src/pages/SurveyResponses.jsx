@@ -18,9 +18,13 @@ function display(value) {
 export default function SurveyResponses() {
   const [rows, setRows] = useState(surveyResponsesCache);
   const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
+    setError("");
+    setLoading(true);
 
     getSurveyResponses()
       .then((result) => {
@@ -35,14 +39,15 @@ export default function SurveyResponses() {
         if (!surveyResponsesCache) {
           setRows([]);
         }
-      });
+      }).finally(() => { if (active) setLoading(false); });
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [attempt]);
 
-  if (!rows) return <Loading label="Reading survey responses..." />;
+  if (loading && !rows?.length) return <Loading label="Reading survey responses..." />;
+  if (error && !rows?.length) return <div role="alert" className="card p-8"><h2 className="font-semibold">Unable to load survey responses</h2><p className="mt-2 text-sm">{error}</p><button onClick={() => setAttempt(value => value + 1)} className="mt-4 rounded-lg bg-teal-700 px-4 py-2 text-white">Retry</button></div>;
 
   return (
     <div className="space-y-6">
@@ -55,7 +60,7 @@ export default function SurveyResponses() {
             </div>
             <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Survey Responses</h1>
             <p className="mt-3 max-w-2xl text-sm text-blue-100 sm:text-base">
-              Raw response explorer. Production version can expose all 31 mapped fields here.
+              Survey responses from the connected Google Sheet.
             </p>
           </div>
 

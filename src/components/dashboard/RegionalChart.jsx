@@ -8,7 +8,7 @@ export default function RegionalChart({ data = [] }) {
   const safeData = Array.isArray(data) ? data : [];
 
   return (
-    <ChartCard title="Campus location distribution" subtitle="Location groups derived from the Address of Campus field" className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/80">
+    <ChartCard title="Campus location distribution" subtitle="Campus counts grouped by the sheet’s Region column" className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/80">
       <div className="h-[360px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={safeData} margin={{ top: 18, right: 12, left: 4, bottom: 28 }}>

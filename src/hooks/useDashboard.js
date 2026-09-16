@@ -4,6 +4,7 @@ import { getDashboardData } from "../services/api";
 
 const dashboardState = new Map();
 const DASHBOARD_STORAGE_PREFIX = "childcare-dashboard:v2:";
+const POLL_INTERVAL_MS = 5 * 60 * 1000;
 
 function getCacheKey(filters) {
   return JSON.stringify(filters || {});
@@ -57,7 +58,11 @@ export function useDashboard(filters = {}) {
     }
   }, [cacheKey]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    const intervalId = window.setInterval(load, POLL_INTERVAL_MS);
+    return () => window.clearInterval(intervalId);
+  }, [load]);
 
   return { data, loading, error, reload: load };
 }
