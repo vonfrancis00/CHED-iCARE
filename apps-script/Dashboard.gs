@@ -94,7 +94,7 @@ function buildDashboardData_() {
 
     regions: buildLocationDistribution_(rows),
 
-    occDistribution: occOffices.map(({ name, value }) => ({ name, value })),
+    occDistribution: occOffices.map(({ name, value, responded, pending }) => ({ name, value, responded, pending })),
     occOffices,
 
     responses: rows.slice().reverse().slice(0, 10).map(addDisplayFields_),

@@ -17,6 +17,8 @@ export default function Dashboard() {
   if (error) return <div className="card p-8"><h2 className="font-semibold">Unable to load dashboard</h2><p className="mt-2 text-sm text-slate-500">{error}</p><button onClick={reload} className="mt-4 rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white">Retry</button></div>;
 
   const o = data.overview;
+  const occOffices = (data.occOffices?.length ? data.occOffices : data.occDistribution || [])
+    .filter((office) => String(office.name || "").toLowerCase().includes("office"));
   return (
     <div>
       <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
@@ -46,7 +48,7 @@ export default function Dashboard() {
 
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
         <SoloParentChart data={data.soloParents} />
-        <OCCChart data={data.occDistribution} />
+        <OCCChart data={occOffices} />
       </div>
 
       <RecentResponses data={data.responses} />
