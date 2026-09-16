@@ -63,9 +63,20 @@ export function useDashboard(filters = {}) {
   }, [cacheKey]);
 
   useEffect(() => {
-    load();
-    const intervalId = window.setInterval(load, POLL_INTERVAL_MS);
-    return () => window.clearInterval(intervalId);
+    // Hidden/offline tabs cannot use new results. Refresh when the user returns
+    // instead of repeatedly calling Google while the browser is suspended.
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible" && navigator.onLine) load();
+    };
+    refreshWhenVisible();
+    const intervalId = window.setInterval(refreshWhenVisible, POLL_INTERVAL_MS);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    window.addEventListener("online", refreshWhenVisible);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener("online", refreshWhenVisible);
+    };
   }, [load]);
 
   return { data, loading, refreshing, error, reload: load };

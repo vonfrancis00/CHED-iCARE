@@ -74,12 +74,13 @@ async function fetchJson_(url, action) {
   // ContentService redirects each call to a short-lived googleusercontent URL.
   // Do not cache that redirect, and retry a fresh redirect once if it expires.
   let lastError;
-  for (let attempt = 0; attempt < TRANSIENT_RETRY_ATTEMPTS; attempt += 1) {
+  const attempts = import.meta.env.PROD ? 1 : TRANSIENT_RETRY_ATTEMPTS;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
       return await fetchJsonOnce_(url, action);
     } catch (error) {
       lastError = error;
-      if (!isTransientGoogleRedirectError_(error) || attempt === TRANSIENT_RETRY_ATTEMPTS - 1) break;
+      if (!isTransientGoogleRedirectError_(error) || attempt === attempts - 1) break;
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
@@ -87,7 +88,9 @@ async function fetchJson_(url, action) {
 }
 
 async function fetchJsonOnce_(url, action) {
-  const requestUrl = new URL(url);
+  const requestUrl = import.meta.env.PROD
+    ? new URL(`/api/sheet${url.search}`, window.location.origin)
+    : new URL(url);
   requestUrl.searchParams.set("_t", `${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), API_TIMEOUT_MS);
@@ -103,7 +106,8 @@ async function fetchJsonOnce_(url, action) {
       ? " The data service could not return these records. Please retry."
       : "";
     const error = new Error(`API request failed: ${response.status}.${hint}`);
-    error.status = response.status;
+    // The server already waited for Google; do not repeat another full timeout.
+    error.status = response.status === 504 ? 408 : response.status;
     throw error;
   }
   let json;
