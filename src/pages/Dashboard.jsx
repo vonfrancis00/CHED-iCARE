@@ -10,16 +10,22 @@ import OCCChart from "../components/dashboard/OCCChart";
 import { Building2, Baby, Users, FileCheck, MapPin } from "lucide-react";
 
 export default function Dashboard() {
-  const { data, loading, error, reload } = useDashboard();
+  const { data, loading, refreshing, error, reload } = useDashboard();
 
-  if (loading) return <Loading label="Reading Google Sheet data..." />;
-  if (error) return <div className="card p-8"><h2 className="font-semibold">Unable to load dashboard</h2><p className="mt-2 text-sm text-slate-500">{error}</p><button onClick={reload} className="mt-4 rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white">Retry</button></div>;
+  if (loading && !data) return <Loading label="Reading Google Sheet data..." />;
+  if (!data) return <div className="card p-8"><h2 className="font-semibold">Unable to load dashboard</h2><p className="mt-2 text-sm text-slate-500">{error}</p><button onClick={reload} className="mt-4 rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white">Retry</button></div>;
 
   const o = data.overview;
   const occOffices = (data.occOffices?.length ? data.occOffices : data.occDistribution || [])
     .filter((office) => String(office.name || "").toLowerCase().includes("office"));
   return (
     <div>
+      <div role="status" className="mb-4 flex flex-wrap items-center gap-3 text-sm text-slate-500">
+        <span>{data.cachedAt || data.updatedAt ? `Last updated: ${new Date(data.cachedAt || data.updatedAt).toLocaleString()}` : "Showing saved data"}</span>
+        {refreshing && <span>Refreshing…</span>}
+        {error && <span className="text-amber-700">Could not refresh. Showing the last saved data.</span>}
+        <button onClick={reload} disabled={refreshing} className="font-semibold text-teal-700 disabled:opacity-50">Refresh</button>
+      </div>
       <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <h1 className="page-title">Childcare Development Overview</h1>

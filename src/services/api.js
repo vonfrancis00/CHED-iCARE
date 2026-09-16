@@ -3,9 +3,8 @@ import { demoDashboard, demoInstitutions } from "../data/demoData";
 
 const API_URL = import.meta.env.VITE_SHEET_API_URL?.trim();
 const API_ACCESS_CODE = import.meta.env.VITE_SHEET_API_ACCESS_CODE?.trim();
-// A missing/deleted Apps Script deployment otherwise leaves route navigation
-// looking frozen for a long time.  Fail soon enough to show the retry panel.
-const API_TIMEOUT_MS = 25000;
+// Allow a cold Google Sheet read to finish; timeouts are not retried automatically.
+const API_TIMEOUT_MS = 60000;
 const CLIENT_CACHE_MS = 15 * 1000;
 const SURVEY_CACHE_MS = 5 * 60 * 1000;
 const TRANSIENT_RETRY_ATTEMPTS = 2;
@@ -141,7 +140,7 @@ async function fetchJsonOnce_(url, action) {
 }
 
 function isTransientGoogleRedirectError_(error) {
-  return [404, 408, 429, 500, 502, 503, 504].includes(error?.status) || error instanceof TypeError;
+  return [404, 429, 500, 502, 503, 504].includes(error?.status) || error instanceof TypeError;
 }
 
 async function demoResponse_(action, source = "demo") {

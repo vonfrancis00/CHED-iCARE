@@ -36,6 +36,7 @@ export function useDashboard(filters = {}) {
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     const cached = dashboardState.get(cacheKey);
@@ -43,6 +44,8 @@ export function useDashboard(filters = {}) {
     const availableData = cached?.data ?? stored;
     try {
       setLoading(!availableData);
+      setRefreshing(true);
+      if (availableData) setData(availableData);
       setError("");
       const result = await getDashboardData(filters);
       dashboardState.set(cacheKey, { data: result });
@@ -55,6 +58,7 @@ export function useDashboard(filters = {}) {
       setError(err.message || "Unable to load dashboard");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [cacheKey]);
 
@@ -64,5 +68,5 @@ export function useDashboard(filters = {}) {
     return () => window.clearInterval(intervalId);
   }, [load]);
 
-  return { data, loading, error, reload: load };
+  return { data, loading, refreshing, error, reload: load };
 }

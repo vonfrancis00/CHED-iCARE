@@ -90,36 +90,76 @@ function sumNumeric_(rows, header) {
 }
 
 function cacheKey_(name) {
-  return "CHILDCARE_DASHBOARD_EXACT_V2_" + name;
+  return "CHILDCARE_DASHBOARD_EXACT_V3_" + name;
 }
+
+// Execution-local: nested dataset/office builds share the outer lock.
+let cacheBuildInProgress_ = false;
 
 function getOrBuildCache_(key, builder, seconds) {
   const cache = CacheService.getScriptCache();
-  const cached = cache.get(key);
-  if (cached) return JSON.parse(cached);
+  const cached = readCache_(cache, key);
+  if (cached !== null) return cached;
+
+  if (cacheBuildInProgress_) {
+    const value = builder();
+    putCache_(cache, key, value, seconds);
+    return value;
+  }
 
   const lock = LockService.getScriptLock();
   if (lock.tryLock(5000)) {
     try {
-      const secondRead = cache.get(key);
-      if (secondRead) return JSON.parse(secondRead);
+      cacheBuildInProgress_ = true;
+      const secondRead = readCache_(cache, key);
+      if (secondRead !== null) return secondRead;
 
       const value = builder();
       putCache_(cache, key, value, seconds);
       return value;
     } finally {
+      cacheBuildInProgress_ = false;
       lock.releaseLock();
     }
   }
 
-  const value = builder();
-  putCache_(cache, key, value, seconds);
-  return value;
+  // Do not start competing sheet reads while another request warms the cache.
+  const completed = readCache_(cache, key);
+  if (completed !== null) return completed;
+  throw new Error("Data is being refreshed. Please retry shortly.");
+}
+
+function readCache_(cache, key) {
+  try {
+    const manifest = cache.get(key);
+    if (!manifest) return null;
+    const { generation, chunks } = JSON.parse(manifest);
+    if (!generation || !Number.isInteger(chunks) || chunks < 1 || chunks > 100) return null;
+    const keys = Array.from({ length: chunks }, (_, index) => key + ":" + generation + ":" + index);
+    const parts = cache.getAll(keys);
+    if (keys.some(part => !parts[part])) return null;
+    return JSON.parse(keys.map(part => parts[part]).join(""));
+  } catch (error) {
+    return null;
+  }
 }
 
 function putCache_(cache, key, value, seconds) {
   try {
-    cache.put(key, JSON.stringify(value), seconds || CONFIG.CACHE_SECONDS);
+    // ASCII JSON makes character length equal byte length, including Unicode
+    // responses. Each piece stays below CacheService's 100 KB per-value limit.
+    const json = JSON.stringify(value).replace(/[\u007f-\uffff]/g, character => "\\u" + character.charCodeAt(0).toString(16).padStart(4, "0"));
+    const chunks = Math.ceil(json.length / 90000);
+    if (chunks > 100) return;
+    const generation = Utilities.getUuid();
+    const ttl = seconds || CONFIG.CACHE_SECONDS;
+    const parts = {};
+    for (let index = 0; index < chunks; index++) {
+      parts[key + ":" + generation + ":" + index] = json.slice(index * 90000, (index + 1) * 90000);
+    }
+    cache.putAll(parts, ttl);
+    // Publish only after every piece is written; readers reject missing pieces.
+    cache.put(key, JSON.stringify({ generation, chunks }), ttl);
   } catch (error) {
     console.warn("Cache skipped for " + key + ": " + error.message);
   }
