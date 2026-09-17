@@ -90,18 +90,17 @@ function sumNumeric_(rows, header) {
 }
 
 function cacheKey_(name) {
-  return "CHILDCARE_DASHBOARD_EXACT_V3_" + name;
+  return "CHILDCARE_DASHBOARD_EXACT_V5_" + name;
 }
-
-// Execution-local: nested dataset/office builds share the outer lock.
-let cacheBuildInProgress_ = false;
 
 function getOrBuildCache_(key, builder, seconds) {
   const cache = CacheService.getScriptCache();
   const cached = readCache_(cache, key);
   if (cached !== null) return cached;
 
-  if (cacheBuildInProgress_) {
+  // Function-local state avoids a top-level declaration in Apps Script's shared
+  // global scope. Nested dataset/office builds still share the outer lock.
+  if (getOrBuildCache_.buildInProgress) {
     const value = builder();
     putCache_(cache, key, value, seconds);
     return value;
@@ -110,7 +109,7 @@ function getOrBuildCache_(key, builder, seconds) {
   const lock = LockService.getScriptLock();
   if (lock.tryLock(5000)) {
     try {
-      cacheBuildInProgress_ = true;
+      getOrBuildCache_.buildInProgress = true;
       const secondRead = readCache_(cache, key);
       if (secondRead !== null) return secondRead;
 
@@ -118,7 +117,7 @@ function getOrBuildCache_(key, builder, seconds) {
       putCache_(cache, key, value, seconds);
       return value;
     } finally {
-      cacheBuildInProgress_ = false;
+      getOrBuildCache_.buildInProgress = false;
       lock.releaseLock();
     }
   }

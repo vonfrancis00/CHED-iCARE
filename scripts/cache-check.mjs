@@ -22,7 +22,12 @@ const context = vm.createContext({
   Utilities: { getUuid: () => String(++generation) },
   LockService: { getScriptLock: () => ({ tryLock: () => { acquisitions++; return true; }, releaseLock: () => { releases++; } }) }
 });
-vm.runInContext(readFileSync('apps-script/Utils.gs', 'utf8'), context);
+// Apps Script files share a global scope; tolerate a legacy declaration in
+// another file and loading the utility definitions again.
+vm.runInContext('let cacheBuildInProgress_ = false;', context);
+const utilitySource = readFileSync('apps-script/Utils.gs', 'utf8');
+vm.runInContext(utilitySource, context);
+vm.runInContext(utilitySource, context);
 const dataset = { rows: Array.from({ length: 2000 }, (_, index) => ({ index, value: 'Survey response 日本語 😀'.repeat(10) })) };
 const result = context.getOrBuildCache_('dashboard', () => context.getOrBuildCache_('dataset', () => dataset));
 assert.equal(result, dataset);

@@ -1,7 +1,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Building2, ChevronLeft, ChevronRight, Eye, Search, X, Database } from "lucide-react";
-import { getInstitutions } from "../services/api";
+import { getInstitutions, getSheetDataRevision } from "../services/api";
 import Loading from "../components/common/Loading";
 
 const institutionsPageCache = new Map();
@@ -14,10 +14,12 @@ export default function Institutions() {
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(() => institutionsPageCache.get("1:20:")?.total || 0);
   const [institutionCount, setInstitutionCount] = useState(() => institutionsPageCache.get("1:20:")?.institutionCount || 0);
+  const [lucCount, setLucCount] = useState(() => institutionsPageCache.get("1:20:")?.lucCount || 0);
+  const [sucCount, setSucCount] = useState(() => institutionsPageCache.get("1:20:")?.sucCount || 0);
   const [reloadKey, setReloadKey] = useState(0);
   const [selected, setSelected] = useState(null);
   const tableRef = useRef(null);
-  const cacheKey = `${page}:${pageSize}:${q.trim().toLowerCase()}`;
+  const cacheKey = `${getSheetDataRevision()}:${page}:${pageSize}:${q.trim().toLowerCase()}`;
   const initialPage = institutionsPageCache.get(cacheKey);
   const [loading, setLoading] = useState(!initialPage);
   const [error, setError] = useState("");
@@ -31,6 +33,8 @@ export default function Institutions() {
         setHeaders(cachedPage.headers);
         setTotal(cachedPage.total);
         setInstitutionCount(cachedPage.institutionCount);
+        setLucCount(cachedPage.lucCount);
+        setSucCount(cachedPage.sucCount);
         setLoading(false);
         return;
       }
@@ -39,12 +43,14 @@ export default function Institutions() {
       try {
         const result = await getInstitutions({ page, pageSize, query: q.trim() });
         if (cancelled) return;
-        const nextPage = { rows: result.data || [], headers: result.headers || [], total: Number(result.total) || 0, institutionCount: Number(result.institutionCount) || 0 };
+        const nextPage = { rows: result.data || [], headers: result.headers || [], total: Number(result.total) || 0, institutionCount: Number(result.institutionCount) || 0, lucCount: Number(result.lucCount) || 0, sucCount: Number(result.sucCount) || 0 };
         institutionsPageCache.set(cacheKey, nextPage);
         setRows(nextPage.rows);
         setHeaders(nextPage.headers);
         setTotal(nextPage.total);
         setInstitutionCount(nextPage.institutionCount);
+        setLucCount(nextPage.lucCount);
+        setSucCount(nextPage.sucCount);
       } catch (err) {
         if (!cancelled) setError(err.message || "Unable to load institutions");
       } finally {
@@ -59,7 +65,7 @@ export default function Institutions() {
     if (page !== 1 || q.trim() || !rows.length || institutionsPageCache.has("1:50:")) return;
     const timer = window.setTimeout(() => {
       getInstitutions({ page: 1, pageSize: 50 }).then(result => {
-        institutionsPageCache.set("1:50:", { rows: result.data || [], headers: result.headers || [], total: Number(result.total) || 0, institutionCount: Number(result.institutionCount) || 0 });
+        institutionsPageCache.set("1:50:", { rows: result.data || [], headers: result.headers || [], total: Number(result.total) || 0, institutionCount: Number(result.institutionCount) || 0, lucCount: Number(result.lucCount) || 0, sucCount: Number(result.sucCount) || 0 });
       }).catch(() => {});
     }, 700);
     return () => window.clearTimeout(timer);
@@ -79,7 +85,7 @@ export default function Institutions() {
       const nextKey = `1:${nextPageSize}:`;
       const nextPage = { ...source, rows: source.rows.slice(0, nextPageSize) };
       institutionsPageCache.set(nextKey, nextPage);
-      setRows(nextPage.rows); setHeaders(nextPage.headers); setTotal(nextPage.total); setInstitutionCount(nextPage.institutionCount);
+      setRows(nextPage.rows); setHeaders(nextPage.headers); setTotal(nextPage.total); setInstitutionCount(nextPage.institutionCount); setLucCount(nextPage.lucCount); setSucCount(nextPage.sucCount);
     }
     setPage(1); setPageSize(nextPageSize);
   };
@@ -123,7 +129,7 @@ export default function Institutions() {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -132,6 +138,30 @@ export default function Institutions() {
             </div>
             <div className="rounded-2xl bg-blue-100 p-3 text-blue-700">
               <Database size={22} />
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500">LUC responses</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-900">{lucCount}</p>
+            </div>
+            <div className="rounded-2xl bg-teal-100 p-3 text-teal-700">
+              <Building2 size={22} />
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-slate-500">SUC responses</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-900">{sucCount}</p>
+            </div>
+            <div className="rounded-2xl bg-amber-100 p-3 text-amber-700">
+              <Building2 size={22} />
             </div>
           </div>
         </div>

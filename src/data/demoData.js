@@ -5,6 +5,8 @@ export const demoDashboard = {
   updatedAt: new Date().toISOString(),
   overview: {
     totalResponses: 114,
+    lucResponses: 5,
+    sucResponses: 8,
     facilityFacultyYes: 44,
     facilityStudentsYes: 42,
     facilityCommunityYes: 25,

@@ -6,10 +6,10 @@ const API_ACCESS_CODE = import.meta.env.VITE_SHEET_API_ACCESS_CODE?.trim();
 // Allow a cold Google Sheet read to finish; timeouts are not retried automatically.
 const API_TIMEOUT_MS = 60000;
 const CLIENT_CACHE_MS = 15 * 1000;
-const SURVEY_CACHE_MS = 5 * 60 * 1000;
 const TRANSIENT_RETRY_ATTEMPTS = 2;
 const responseCache = new Map();
 const pendingRequests = new Map();
+let sheetDataRevision = 0;
 
 async function request(action, params = {}) {
   if (!API_URL) {
@@ -23,8 +23,7 @@ async function request(action, params = {}) {
   const canCache = action !== "clearDashboardCache";
   if (canCache && pendingRequests.has(cacheKey)) return pendingRequests.get(cacheKey);
   const cached = responseCache.get(cacheKey);
-  const cacheDuration = (action === "getInstitutions" || action === "getSurveyResponses") ? SURVEY_CACHE_MS : CLIENT_CACHE_MS;
-  if (canCache && cached && Date.now() - cached.createdAt < cacheDuration) {
+  if (canCache && cached && Date.now() - cached.createdAt < CLIENT_CACHE_MS) {
     return cached.promise;
   }
 
@@ -36,7 +35,10 @@ async function request(action, params = {}) {
     pendingRequests.set(cacheKey, promise);
   }
 
-  if (action === "clearDashboardCache") responseCache.clear();
+  if (action === "clearDashboardCache") {
+    responseCache.clear();
+    sheetDataRevision += 1;
+  }
   return promise;
 }
 
@@ -88,9 +90,9 @@ async function fetchJson_(url, action) {
 }
 
 async function fetchJsonOnce_(url, action) {
-  const requestUrl = import.meta.env.PROD
-    ? new URL(`/api/sheet${url.search}`, window.location.origin)
-    : new URL(url);
+  // Both Vite development and the production host proxy this route. This keeps
+  // Google's redirect and CORS behavior on the server instead of the browser.
+  const requestUrl = new URL(`/api/sheet${url.search}`, window.location.origin);
   requestUrl.searchParams.set("_t", `${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), API_TIMEOUT_MS);
@@ -111,10 +113,20 @@ async function fetchJsonOnce_(url, action) {
     throw error;
   }
   let json;
+  const responseText = await response.text();
   try {
-    json = await response.json();
+    json = JSON.parse(responseText);
   } catch (error) {
     if (error.name === "AbortError") throw error;
+    // Google returns HTML when a script fails before doGet can run. Parse it
+    // without rendering it so the useful compiler error is not hidden.
+    const document = new DOMParser().parseFromString(responseText, "text/html");
+    document.querySelectorAll("script, style").forEach(node => node.remove());
+    const message = (document.body.textContent || "").replace(/\s+/g, " ").trim();
+    const scriptError = message.match(/(?:SyntaxError|ReferenceError|TypeError):.{1,350}/);
+    if (scriptError) {
+      throw new Error(`Apps Script failed: ${scriptError[0]} Check all backend files for duplicate declarations, then update the existing deployment to a new version.`);
+    }
     throw new Error("Apps Script returned an invalid response. Confirm the Web App deployment runs the latest code and is accessible to this site.");
   }
   if (!json || typeof json !== "object") throw new Error("The data service returned an invalid response.");
@@ -162,3 +174,4 @@ export const getDashboardData = (params = {}) => request("getDashboardData", par
 export const getInstitutions = (params = {}) => request("getInstitutions", params);
 export const getSurveyResponses = (params = {}) => request("getInstitutions", params);
 export const clearDashboardCache = () => request("clearDashboardCache");
+export const getSheetDataRevision = () => sheetDataRevision;

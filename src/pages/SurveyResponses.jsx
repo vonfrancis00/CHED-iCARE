@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Database, MapPin, Building2 } from "lucide-react";
-import { getSurveyResponses } from "../services/api";
+import { getSheetDataRevision, getSurveyResponses } from "../services/api";
 import Loading from "../components/common/Loading";
 
 const surveyPageCache = new Map();
@@ -26,7 +26,7 @@ export default function SurveyResponses() {
   const [campusCount, setCampusCount] = useState(() => surveyPageCache.get("1:20")?.campusCount || 0);
   const [loading, setLoading] = useState(() => !surveyPageCache.get("1:20"));
   const tableRef = useRef(null);
-  const cacheKey = `${page}:${pageSize}`;
+  const cacheKey = `${getSheetDataRevision()}:${page}:${pageSize}`;
 
   useEffect(() => {
     let active = true;

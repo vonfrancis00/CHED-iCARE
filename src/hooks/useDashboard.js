@@ -1,6 +1,6 @@
 
 import { useCallback, useEffect, useState } from "react";
-import { getDashboardData } from "../services/api";
+import { clearDashboardCache, getDashboardData } from "../services/api";
 
 const dashboardState = new Map();
 const DASHBOARD_STORAGE_PREFIX = "childcare-dashboard:v2:";
@@ -38,7 +38,7 @@ export function useDashboard(filters = {}) {
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async ({ force = false } = {}) => {
     const cached = dashboardState.get(cacheKey);
     const stored = cached?.data ? null : getStoredData(cacheKey);
     const availableData = cached?.data ?? stored;
@@ -47,6 +47,7 @@ export function useDashboard(filters = {}) {
       setRefreshing(true);
       if (availableData) setData(availableData);
       setError("");
+      if (force) await clearDashboardCache();
       const result = await getDashboardData(filters);
       dashboardState.set(cacheKey, { data: result });
       setStoredData(cacheKey, result);

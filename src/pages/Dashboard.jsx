@@ -24,7 +24,7 @@ export default function Dashboard() {
         <span>{data.cachedAt || data.updatedAt ? `Last updated: ${new Date(data.cachedAt || data.updatedAt).toLocaleString()}` : "Showing saved data"}</span>
         {refreshing && <span>Refreshing…</span>}
         {error && <span className="text-amber-700">Could not refresh. Showing the last saved data.</span>}
-        <button onClick={reload} disabled={refreshing} className="font-semibold text-teal-700 disabled:opacity-50">Refresh</button>
+        <button onClick={() => reload({ force: true })} disabled={refreshing} className="font-semibold text-teal-700 disabled:opacity-50">Refresh</button>
       </div>
       <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
@@ -37,7 +37,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <StatCard label="Survey Responses" value={o.totalResponses} hint="LUCs and SUCs" icon={Building2} />
+        <StatCard label="Survey Responses" value={o.totalResponses} hint={`LUCs: ${o.lucResponses ?? 0} · SUCs: ${o.sucResponses ?? 0}`} icon={Building2} />
         <StatCard label="Facility — Faculty" value={o.facilityFacultyYes} hint="Exact Yes responses" icon={Baby} tone="blue" />
         <StatCard label="Facility — Students" value={o.facilityStudentsYes} hint="Exact Yes responses" icon={Users} tone="teal" />
         <StatCard label="Program — Students" value={o.programStudentsYes} hint="Exact Yes responses" icon={FileCheck} tone="amber" />

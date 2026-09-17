@@ -1,5 +1,6 @@
 
 const H = {
+  institutionType: "SUC/LUC",
   facilityFaculty: "Do you currently have a childcare facility or center on your campus that is used by faculty and non-teaching personnel?",
   facilityStudents: "Do you currently have a childcare facility or center on your campus that students use?",
   facilityCommunity: "Do you currently have a childcare facility or center on your campus that community members use?",
@@ -31,6 +32,7 @@ function getDashboardData() {
 function buildDashboardData_() {
   const dataset = getRawDataset_();
   const rows = dataset.rows;
+  const institutionTypes = countInstitutionTypes_(rows);
 
   const facilityFaculty = countQuestion_(rows, H.facilityFaculty);
   const facilityStudents = countQuestion_(rows, H.facilityStudents);
@@ -65,6 +67,8 @@ function buildDashboardData_() {
 
     overview: {
       totalResponses: rows.length,
+      lucResponses: institutionTypes.luc,
+      sucResponses: institutionTypes.suc,
       facilityFacultyYes: facilityFaculty.yes,
       facilityStudentsYes: facilityStudents.yes,
       facilityCommunityYes: facilityCommunity.yes,
@@ -106,6 +110,15 @@ function buildDashboardData_() {
   return result;
 }
 
+function countInstitutionTypes_(rows) {
+  return rows.reduce((counts, row) => {
+    const type = String(headerValue_(row, H.institutionType)).trim().toUpperCase();
+    if (type === "LUC") counts.luc++;
+    if (type === "SUC") counts.suc++;
+    return counts;
+  }, { luc: 0, suc: 0 });
+}
+
 function addDisplayFields_(row) {
   return {
     ...row,
@@ -123,14 +136,17 @@ function getInstitutions(params) {
   const pageSize = Math.min(100, Math.max(1, Number(params.pageSize) || 20));
   const query = String(params.query || "").trim().toLowerCase();
   const queryKey = query ? Utilities.base64EncodeWebSafe(query).slice(0, 80) : "ALL";
-  return getOrBuildCache_(cacheKey_("INSTITUTIONS_PAGE_" + page + "_" + pageSize + "_" + queryKey), () => buildInstitutionsPage_(page, pageSize, query));
+  // CacheService cannot delete entries by prefix. Include this revision in every
+  // page key so a refresh immediately makes every paginated/search cache stale.
+  const revision = getResponseCacheRevision_();
+  return getOrBuildCache_(cacheKey_("INSTITUTIONS_PAGE_" + revision + "_" + page + "_" + pageSize + "_" + queryKey), () => buildInstitutionsPage_(page, pageSize, query));
 }
 
 function buildInstitutionsPage_(page, pageSize, query) {
   const sheet = getResponseSheet_();
   const lastRow = Math.min(sheet.getLastRow(), (CONFIG.MAX_RESPONSE_ROWS || 5000) + 1);
   const lastColumn = sheet.getLastColumn();
-  if (lastRow < 2 || lastColumn < 1) return { success: true, headers: [], data: [], total: 0, page: page, pageSize: pageSize, institutionCount: 0, campusCount: 0 };
+  if (lastRow < 2 || lastColumn < 1) return { success: true, headers: [], data: [], total: 0, page: page, pageSize: pageSize, institutionCount: 0, campusCount: 0, lucCount: 0, sucCount: 0 };
 
   const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0].map(h => String(h == null ? "" : h).trim());
   const institutionColumn = Math.max(0, headers.indexOf(H.institution));
@@ -139,12 +155,20 @@ function buildInstitutionsPage_(page, pageSize, query) {
   const campusColumn = Math.max(0, headers.indexOf(H.campus));
   const campusValues = sheet.getRange(2, campusColumn + 1, lastRow - 1, 1).getValues();
   const campusCount = new Set(campusValues.map(row => String(row[0] || "").trim()).filter(Boolean)).size;
+  const institutionTypeColumn = headers.indexOf(H.institutionType);
+  const institutionTypeValues = institutionTypeColumn >= 0 ? sheet.getRange(2, institutionTypeColumn + 1, lastRow - 1, 1).getValues() : [];
+  const institutionTypes = institutionTypeValues.reduce((counts, row) => {
+    const type = String(row[0] || "").trim().toUpperCase();
+    if (type === "LUC") counts.luc++;
+    if (type === "SUC") counts.suc++;
+    return counts;
+  }, { luc: 0, suc: 0 });
 
   if (query) {
     const dataset = getRawDataset_();
     const matches = dataset.rows.filter(row => Object.values(row).some(value => String(value == null ? "" : value).toLowerCase().includes(query))).reverse();
     const start = (page - 1) * pageSize;
-    return { success: true, source: "google-sheet", updatedAt: new Date().toISOString(), cachedAt: dataset.cachedAt, headers: dataset.headers, data: matches.slice(start, start + pageSize).map(addDisplayFields_), total: matches.length, page: page, pageSize: pageSize, institutionCount: institutionCount, campusCount: campusCount };
+    return { success: true, source: "google-sheet", updatedAt: new Date().toISOString(), cachedAt: dataset.cachedAt, headers: dataset.headers, data: matches.slice(start, start + pageSize).map(addDisplayFields_), total: matches.length, page: page, pageSize: pageSize, institutionCount: institutionCount, campusCount: campusCount, lucCount: institutionTypes.luc, sucCount: institutionTypes.suc };
   }
 
   const total = lastRow - 1;
@@ -167,7 +191,9 @@ function buildInstitutionsPage_(page, pageSize, query) {
     page: page,
     pageSize: pageSize,
     institutionCount: institutionCount,
-    campusCount: campusCount
+    campusCount: campusCount,
+    lucCount: institutionTypes.luc,
+    sucCount: institutionTypes.suc
   };
 }
 
@@ -249,10 +275,15 @@ function buildOCCOfficeGroups_() {
 }
 
 function clearDashboardCache() {
+  // Bump the page-cache namespace because CacheService has no wildcard delete.
+  PropertiesService.getScriptProperties().setProperty("CHILDCARE_RESPONSE_CACHE_REVISION", String(Date.now()));
   removeCaches_([
     cacheKey_("DATASET"),
     cacheKey_("DASHBOARD"),
-    cacheKey_("INSTITUTIONS"),
     cacheKey_("OCC")
   ]);
+}
+
+function getResponseCacheRevision_() {
+  return PropertiesService.getScriptProperties().getProperty("CHILDCARE_RESPONSE_CACHE_REVISION") || "0";
 }
