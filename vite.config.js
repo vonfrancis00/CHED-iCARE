@@ -1,33 +1,30 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
+import sheetHandler from "./api/sheet.js";
 
 export default defineConfig(({ mode }) => {
-  // Vite injects VITE_* values into the browser, but a local server can also
-  // receive them from its parent process instead of an .env file.
-  const env = { ...process.env, ...loadEnv(mode, process.cwd(), "") };
-  let apiUrl;
-  try {
-    apiUrl = new URL(env.VITE_SHEET_API_URL);
-  } catch {
-    apiUrl = null;
-  }
-
-  const sheetProxy = apiUrl && apiUrl.protocol === "https:" && apiUrl.hostname === "script.google.com"
-    ? {
-        "/api/sheet": {
-          target: apiUrl.origin,
-          changeOrigin: true,
-          // Apps Script returns a redirect to its JSON response. Follow it here
-          // so the browser stays on localhost throughout the request.
-          followRedirects: true,
-          rewrite: path => path.replace(/^\/api\/sheet/, apiUrl.pathname)
-        }
-      }
-    : undefined;
-
+  const env = { ...loadEnv(mode, process.cwd(), ""), ...process.env };
   return {
-    plugins: [react()],
-    server: { port: 5173, strictPort: true, proxy: sheetProxy },
+    plugins: [react(), {
+      name: "local-sheet-api",
+      configureServer(server) {
+        server.middlewares.use("/api/sheet", (req, res) => {
+          // Use the same bounded request/retry path in development and production.
+          res.status = code => { res.statusCode = code; return res; };
+          res.json = payload => {
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify(payload));
+            return res;
+          };
+          sheetHandler(req, res, env).catch(() => {
+            if (!res.writableEnded) res.status(502).json({
+              success: false, message: "Unable to load records. Please retry."
+            });
+          });
+        });
+      }
+    }],
+    server: { port: 5173, strictPort: true },
     build: { sourcemap: false }
   };
 });

@@ -6,7 +6,7 @@ const API_ACCESS_CODE = import.meta.env.VITE_SHEET_API_ACCESS_CODE?.trim();
 // Allow a cold Google Sheet read to finish; timeouts are not retried automatically.
 const API_TIMEOUT_MS = 60000;
 const CLIENT_CACHE_MS = 15 * 1000;
-const TRANSIENT_RETRY_ATTEMPTS = 2;
+const RECORD_CACHE_MS = 5 * 60 * 1000;
 const responseCache = new Map();
 const pendingRequests = new Map();
 let sheetDataRevision = 0;
@@ -23,12 +23,19 @@ async function request(action, params = {}) {
   const canCache = action !== "clearDashboardCache";
   if (canCache && pendingRequests.has(cacheKey)) return pendingRequests.get(cacheKey);
   const cached = responseCache.get(cacheKey);
-  if (canCache && cached && Date.now() - cached.createdAt < CLIENT_CACHE_MS) {
+  const ttl = action === "getInstitutions" ? RECORD_CACHE_MS : CLIENT_CACHE_MS;
+  if (canCache && cached && Date.now() - cached.createdAt < ttl) {
     return cached.promise;
   }
 
   const promise = fetchJson_(url, action).then(result => {
-    if (canCache) responseCache.set(cacheKey, { createdAt: Date.now(), promise: Promise.resolve(result) });
+    if (action === "getInstitutions" && !Array.isArray(result.data)) {
+      throw new Error("The data service returned invalid records. Please retry.");
+    }
+    if (canCache) {
+      if (responseCache.size >= 100) responseCache.delete(responseCache.keys().next().value);
+      responseCache.set(cacheKey, { createdAt: Date.now(), data: result, promise: Promise.resolve(result) });
+    }
     return result;
   }).finally(() => pendingRequests.delete(cacheKey));
   if (canCache) {
@@ -72,22 +79,8 @@ function buildApiUrl_(action, params = {}, options = {}) {
   return url;
 }
 
-async function fetchJson_(url, action) {
-  // ContentService redirects each call to a short-lived googleusercontent URL.
-  // Do not cache that redirect, and retry a fresh redirect once if it expires.
-  let lastError;
-  const attempts = import.meta.env.PROD ? 1 : TRANSIENT_RETRY_ATTEMPTS;
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    try {
-      return await fetchJsonOnce_(url, action);
-    } catch (error) {
-      lastError = error;
-      if (!isTransientGoogleRedirectError_(error) || attempt === attempts - 1) break;
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-  }
-  throw lastError;
-}
+// The server owns retries and one shared deadline in both environments.
+const fetchJson_ = (url, action) => fetchJsonOnce_(url, action);
 
 async function fetchJsonOnce_(url, action) {
   // Both Vite development and the production host proxy this route. This keeps
@@ -104,10 +97,11 @@ async function fetchJsonOnce_(url, action) {
     });
 
   if (!response.ok) {
+    const payload = await response.json().catch(() => null);
     const hint = response.status === 404
       ? " The data service could not return these records. Please retry."
       : "";
-    const error = new Error(`API request failed: ${response.status}.${hint}`);
+    const error = new Error(payload?.message || `API request failed: ${response.status}.${hint}`);
     // The server already waited for Google; do not repeat another full timeout.
     error.status = response.status === 504 ? 408 : response.status;
     throw error;
@@ -155,9 +149,6 @@ async function fetchJsonOnce_(url, action) {
   }
 }
 
-function isTransientGoogleRedirectError_(error) {
-  return [404, 429, 500, 502, 503, 504].includes(error?.status) || error instanceof TypeError;
-}
 
 async function demoResponse_(action, source = "demo") {
   await new Promise((resolve) => setTimeout(resolve, 150));
@@ -175,3 +166,12 @@ export const getInstitutions = (params = {}) => request("getInstitutions", param
 export const getSurveyResponses = (params = {}) => request("getInstitutions", params);
 export const clearDashboardCache = () => request("clearDashboardCache");
 export const getSheetDataRevision = () => sheetDataRevision;
+
+// Both record pages use exactly the same keys, expiry and in-flight requests.
+export function peekInstitutionPage(params) {
+  if (!API_URL) return null;
+  try {
+    const cached = responseCache.get(buildApiUrl_("getInstitutions", params, { includeCode: true }).toString());
+    return cached && Date.now() - cached.createdAt < RECORD_CACHE_MS ? cached.data : null;
+  } catch { return null; }
+}

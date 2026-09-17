@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Database, MapPin, Building2 } from "lucide-react";
-import { getSheetDataRevision, getSurveyResponses } from "../services/api";
+import { useInstitutionPage } from "../hooks/useInstitutionPage";
 import Loading from "../components/common/Loading";
 
-const surveyPageCache = new Map();
 
 const FIELD_MAP = {
   institution: "Name of Institution",
@@ -16,79 +15,24 @@ function display(value) {
 }
 
 export default function SurveyResponses() {
-  const [rows, setRows] = useState(() => surveyPageCache.get("1:20")?.rows || []);
-  const [error, setError] = useState("");
-  const [attempt, setAttempt] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [total, setTotal] = useState(() => surveyPageCache.get("1:20")?.total || 0);
-  const [institutionCount, setInstitutionCount] = useState(() => surveyPageCache.get("1:20")?.institutionCount || 0);
-  const [campusCount, setCampusCount] = useState(() => surveyPageCache.get("1:20")?.campusCount || 0);
-  const [loading, setLoading] = useState(() => !surveyPageCache.get("1:20"));
   const tableRef = useRef(null);
-  const cacheKey = `${getSheetDataRevision()}:${page}:${pageSize}`;
-
-  useEffect(() => {
-    let active = true;
-    const cachedPage = surveyPageCache.get(cacheKey);
-    if (cachedPage) {
-      setRows(cachedPage.rows);
-      setTotal(cachedPage.total);
-      setInstitutionCount(cachedPage.institutionCount);
-      setCampusCount(cachedPage.campusCount);
-      setLoading(false);
-      return () => { active = false; };
-    }
-    setError(""); setLoading(true);
-
-    getSurveyResponses({ page, pageSize })
-      .then((result) => {
-        if (!active) return;
-        const nextPage = { rows: Array.isArray(result.data) ? result.data : [], total: Number(result.total) || 0, institutionCount: Number(result.institutionCount) || 0, campusCount: Number(result.campusCount) || 0 };
-        surveyPageCache.set(cacheKey, nextPage);
-        setRows(nextPage.rows);
-        setTotal(nextPage.total);
-        setInstitutionCount(nextPage.institutionCount);
-        setCampusCount(nextPage.campusCount);
-      })
-      .catch((err) => {
-        if (!active) return;
-        setError(err.message || "Unable to load survey responses");
-        setRows([]);
-      }).finally(() => { if (active) setLoading(false); });
-
-    return () => {
-      active = false;
-    };
-  }, [attempt, cacheKey, page, pageSize]);
-
-  useEffect(() => { setPage(1); }, [pageSize]);
-  useEffect(() => {
-    if (page !== 1 || !rows.length || surveyPageCache.has("1:50")) return;
-    const timer = window.setTimeout(() => {
-      getSurveyResponses({ page: 1, pageSize: 50 }).then(result => {
-        surveyPageCache.set("1:50", { rows: Array.isArray(result.data) ? result.data : [], total: Number(result.total) || 0, institutionCount: Number(result.institutionCount) || 0, campusCount: Number(result.campusCount) || 0 });
-      }).catch(() => {});
-    }, 700);
-    return () => window.clearTimeout(timer);
-  }, [page, rows.length]);
+  const { data, loading, error, reload } = useInstitutionPage(page, pageSize);
+  const rows = data?.data || [];
+  const total = Number(data?.total) || 0;
+  const institutionCount = Number(data?.institutionCount) || 0;
+  const campusCount = Number(data?.campusCount) || 0;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  const firstRow = total ? (page - 1) * pageSize + 1 : 0;
-  const lastRow = Math.min(page * pageSize, total);
+  const currentPage = Math.min(page, pageCount);
+  const firstRow = total ? (currentPage - 1) * pageSize + 1 : 0;
+  const lastRow = Math.min(currentPage * pageSize, total);
   const changePage = nextPage => { setPage(nextPage); tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
-  const changePageSize = nextPageSize => {
-    const source = surveyPageCache.get("1:50") || surveyPageCache.get("1:20");
-    if (source && source.rows.length >= Math.min(nextPageSize, total)) {
-      const nextPage = { ...source, rows: source.rows.slice(0, nextPageSize) };
-      surveyPageCache.set(`1:${nextPageSize}`, nextPage);
-      setRows(nextPage.rows); setTotal(nextPage.total); setInstitutionCount(nextPage.institutionCount); setCampusCount(nextPage.campusCount);
-    }
-    setPage(1); setPageSize(nextPageSize);
-  };
+  const changePageSize = nextPageSize => { setPage(1); setPageSize(nextPageSize); };
 
   // Prefer a useful error/retry panel to an indefinite-looking loader.
-  if (loading && !rows?.length && !error) return <Loading variant="responses" label="Reading survey responses..." />;
-  if (error && !rows?.length) return <div role="alert" className="card p-8"><h2 className="font-semibold">Unable to load survey responses</h2><p className="mt-2 text-sm">{error}</p><button onClick={() => setAttempt(value => value + 1)} className="mt-4 rounded-lg bg-teal-700 px-4 py-2 text-white">Retry</button></div>;
+  if (loading && !data && !error) return <Loading variant="responses" label="Reading survey responses..." />;
+  if (error && !rows?.length) return <div role="alert" className="card p-8"><h2 className="font-semibold">Unable to load survey responses</h2><p className="mt-2 text-sm">{error}</p><button onClick={reload} className="mt-4 rounded-lg bg-teal-700 px-4 py-2 text-white">Retry</button></div>;
 
   return (
     <div className="space-y-6">
@@ -117,7 +61,7 @@ export default function SurveyResponses() {
 
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
+          {error} <button onClick={reload} className="ml-3 underline">Retry</button>
         </div>
       )}
 
@@ -159,7 +103,8 @@ export default function SurveyResponses() {
         </div>
       </div>
 
-      <div ref={tableRef} className="card overflow-hidden scroll-mt-6">
+      <div ref={tableRef} className="card overflow-hidden scroll-mt-6" aria-busy={loading}>
+        {loading && <div role="status" className="animate-pulse bg-blue-50 px-5 py-3 text-sm text-blue-800">Loading responses. Previous results remain visible.</div>}
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">

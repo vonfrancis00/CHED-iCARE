@@ -143,57 +143,24 @@ function getInstitutions(params) {
 }
 
 function buildInstitutionsPage_(page, pageSize, query) {
-  const sheet = getResponseSheet_();
-  const lastRow = Math.min(sheet.getLastRow(), (CONFIG.MAX_RESPONSE_ROWS || 5000) + 1);
-  const lastColumn = sheet.getLastColumn();
-  if (lastRow < 2 || lastColumn < 1) return { success: true, headers: [], data: [], total: 0, page: page, pageSize: pageSize, institutionCount: 0, campusCount: 0, lucCount: 0, sucCount: 0 };
-
-  const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0].map(h => String(h == null ? "" : h).trim());
-  const institutionColumn = Math.max(0, headers.indexOf(H.institution));
-  const institutionValues = sheet.getRange(2, institutionColumn + 1, lastRow - 1, 1).getValues();
-  const institutionCount = new Set(institutionValues.map(row => String(row[0] || "").trim()).filter(Boolean)).size;
-  const campusColumn = Math.max(0, headers.indexOf(H.campus));
-  const campusValues = sheet.getRange(2, campusColumn + 1, lastRow - 1, 1).getValues();
-  const campusCount = new Set(campusValues.map(row => String(row[0] || "").trim()).filter(Boolean)).size;
-  const institutionTypeColumn = headers.indexOf(H.institutionType);
-  const institutionTypeValues = institutionTypeColumn >= 0 ? sheet.getRange(2, institutionTypeColumn + 1, lastRow - 1, 1).getValues() : [];
-  const institutionTypes = institutionTypeValues.reduce((counts, row) => {
-    const type = String(row[0] || "").trim().toUpperCase();
-    if (type === "LUC") counts.luc++;
-    if (type === "SUC") counts.suc++;
-    return counts;
-  }, { luc: 0, suc: 0 });
-
-  if (query) {
-    const dataset = getRawDataset_();
-    const matches = dataset.rows.filter(row => Object.values(row).some(value => String(value == null ? "" : value).toLowerCase().includes(query))).reverse();
-    const start = (page - 1) * pageSize;
-    return { success: true, source: "google-sheet", updatedAt: new Date().toISOString(), cachedAt: dataset.cachedAt, headers: dataset.headers, data: matches.slice(start, start + pageSize).map(addDisplayFields_), total: matches.length, page: page, pageSize: pageSize, institutionCount: institutionCount, campusCount: campusCount, lucCount: institutionTypes.luc, sucCount: institutionTypes.suc };
-  }
-
-  const total = lastRow - 1;
-  const endRow = lastRow - (page - 1) * pageSize;
-  const startRow = Math.max(2, endRow - pageSize + 1);
-  const count = Math.max(0, endRow - startRow + 1);
-  const values = count ? sheet.getRange(startRow, 1, count, lastColumn).getValues() : [];
-  const data = values.reverse().map((row, index) => {
-    const item = { rowNumber: endRow - index };
-    headers.forEach((header, column) => { item[header] = normalizeCellForJson_(row[column]); });
-    return addDisplayFields_(item);
-  });
+  // Share the dashboard's cached dataset for browsing AND searching. Once warm,
+  // paging needs no spreadsheet reads and all totals refer to the same snapshot.
+  const dataset = getRawDataset_();
+  const rows = dataset.rows;
+  const institutionCount = new Set(rows.map(row => String(headerValue_(row, H.institution) || "").trim()).filter(Boolean)).size;
+  const campusCount = new Set(rows.map(row => String(headerValue_(row, H.campus) || "").trim()).filter(Boolean)).size;
+  const institutionTypes = countInstitutionTypes_(rows);
+  const matches = (query
+    ? rows.filter(row => Object.values(row).some(value => String(value == null ? "" : value).toLowerCase().includes(query)))
+    : rows.slice()).reverse();
+  const start = (page - 1) * pageSize;
   return {
-    success: true,
-    source: "google-sheet",
-    updatedAt: new Date().toISOString(),
-    headers: headers,
-    data: data,
-    total: total,
-    page: page,
-    pageSize: pageSize,
-    institutionCount: institutionCount,
-    campusCount: campusCount,
-    lucCount: institutionTypes.luc,
-    sucCount: institutionTypes.suc
+    success: true, source: "google-sheet", updatedAt: new Date().toISOString(),
+    cachedAt: dataset.cachedAt, headers: dataset.headers,
+    data: matches.slice(start, start + pageSize).map(addDisplayFields_),
+    total: matches.length, page: page, pageSize: pageSize,
+    institutionCount: institutionCount, campusCount: campusCount,
+    lucCount: institutionTypes.luc, sucCount: institutionTypes.suc
   };
 }
 

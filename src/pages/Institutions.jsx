@@ -1,98 +1,35 @@
 
-import { useEffect, useRef, useState } from "react";
-import { Building2, ChevronLeft, ChevronRight, Eye, Search, X, Database } from "lucide-react";
-import { getInstitutions, getSheetDataRevision } from "../services/api";
+import { useRef, useState } from "react";
+import { Building2, ChevronLeft, ChevronRight, Eye, Search, X, Database, LoaderCircle } from "lucide-react";
+import { useInstitutionPage } from "../hooks/useInstitutionPage";
 import Loading from "../components/common/Loading";
 
-const institutionsPageCache = new Map();
 
 export default function Institutions() {
-  const [rows, setRows] = useState(() => institutionsPageCache.get("1:20:")?.rows || []);
-  const [headers, setHeaders] = useState(() => institutionsPageCache.get("1:20:")?.headers || []);
-  const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [total, setTotal] = useState(() => institutionsPageCache.get("1:20:")?.total || 0);
-  const [institutionCount, setInstitutionCount] = useState(() => institutionsPageCache.get("1:20:")?.institutionCount || 0);
-  const [lucCount, setLucCount] = useState(() => institutionsPageCache.get("1:20:")?.lucCount || 0);
-  const [sucCount, setSucCount] = useState(() => institutionsPageCache.get("1:20:")?.sucCount || 0);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [selected, setSelected] = useState(null);
   const tableRef = useRef(null);
-  const cacheKey = `${getSheetDataRevision()}:${page}:${pageSize}:${q.trim().toLowerCase()}`;
-  const initialPage = institutionsPageCache.get(cacheKey);
-  const [loading, setLoading] = useState(!initialPage);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-    const timer = window.setTimeout(async () => {
-      const cachedPage = institutionsPageCache.get(cacheKey);
-      if (cachedPage) {
-        setRows(cachedPage.rows);
-        setHeaders(cachedPage.headers);
-        setTotal(cachedPage.total);
-        setInstitutionCount(cachedPage.institutionCount);
-        setLucCount(cachedPage.lucCount);
-        setSucCount(cachedPage.sucCount);
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      setError("");
-      try {
-        const result = await getInstitutions({ page, pageSize, query: q.trim() });
-        if (cancelled) return;
-        const nextPage = { rows: result.data || [], headers: result.headers || [], total: Number(result.total) || 0, institutionCount: Number(result.institutionCount) || 0, lucCount: Number(result.lucCount) || 0, sucCount: Number(result.sucCount) || 0 };
-        institutionsPageCache.set(cacheKey, nextPage);
-        setRows(nextPage.rows);
-        setHeaders(nextPage.headers);
-        setTotal(nextPage.total);
-        setInstitutionCount(nextPage.institutionCount);
-        setLucCount(nextPage.lucCount);
-        setSucCount(nextPage.sucCount);
-      } catch (err) {
-        if (!cancelled) setError(err.message || "Unable to load institutions");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }, q ? 300 : 0);
-    return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [page, pageSize, q, reloadKey, cacheKey]);
-
-  useEffect(() => { setPage(1); }, [q, pageSize]);
-  useEffect(() => {
-    if (page !== 1 || q.trim() || !rows.length || institutionsPageCache.has("1:50:")) return;
-    const timer = window.setTimeout(() => {
-      getInstitutions({ page: 1, pageSize: 50 }).then(result => {
-        institutionsPageCache.set("1:50:", { rows: result.data || [], headers: result.headers || [], total: Number(result.total) || 0, institutionCount: Number(result.institutionCount) || 0, lucCount: Number(result.lucCount) || 0, sucCount: Number(result.sucCount) || 0 });
-      }).catch(() => {});
-    }, 700);
-    return () => window.clearTimeout(timer);
-  }, [page, q, rows.length]);
+  const [q, setQ] = useState("");
+  const [selected, setSelected] = useState(null);
+  const { data, loading, error, reload } = useInstitutionPage(page, pageSize, q);
+  const rows = data?.data || [];
+  const headers = data?.headers || [];
+  const total = Number(data?.total) || 0;
+  const institutionCount = Number(data?.institutionCount) || 0;
+  const lucCount = Number(data?.lucCount) || 0;
+  const sucCount = Number(data?.sucCount) || 0;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
   const firstRow = total ? (currentPage - 1) * pageSize + 1 : 0;
   const lastRow = Math.min(currentPage * pageSize, total);
-  const loadInstitutions = () => { institutionsPageCache.delete(cacheKey); setReloadKey(value => value + 1); };
-  const changePage = nextPage => {
-    setPage(nextPage);
-    tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-  const changePageSize = nextPageSize => {
-    const source = institutionsPageCache.get("1:50:") || institutionsPageCache.get("1:20:");
-    if (source && source.rows.length >= Math.min(nextPageSize, total)) {
-      const nextKey = `1:${nextPageSize}:`;
-      const nextPage = { ...source, rows: source.rows.slice(0, nextPageSize) };
-      institutionsPageCache.set(nextKey, nextPage);
-      setRows(nextPage.rows); setHeaders(nextPage.headers); setTotal(nextPage.total); setInstitutionCount(nextPage.institutionCount); setLucCount(nextPage.lucCount); setSucCount(nextPage.sucCount);
-    }
-    setPage(1); setPageSize(nextPageSize);
-  };
+  const isSearching = loading;
+  const loadInstitutions = reload;
+  const changePage = nextPage => { setPage(nextPage); tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
+  const changePageSize = nextPageSize => { setPage(1); setPageSize(nextPageSize); };
 
   // Do not allow a failed initial request to mask its error screen with the
   // full-page spinner.
-  if (loading && !rows.length && !error) return <Loading variant="institutions" label="Reading institution responses..." />;
+  if (loading && !data && !error) return <Loading variant="institutions" label="Reading institution responses..." />;
 
   return (
     <div className="space-y-6">
@@ -194,12 +131,14 @@ export default function Institutions() {
       <div className="card mb-5 p-4">
         <div className="relative">
           <Search className="absolute left-3 top-3.5 text-slate-400" size={18}/>
-          <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search any of the 31 fields..." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 outline-none focus:border-blue-500"/>
+          <input value={q} onChange={e => { setPage(1); setQ(e.target.value); }} placeholder="Search any of the 31 fields..." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 outline-none focus:border-blue-500" aria-label="Search institutions" aria-busy={isSearching}/>
+          {isSearching && <LoaderCircle className="absolute right-3 top-3.5 animate-spin text-blue-600" size={18} aria-label="Searching"/>}
         </div>
         <p className="mt-2 text-xs text-slate-500">{total.toLocaleString()} matching response{total === 1 ? "" : "s"} · showing {firstRow.toLocaleString()}–{lastRow.toLocaleString()}</p>
       </div>
 
       <div ref={tableRef} className="card overflow-hidden scroll-mt-6">
+        {isSearching && <div className="flex items-center gap-2 border-b border-blue-100 bg-blue-50 px-5 py-2.5 text-xs font-medium text-blue-800"><LoaderCircle size={15} className="animate-spin"/> Finding matching institutions...</div>}
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
