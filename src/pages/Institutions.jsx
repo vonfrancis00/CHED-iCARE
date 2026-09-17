@@ -1,6 +1,6 @@
 
 import { useEffect, useMemo, useState } from "react";
-import { Building2, Eye, Search, X, Database } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, Eye, Search, X, Database } from "lucide-react";
 import { getInstitutions } from "../services/api";
 import Loading from "../components/common/Loading";
 
@@ -13,6 +13,8 @@ export default function Institutions() {
   const [rows, setRows] = useState(institutionsCache.rows || []);
   const [headers, setHeaders] = useState(institutionsCache.headers);
   const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(!institutionsCache.rows);
   const [error, setError] = useState("");
@@ -49,6 +51,13 @@ export default function Institutions() {
       Object.values(row).some(v => String(v ?? "").toLowerCase().includes(query))
     );
   }, [rows, q]);
+
+  useEffect(() => { setPage(1); }, [q, pageSize]);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const pageRows = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const firstRow = filtered.length ? (currentPage - 1) * pageSize + 1 : 0;
+  const lastRow = Math.min(currentPage * pageSize, filtered.length);
 
   // Do not allow a failed initial request to mask its error screen with the
   // full-page spinner.
@@ -132,7 +141,7 @@ export default function Institutions() {
           <Search className="absolute left-3 top-3.5 text-slate-400" size={18}/>
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search any of the 31 fields..." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 outline-none focus:border-blue-500"/>
         </div>
-        <p className="mt-2 text-xs text-slate-500">{filtered.length.toLocaleString()} of {rows.length.toLocaleString()} responses shown</p>
+        <p className="mt-2 text-xs text-slate-500">{filtered.length.toLocaleString()} matching response{filtered.length === 1 ? "" : "s"} · showing {firstRow.toLocaleString()}–{lastRow.toLocaleString()}</p>
       </div>
 
       <div className="card overflow-hidden">
@@ -150,7 +159,7 @@ export default function Institutions() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map(row => (
+              {pageRows.map(row => (
                 <tr key={row.rowNumber} className="hover:bg-slate-50">
                   <td className="sticky left-0 bg-white px-5 py-4 font-semibold text-slate-900">{row["Name of Institution"] || "—"}</td>
                   <td className="px-5 py-4">{row["Name of Institution Campus"] || "—"}</td>
@@ -165,6 +174,10 @@ export default function Institutions() {
           </table>
         </div>
         {!filtered.length && <div className="p-10 text-center text-sm text-slate-500">No matching responses.</div>}
+        {filtered.length > 0 && <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-slate-500">Showing <span className="font-semibold text-slate-700">{firstRow}–{lastRow}</span> of {filtered.length.toLocaleString()}</div>
+          <div className="flex flex-wrap items-center gap-3"><label className="flex items-center gap-2 text-xs text-slate-500">Rows per page<select value={pageSize} onChange={event => setPageSize(Number(event.target.value))} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-blue-600"><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select></label><div className="flex items-center gap-1"><button type="button" onClick={() => setPage(value => Math.max(1, value - 1))} disabled={currentPage === 1} aria-label="Previous page" className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={16} /></button><span className="min-w-20 text-center text-xs font-medium text-slate-600">Page {currentPage} of {pageCount}</span><button type="button" onClick={() => setPage(value => Math.min(pageCount, value + 1))} disabled={currentPage === pageCount} aria-label="Next page" className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"><ChevronRight size={16} /></button></div></div>
+        </div>}
       </div>
 
       {selected && <DetailsModal row={selected} headers={headers} onClose={() => setSelected(null)} />}
