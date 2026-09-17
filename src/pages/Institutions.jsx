@@ -92,7 +92,7 @@ export default function Institutions() {
 
   // Do not allow a failed initial request to mask its error screen with the
   // full-page spinner.
-  if (loading && !rows.length && !error) return <Loading label="Reading institution responses..." />;
+  if (loading && !rows.length && !error) return <Loading variant="institutions" label="Reading institution responses..." />;
 
   return (
     <div className="space-y-6">
@@ -105,7 +105,7 @@ export default function Institutions() {
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl uppercase">Institutions</h1>
             <p className="mt-3 max-w-2xl text-sm text-blue-100 sm:text-base">
-              This table is populated directly from all rows in Form Responses 1.
+              Overview of participating institutions, campuses, facilities, and childcare development programs.
             </p>
           </div>
 

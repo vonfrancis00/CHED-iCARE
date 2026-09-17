@@ -87,7 +87,7 @@ export default function SurveyResponses() {
   };
 
   // Prefer a useful error/retry panel to an indefinite-looking loader.
-  if (loading && !rows?.length && !error) return <Loading label="Reading survey responses..." />;
+  if (loading && !rows?.length && !error) return <Loading variant="responses" label="Reading survey responses..." />;
   if (error && !rows?.length) return <div role="alert" className="card p-8"><h2 className="font-semibold">Unable to load survey responses</h2><p className="mt-2 text-sm">{error}</p><button onClick={() => setAttempt(value => value + 1)} className="mt-4 rounded-lg bg-teal-700 px-4 py-2 text-white">Retry</button></div>;
 
   return (

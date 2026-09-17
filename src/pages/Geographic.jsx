@@ -33,7 +33,7 @@ export default function Geographic() {
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl uppercase">Geographic Analysis</h1>
             <p className="mt-3 max-w-2xl text-sm text-blue-100 sm:text-base">
-              Location groups are derived only from the Address of Campus field; the raw address remains available in Institutions.
+              Overview of campus distribution and regional coverage across participating institutions.
             </p>
           </div>
 

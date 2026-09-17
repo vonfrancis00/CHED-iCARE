@@ -263,12 +263,27 @@ function buildOCCOfficeGroups_() {
   return Object.entries(groups)
     .map(([name, institutions]) => {
       const responded = institutions.filter(institution => institution.responded).length;
+      const isComplete = institutions.length > 0 && responded === institutions.length;
+      const completionKey = "OCC_COMPLETED_AT_" + encodeURIComponent(name);
+      const properties = PropertiesService.getScriptProperties();
+      let completedAt = properties.getProperty(completionKey);
+
+      // The source register records completion as a checkbox, so retain the
+      // first time an office is observed fully complete between dashboard reads.
+      if (isComplete && !completedAt) {
+        completedAt = new Date().toISOString();
+        properties.setProperty(completionKey, completedAt);
+      } else if (!isComplete && completedAt) {
+        properties.deleteProperty(completionKey);
+        completedAt = null;
+      }
 
       return {
         name,
         value: institutions.length,
         responded,
         pending: institutions.length - responded,
+        completedAt,
         institutions
       };
     });

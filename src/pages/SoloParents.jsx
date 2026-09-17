@@ -33,7 +33,7 @@ export default function SoloParents() {
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl uppercase">Solo Parents</h1>
             <p className="mt-3 max-w-2xl text-sm text-blue-100 sm:text-base">
-              Counts are calculated from the exact numeric fields in the survey.
+              Overview of solo parent enrollment, gender distribution, and community support across participating institutions.
             </p>
           </div>
 

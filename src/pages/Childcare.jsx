@@ -49,7 +49,7 @@ export default function Childcare() {
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl uppercase">Childcare Facilities & Programs</h1>
             <p className="mt-3 max-w-2xl text-sm text-blue-100 sm:text-base">
-              Exact response counts from the childcare facility and documented program questions.
+              Monitoring childcare facility readiness and the availability of documented childcare development programs.
             </p>
           </div>
 
