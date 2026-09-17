@@ -51,7 +51,7 @@ export default function Geographic() {
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Regions tracked</p>
+              <p className="text-sm text-slate-500">Regions Tracked</p>
               <p className="mt-3 text-3xl font-semibold text-slate-900">{regionCount || 0}</p>
             </div>
             <div className="rounded-2xl bg-blue-100 p-3 text-blue-700">
@@ -63,7 +63,7 @@ export default function Geographic() {
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Total campuses</p>
+              <p className="text-sm text-slate-500">Total Campuses</p>
               <p className="mt-3 text-3xl font-semibold text-slate-900">{totalCampuses}</p>
             </div>
             <div className="rounded-2xl bg-indigo-100 p-3 text-indigo-700">
@@ -75,7 +75,7 @@ export default function Geographic() {
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Top region</p>
+              <p className="text-sm text-slate-500">Top Region</p>
               <p className="mt-3 text-xl font-semibold text-slate-900">{topRegion ? topRegion.name : "—"}</p>
             </div>
             <div className="rounded-2xl bg-blue-100 p-3 text-blue-700">
@@ -87,7 +87,7 @@ export default function Geographic() {
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Strongest share</p>
+              <p className="text-sm text-slate-500">Strongest Share</p>
               <p className="mt-3 text-3xl font-semibold text-slate-900">{topRegion ? `${Math.round((Number(topRegion.value || 0) / Math.max(totalCampuses, 1)) * 100)}%` : "0%"}</p>
             </div>
             <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
@@ -103,7 +103,7 @@ export default function Geographic() {
         <section className="card p-5 sm:p-6">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">Regional breakdown</h2>
+              <h2 className="text-lg font-semibold text-slate-900">Regional Breakdown</h2>
               <p className="mt-1 text-sm text-slate-500">Distribution of campus counts across each region.</p>
             </div>
           </div>
