@@ -19,19 +19,20 @@ export default function Dashboard() {
   const occOffices = (data.occOffices?.length ? data.occOffices : data.occDistribution || [])
     .filter((office) => String(office.name || "").toLowerCase().includes("office"));
   return (
-    <div>
-      <div role="status" className="mb-4 flex flex-wrap items-center gap-3 text-sm text-slate-500">
+    <div className="dashboard-overview rounded-3xl border border-[#bfd0e5] bg-[#f6f9fd]/85 p-4 shadow-[0_20px_55px_-42px_rgba(6,27,58,0.6)] backdrop-blur-sm sm:p-6">
+      <div role="status" className="hidden">
         <span>{data.cachedAt || data.updatedAt ? `Last updated: ${new Date(data.cachedAt || data.updatedAt).toLocaleString()}` : "Showing saved data"}</span>
         {refreshing && <span>Refreshing…</span>}
         {error && <span className="text-amber-700">Could not refresh. Showing the last saved data.</span>}
-        <button onClick={() => reload({ force: true })} disabled={refreshing} className="font-semibold text-teal-700 disabled:opacity-50">Refresh</button>
+        <button onClick={() => reload({ force: true })} disabled={refreshing} className="rounded-full bg-[#08264d] px-3 py-1.5 font-semibold text-white transition hover:bg-[#0e427d] disabled:opacity-50">Refresh</button>
       </div>
-      <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+      <div className="relative mb-7 overflow-hidden rounded-2xl border border-[#123b70] bg-[linear-gradient(115deg,#061a38_0%,#082b59_55%,#0e427d_100%)] px-5 py-5 shadow-[0_14px_30px_-18px_rgba(6,27,58,0.85)] sm:flex sm:flex-row sm:items-end sm:justify-between sm:px-6">
         <div>
-          <h1 className="page-title font-extrabold uppercase">Childcare Development Overview</h1>
-          <p className="mt-1 text-sm text-slate-500">Values are calculated from the actual Form Responses 1 sheet.</p>
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-sky-300">Monitoring dashboard</p>
+          <h1 className="page-title font-extrabold uppercase !text-white">Childcare Development Overview</h1>
+          <p className="mt-2 text-sm leading-6 text-blue-100">Values are calculated from the actual Form Responses 1 sheet.</p>
         </div>
-        <div className="rounded-xl bg-teal-50 px-4 py-2 text-xs font-medium text-teal-800">
+        <div className="mt-4 shrink-0 rounded-full border border-sky-300/30 bg-white/10 px-4 py-2 text-xs font-semibold text-sky-100 shadow-sm backdrop-blur-sm sm:mt-0">
           Source: {data.source === "google-sheet" ? "Google Sheet" : "Demo data"}
         </div>
       </div>

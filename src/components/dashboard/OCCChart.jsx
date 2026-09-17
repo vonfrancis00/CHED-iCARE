@@ -4,6 +4,14 @@ export default function OCCChart({ data = [] }) {
   const totalAssigned = data.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
   const totalResponded = data.reduce((sum, item) => sum + (Number(item.responded) || 0), 0);
   const overallProgress = totalAssigned ? (totalResponded / totalAssigned) * 100 : 0;
+  const rankedData = [...data].sort((a, b) => {
+    const assignedA = Number(a.value) || 0;
+    const assignedB = Number(b.value) || 0;
+    const progressA = assignedA ? Math.min((Number(a.responded) || 0) / assignedA, 1) : 0;
+    const progressB = assignedB ? Math.min((Number(b.responded) || 0) / assignedB, 1) : 0;
+
+    return progressB - progressA || String(a.name).localeCompare(String(b.name));
+  });
 
   return (
     <ChartCard
@@ -19,7 +27,7 @@ export default function OCCChart({ data = [] }) {
       </div>
 
       <div className="divide-y divide-slate-100">
-        {data.map((item, index) => {
+        {rankedData.map((item, index) => {
           const assigned = Number(item.value) || 0;
           const responded = Number(item.responded) || 0;
           const progress = assigned ? Math.min((responded / assigned) * 100, 100) : 0;
