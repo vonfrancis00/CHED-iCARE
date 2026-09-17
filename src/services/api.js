@@ -23,7 +23,7 @@ async function request(action, params = {}) {
   const canCache = action !== "clearDashboardCache";
   if (canCache && pendingRequests.has(cacheKey)) return pendingRequests.get(cacheKey);
   const cached = responseCache.get(cacheKey);
-  const cacheDuration = action === "getSurveyResponses" ? SURVEY_CACHE_MS : CLIENT_CACHE_MS;
+  const cacheDuration = (action === "getInstitutions" || action === "getSurveyResponses") ? SURVEY_CACHE_MS : CLIENT_CACHE_MS;
   if (canCache && cached && Date.now() - cached.createdAt < cacheDuration) {
     return cached.promise;
   }
@@ -159,6 +159,6 @@ async function demoResponse_(action, source = "demo") {
 export const getDashboardData = (params = {}) => request("getDashboardData", params);
 // Both pages use the full survey dataset. Use its working endpoint and share
 // cached and in-flight requests so navigating between them does not reload it.
-export const getInstitutions = (params = {}) => request("getSurveyResponses", params);
-export const getSurveyResponses = (params = {}) => request("getSurveyResponses", params);
+export const getInstitutions = (params = {}) => request("getInstitutions", params);
+export const getSurveyResponses = (params = {}) => request("getInstitutions", params);
 export const clearDashboardCache = () => request("clearDashboardCache");

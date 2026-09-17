@@ -1,67 +1,92 @@
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Building2, ChevronLeft, ChevronRight, Eye, Search, X, Database } from "lucide-react";
 import { getInstitutions } from "../services/api";
 import Loading from "../components/common/Loading";
 
-let institutionsCache = {
-  rows: null,
-  headers: []
-};
+const institutionsPageCache = new Map();
 
 export default function Institutions() {
-  const [rows, setRows] = useState(institutionsCache.rows || []);
-  const [headers, setHeaders] = useState(institutionsCache.headers);
+  const [rows, setRows] = useState(() => institutionsPageCache.get("1:20:")?.rows || []);
+  const [headers, setHeaders] = useState(() => institutionsPageCache.get("1:20:")?.headers || []);
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(() => institutionsPageCache.get("1:20:")?.total || 0);
+  const [institutionCount, setInstitutionCount] = useState(() => institutionsPageCache.get("1:20:")?.institutionCount || 0);
+  const [reloadKey, setReloadKey] = useState(0);
   const [selected, setSelected] = useState(null);
-  const [loading, setLoading] = useState(!institutionsCache.rows);
+  const tableRef = useRef(null);
+  const cacheKey = `${page}:${pageSize}:${q.trim().toLowerCase()}`;
+  const initialPage = institutionsPageCache.get(cacheKey);
+  const [loading, setLoading] = useState(!initialPage);
   const [error, setError] = useState("");
 
-  const loadInstitutions = () => {
-    setLoading(!institutionsCache.rows);
-    setError("");
-    getInstitutions()
-      .then(r => {
-        const nextRows = r.data || [];
-        const nextHeaders = r.headers || [];
-        institutionsCache = { rows: nextRows, headers: nextHeaders };
-        setRows(nextRows);
-        setHeaders(nextHeaders);
-      })
-      .catch(err => {
-        if (!institutionsCache.rows) {
-          setRows([]);
-          setHeaders([]);
-        }
-        setError(err.message || "Unable to load institutions");
-      })
-      .finally(() => setLoading(false));
-  };
-
   useEffect(() => {
-    loadInstitutions();
-  }, []);
-
-  const filtered = useMemo(() => {
-    const query = q.toLowerCase().trim();
-    if (!query) return rows;
-    return rows.filter(row =>
-      Object.values(row).some(v => String(v ?? "").toLowerCase().includes(query))
-    );
-  }, [rows, q]);
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      const cachedPage = institutionsPageCache.get(cacheKey);
+      if (cachedPage) {
+        setRows(cachedPage.rows);
+        setHeaders(cachedPage.headers);
+        setTotal(cachedPage.total);
+        setInstitutionCount(cachedPage.institutionCount);
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError("");
+      try {
+        const result = await getInstitutions({ page, pageSize, query: q.trim() });
+        if (cancelled) return;
+        const nextPage = { rows: result.data || [], headers: result.headers || [], total: Number(result.total) || 0, institutionCount: Number(result.institutionCount) || 0 };
+        institutionsPageCache.set(cacheKey, nextPage);
+        setRows(nextPage.rows);
+        setHeaders(nextPage.headers);
+        setTotal(nextPage.total);
+        setInstitutionCount(nextPage.institutionCount);
+      } catch (err) {
+        if (!cancelled) setError(err.message || "Unable to load institutions");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, q ? 300 : 0);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [page, pageSize, q, reloadKey, cacheKey]);
 
   useEffect(() => { setPage(1); }, [q, pageSize]);
-  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  useEffect(() => {
+    if (page !== 1 || q.trim() || !rows.length || institutionsPageCache.has("1:50:")) return;
+    const timer = window.setTimeout(() => {
+      getInstitutions({ page: 1, pageSize: 50 }).then(result => {
+        institutionsPageCache.set("1:50:", { rows: result.data || [], headers: result.headers || [], total: Number(result.total) || 0, institutionCount: Number(result.institutionCount) || 0 });
+      }).catch(() => {});
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [page, q, rows.length]);
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
-  const pageRows = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  const firstRow = filtered.length ? (currentPage - 1) * pageSize + 1 : 0;
-  const lastRow = Math.min(currentPage * pageSize, filtered.length);
+  const firstRow = total ? (currentPage - 1) * pageSize + 1 : 0;
+  const lastRow = Math.min(currentPage * pageSize, total);
+  const loadInstitutions = () => { institutionsPageCache.delete(cacheKey); setReloadKey(value => value + 1); };
+  const changePage = nextPage => {
+    setPage(nextPage);
+    tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const changePageSize = nextPageSize => {
+    const source = institutionsPageCache.get("1:50:") || institutionsPageCache.get("1:20:");
+    if (source && source.rows.length >= Math.min(nextPageSize, total)) {
+      const nextKey = `1:${nextPageSize}:`;
+      const nextPage = { ...source, rows: source.rows.slice(0, nextPageSize) };
+      institutionsPageCache.set(nextKey, nextPage);
+      setRows(nextPage.rows); setHeaders(nextPage.headers); setTotal(nextPage.total); setInstitutionCount(nextPage.institutionCount);
+    }
+    setPage(1); setPageSize(nextPageSize);
+  };
 
   // Do not allow a failed initial request to mask its error screen with the
   // full-page spinner.
-  if (loading && !error) return <Loading label="Reading all survey responses..." />;
+  if (loading && !rows.length && !error) return <Loading label="Reading institution responses..." />;
 
   return (
     <div className="space-y-6">
@@ -81,7 +106,7 @@ export default function Institutions() {
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
             <div className="text-[11px] uppercase tracking-[0.18em] text-blue-100">Records</div>
             <div className="mt-2 flex items-center gap-3">
-              <span className="text-2xl font-semibold">{rows.length}</span>
+              <span className="text-2xl font-semibold">{total}</span>
               <span className="text-sm text-blue-100">entries</span>
             </div>
           </div>
@@ -103,7 +128,7 @@ export default function Institutions() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-500">Total entries</p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">{rows.length}</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-900">{total}</p>
             </div>
             <div className="rounded-2xl bg-blue-100 p-3 text-blue-700">
               <Database size={22} />
@@ -115,7 +140,7 @@ export default function Institutions() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-500">Institutions</p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">{new Set(rows.map((row) => row["Name of Institution"]).filter(Boolean)).size}</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-900">{institutionCount}</p>
             </div>
             <div className="rounded-2xl bg-indigo-100 p-3 text-indigo-700">
               <Building2 size={22} />
@@ -127,7 +152,7 @@ export default function Institutions() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-500">Visible rows</p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">{filtered.length}</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-900">{rows.length}</p>
             </div>
             <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
               <Search size={22} />
@@ -141,10 +166,10 @@ export default function Institutions() {
           <Search className="absolute left-3 top-3.5 text-slate-400" size={18}/>
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search any of the 31 fields..." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 outline-none focus:border-blue-500"/>
         </div>
-        <p className="mt-2 text-xs text-slate-500">{filtered.length.toLocaleString()} matching response{filtered.length === 1 ? "" : "s"} · showing {firstRow.toLocaleString()}–{lastRow.toLocaleString()}</p>
+        <p className="mt-2 text-xs text-slate-500">{total.toLocaleString()} matching response{total === 1 ? "" : "s"} · showing {firstRow.toLocaleString()}–{lastRow.toLocaleString()}</p>
       </div>
 
-      <div className="card overflow-hidden">
+      <div ref={tableRef} className="card overflow-hidden scroll-mt-6">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
@@ -159,7 +184,7 @@ export default function Institutions() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {pageRows.map(row => (
+              {rows.map(row => (
                 <tr key={row.rowNumber} className="hover:bg-slate-50">
                   <td className="sticky left-0 bg-white px-5 py-4 font-semibold text-slate-900">{row["Name of Institution"] || "—"}</td>
                   <td className="px-5 py-4">{row["Name of Institution Campus"] || "—"}</td>
@@ -173,10 +198,10 @@ export default function Institutions() {
             </tbody>
           </table>
         </div>
-        {!filtered.length && <div className="p-10 text-center text-sm text-slate-500">No matching responses.</div>}
-        {filtered.length > 0 && <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-slate-500">Showing <span className="font-semibold text-slate-700">{firstRow}–{lastRow}</span> of {filtered.length.toLocaleString()}</div>
-          <div className="flex flex-wrap items-center gap-3"><label className="flex items-center gap-2 text-xs text-slate-500">Rows per page<select value={pageSize} onChange={event => setPageSize(Number(event.target.value))} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-blue-600"><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select></label><div className="flex items-center gap-1"><button type="button" onClick={() => setPage(value => Math.max(1, value - 1))} disabled={currentPage === 1} aria-label="Previous page" className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={16} /></button><span className="min-w-20 text-center text-xs font-medium text-slate-600">Page {currentPage} of {pageCount}</span><button type="button" onClick={() => setPage(value => Math.min(pageCount, value + 1))} disabled={currentPage === pageCount} aria-label="Next page" className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"><ChevronRight size={16} /></button></div></div>
+        {!rows.length && !loading && <div className="p-10 text-center text-sm text-slate-500">No matching responses.</div>}
+        {total > 0 && <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-slate-500">Showing <span className="font-semibold text-slate-700">{firstRow}–{lastRow}</span> of {total.toLocaleString()}</div>
+          <div className="flex flex-wrap items-center gap-3"><label className="flex items-center gap-2 text-xs text-slate-500">Rows per page<select value={pageSize} onChange={event => changePageSize(Number(event.target.value))} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-blue-600"><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select></label><div className="flex items-center gap-1"><button type="button" onClick={() => changePage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} aria-label="Previous page" className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={16} /></button><span className="min-w-20 text-center text-xs font-medium text-slate-600">Page {currentPage} of {pageCount}</span><button type="button" onClick={() => changePage(Math.min(pageCount, currentPage + 1))} disabled={currentPage === pageCount} aria-label="Next page" className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"><ChevronRight size={16} /></button></div></div>
         </div>}
       </div>
 

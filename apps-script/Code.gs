@@ -8,9 +8,9 @@ function doGet(e) {
       case "getDashboardData":
         return jsonResponse(getDashboardData());
       case "getInstitutions":
-        return jsonResponse(getInstitutions());
+        return jsonResponse(getInstitutions(params));
       case "getSurveyResponses":
-        return jsonResponse(getSurveyResponses());
+        return jsonResponse(getSurveyResponses(params));
       case "clearDashboardCache":
         clearDashboardCache();
         return jsonResponse({ success: true, message: "Dashboard cache cleared." });

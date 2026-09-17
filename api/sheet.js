@@ -21,6 +21,10 @@ export default async function handler(req, res) {
   upstream.search = '';
   upstream.searchParams.set('action', action);
   if (configuredCode) upstream.searchParams.set('code', configuredCode);
+  for (const key of ['page', 'pageSize', 'query']) {
+    const value = input.searchParams.get(key);
+    if (value) upstream.searchParams.set(key, value);
+  }
   upstream.searchParams.set('_t', `${Date.now()}-${Math.random()}`);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 55000);

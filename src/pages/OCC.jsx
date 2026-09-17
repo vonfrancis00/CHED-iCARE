@@ -10,7 +10,7 @@ const percent = (checked, total) => total ? Math.min(100, Math.max(0, Math.round
 export default function OCC() {
   const [selectedOfficeName, setSelectedOfficeName] = useState("");
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState("assigned");
+  const [sort, setSort] = useState("progress");
   const [refreshing, setRefreshing] = useState(false);
   const { data, loading, error, reload } = useDashboard();
   if (loading) return <Loading />;
@@ -20,7 +20,15 @@ export default function OCC() {
   const accomplished = offices.reduce((sum, office) => sum + (Number(office.responded) || 0), 0);
   const pending = Math.max(0, total - accomplished);
   const rate = percent(accomplished, total);
-  const visible = offices.filter(office => office.name.toLowerCase().includes(query.toLowerCase())).sort((a, b) => sort === "name" ? a.name.localeCompare(b.name) : sort === "pending" ? (b.value - (b.responded || 0)) - (a.value - (a.responded || 0)) : (Number(b.value) || 0) - (Number(a.value) || 0));
+  const visible = offices.filter(office => office.name.toLowerCase().includes(query.toLowerCase())).sort((a, b) => {
+    const aAssigned = Number(a.value) || 0;
+    const bAssigned = Number(b.value) || 0;
+    const byName = a.name.localeCompare(b.name);
+    if (sort === "name") return byName;
+    if (sort === "pending") return (bAssigned - (Number(b.responded) || 0)) - (aAssigned - (Number(a.responded) || 0)) || byName;
+    if (sort === "assigned") return bAssigned - aAssigned || byName;
+    return percent(Number(b.responded) || 0, bAssigned) - percent(Number(a.responded) || 0, aAssigned) || byName;
+  });
   const selected = offices.find(office => office.name === selectedOfficeName);
   const refresh = async () => { setRefreshing(true); try { await reload(); } finally { setRefreshing(false); } };
   return (
@@ -45,14 +53,14 @@ export default function OCC() {
       {error && <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">Showing saved data. Refresh failed: {error}</div>}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Assigned institutions", value: total, detail: "Across all offices", icon: ClipboardList, tone: "bg-blue-100 text-blue-700" },
-          { label: "Offices", value: offices.length, detail: "In the office register", icon: Building2, tone: "bg-indigo-100 text-indigo-700" },
-          { label: "Accomplished surveys", value: accomplished, detail: "Marked as accomplished", icon: CheckCircle2, tone: "bg-sky-100 text-sky-700" },
-          { label: "Awaiting checks", value: pending, detail: "Remaining assignments", icon: CircleDashed, tone: "bg-slate-100 text-slate-700" }
+          { label: "Assigned institutions", value: total, detail: "Across all OCC / Offices", icon: ClipboardList, tone: "bg-blue-100 text-blue-700" },
+          { label: "OCC / Offices", value: offices.length, detail: "In the OCC / Office register", icon: Building2, tone: "bg-indigo-100 text-indigo-700" },
+          { label: "Accomplished surveys", value: accomplished, detail: "Marked as Accomplished", icon: CheckCircle2, tone: "bg-sky-100 text-sky-700" },
+          { label: "Awaiting checks", value: pending, detail: "Remaining Assignments", icon: CircleDashed, tone: "bg-slate-100 text-slate-700" }
         ].map(({ label, value, detail, icon: Icon, tone }) => <div key={label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-slate-500">{label}</span><span className={`rounded-xl p-2 ${tone}`}><Icon size={17} /></span></div><div className="mt-2 text-3xl font-semibold tracking-tight tabular-nums text-slate-950">{number(value)}</div><p className="mt-1 text-xs text-slate-500">{detail}</p></div>)}
       </div>
       <section className="space-y-4">
-        <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center"><div><h2 className="text-lg font-semibold tracking-tight text-slate-900">Office overview <span className="ml-2 rounded-md border border-slate-200 bg-white px-2 py-0.5 align-middle text-xs text-slate-500">{offices.length}</span></h2><p className="mt-1 text-sm text-slate-500">Select an office to explore its institution register.</p></div><div className="flex flex-col gap-2 sm:flex-row"><div className="relative"><Search size={16} className="pointer-events-none absolute left-3 top-3 text-slate-400" /><input type="search" aria-label="Search offices" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search offices…" className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 sm:w-56" /></div><div className="relative"><ArrowDownUp size={15} className="pointer-events-none absolute left-3 top-3.5 text-slate-400" /><select aria-label="Sort offices" value={sort} onChange={event => setSort(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-6 text-sm text-slate-600 focus:outline-blue-600"><option value="assigned">Most assigned</option><option value="pending">Most pending</option><option value="name">Office name</option></select></div></div></div>
+        <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center"><div><h2 className="text-lg font-semibold tracking-tight text-slate-900">Office overview <span className="ml-2 rounded-md border border-slate-200 bg-white px-2 py-0.5 align-middle text-xs text-slate-500">{offices.length}</span></h2><p className="mt-1 text-sm text-slate-500">Select an office to explore its institution register.</p></div><div className="flex flex-col gap-2 sm:flex-row"><div className="relative"><Search size={16} className="pointer-events-none absolute left-3 top-3 text-slate-400" /><input type="search" aria-label="Search offices" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search offices…" className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 sm:w-56" /></div><div className="relative"><ArrowDownUp size={15} className="pointer-events-none absolute left-3 top-3.5 text-slate-400" /><select aria-label="Sort offices" value={sort} onChange={event => setSort(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-6 text-sm text-slate-600 focus:outline-blue-600"><option value="progress">Highest survey progress</option><option value="assigned">Most assigned</option><option value="pending">Most pending</option><option value="name">Office name</option></select></div></div></div>
         <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {visible.map(office => {
             const value = Number(office.value) || 0;

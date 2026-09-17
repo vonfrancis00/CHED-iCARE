@@ -118,24 +118,66 @@ function addDisplayFields_(row) {
   };
 }
 
-function getInstitutions() {
-  return getOrBuildCache_(cacheKey_("INSTITUTIONS"), () => buildInstitutions_());
+function getInstitutions(params) {
+  const page = Math.max(1, Number(params.page) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number(params.pageSize) || 20));
+  const query = String(params.query || "").trim().toLowerCase();
+  const queryKey = query ? Utilities.base64EncodeWebSafe(query).slice(0, 80) : "ALL";
+  return getOrBuildCache_(cacheKey_("INSTITUTIONS_PAGE_" + page + "_" + pageSize + "_" + queryKey), () => buildInstitutionsPage_(page, pageSize, query));
 }
 
-function buildInstitutions_() {
-  const dataset = getRawDataset_();
+function buildInstitutionsPage_(page, pageSize, query) {
+  const sheet = getResponseSheet_();
+  const lastRow = Math.min(sheet.getLastRow(), (CONFIG.MAX_RESPONSE_ROWS || 5000) + 1);
+  const lastColumn = sheet.getLastColumn();
+  if (lastRow < 2 || lastColumn < 1) return { success: true, headers: [], data: [], total: 0, page: page, pageSize: pageSize, institutionCount: 0, campusCount: 0 };
+
+  const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0].map(h => String(h == null ? "" : h).trim());
+  const institutionColumn = Math.max(0, headers.indexOf(H.institution));
+  const institutionValues = sheet.getRange(2, institutionColumn + 1, lastRow - 1, 1).getValues();
+  const institutionCount = new Set(institutionValues.map(row => String(row[0] || "").trim()).filter(Boolean)).size;
+  const campusColumn = Math.max(0, headers.indexOf(H.campus));
+  const campusValues = sheet.getRange(2, campusColumn + 1, lastRow - 1, 1).getValues();
+  const campusCount = new Set(campusValues.map(row => String(row[0] || "").trim()).filter(Boolean)).size;
+
+  if (query) {
+    const dataset = getRawDataset_();
+    const matches = dataset.rows.filter(row => Object.values(row).some(value => String(value == null ? "" : value).toLowerCase().includes(query))).reverse();
+    const start = (page - 1) * pageSize;
+    return { success: true, source: "google-sheet", updatedAt: new Date().toISOString(), cachedAt: dataset.cachedAt, headers: dataset.headers, data: matches.slice(start, start + pageSize).map(addDisplayFields_), total: matches.length, page: page, pageSize: pageSize, institutionCount: institutionCount, campusCount: campusCount };
+  }
+
+  const total = lastRow - 1;
+  const endRow = lastRow - (page - 1) * pageSize;
+  const startRow = Math.max(2, endRow - pageSize + 1);
+  const count = Math.max(0, endRow - startRow + 1);
+  const values = count ? sheet.getRange(startRow, 1, count, lastColumn).getValues() : [];
+  const data = values.reverse().map((row, index) => {
+    const item = { rowNumber: endRow - index };
+    headers.forEach((header, column) => { item[header] = normalizeCellForJson_(row[column]); });
+    return addDisplayFields_(item);
+  });
   return {
     success: true,
     source: "google-sheet",
     updatedAt: new Date().toISOString(),
-    cachedAt: dataset.cachedAt,
-    headers: dataset.headers,
-    data: dataset.rows.slice().reverse().map(addDisplayFields_)
+    headers: headers,
+    data: data,
+    total: total,
+    page: page,
+    pageSize: pageSize,
+    institutionCount: institutionCount,
+    campusCount: campusCount
   };
 }
 
-function getSurveyResponses() {
-  return getInstitutions();
+function getSurveyResponses(params) {
+  return getInstitutions(params || {});
+}
+
+function buildInstitutions_() {
+  const dataset = getRawDataset_();
+  return { success: true, source: "google-sheet", updatedAt: new Date().toISOString(), cachedAt: dataset.cachedAt, headers: dataset.headers, data: dataset.rows.slice().reverse().map(addDisplayFields_) };
 }
 
 function buildLocationDistribution_(rows) {

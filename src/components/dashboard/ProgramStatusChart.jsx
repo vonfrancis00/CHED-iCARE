@@ -28,6 +28,7 @@ export default function ProgramStatusChart({ data = [] }) {
             <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#475569" }} />
             <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#64748b" }} />
             <Tooltip
+              shared={false}
               cursor={{ fill: "rgba(14, 165, 233, 0.06)" }}
               contentStyle={{ borderRadius: 16, border: "1px solid #e2e8f0", boxShadow: "0 14px 40px rgba(15, 23, 42, 0.08)", background: "rgba(255,255,255,0.95)" }}
             />
