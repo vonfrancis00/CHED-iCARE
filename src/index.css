@@ -167,6 +167,8 @@ button, input, select { font: inherit; }
 
 /* Reference-layout proportions: full-bleed building, content left, glass form right. */
 @media (min-width: 821px) {
+  /* Keep the default desktop composition at the calmer 90% visual density. */
+  .login-shell { width: 111.112%; min-height: 111.112vh; zoom: .9; }
   .login-page { padding: 0; background-position: center 42%; background-size: 100% 100%; }
   .login-shell { width: 100%; min-height: 100vh; grid-template-columns: minmax(0, 1fr) minmax(560px, 38vw); }
   .login-intro { padding: 48px clamp(62px, 6.5vw, 118px); }
