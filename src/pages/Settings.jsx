@@ -56,9 +56,11 @@ export default function Settings({ user }) {
   const deletingRef = useRef(deleting);
   deletingRef.current = deleting;
   const officeOptions = [...new Set([...offices, ...(editingUser?.office ? [editingUser.office] : [])])].sort((a, b) => a.localeCompare(b));
-  const visibleUsers = users.filter(account => [account.name, account.email, account.office, account.role]
+  const currentUserEmail = String(user?.email || "").trim().toLowerCase();
+  const directoryUsers = users.filter(account => String(account.email || "").trim().toLowerCase() !== currentUserEmail);
+  const visibleUsers = directoryUsers.filter(account => [account.name, account.email, account.office, account.role]
     .some(value => String(value || "").toLowerCase().includes(usersQuery.trim().toLowerCase())));
-  const superAdminCount = users.filter(account => account.role === "super_admin").length;
+  const superAdminCount = directoryUsers.filter(account => account.role === "super_admin").length;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -338,9 +340,9 @@ export default function Settings({ user }) {
             </button>
           </div>
           <div className="mt-6 flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700"><span className="h-2 w-2 rounded-full bg-blue-600" />{users.length} total users</span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700"><span className="h-2 w-2 rounded-full bg-blue-600" />{directoryUsers.length} other users</span>
             <span className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700"><ShieldCheck size={13} className="text-blue-700" />{superAdminCount} super admins</span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700"><UsersRound size={13} className="text-blue-700" />{users.length - superAdminCount} admins</span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700"><UsersRound size={13} className="text-blue-700" />{directoryUsers.length - superAdminCount} admins</span>
           </div>
         </div>
 
@@ -350,7 +352,7 @@ export default function Settings({ user }) {
               <Search size={18} className="pointer-events-none absolute left-3.5 top-3.5 text-slate-400" aria-hidden="true" />
               <input type="search" aria-label="Search users" value={usersQuery} onChange={event => setUsersQuery(event.target.value)} placeholder="Search by name, email, or office" className="settings-input settings-input-with-leading-icon settings-search-input" />
             </div>
-            <p className="text-xs font-medium text-slate-500" aria-live="polite">Showing {visibleUsers.length} of {users.length}</p>
+            <p className="text-xs font-medium text-slate-500" aria-live="polite">Showing {visibleUsers.length} of {directoryUsers.length}</p>
           </div>
           {usersError && <div className="mt-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert"><AlertCircle size={18} className="shrink-0" />{usersError}</div>}
           <ul className="mt-5 space-y-3">
@@ -369,8 +371,8 @@ export default function Settings({ user }) {
               </li>
             ))}
           </ul>
-          {!usersLoading && !usersError && !visibleUsers.length && <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">{usersQuery ? "No users match your search." : "No users found in the Users sheet."}</div>}
-          {usersLoading && !users.length && <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500" role="status">Loading users...</div>}
+          {!usersLoading && !usersError && !visibleUsers.length && <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">{usersQuery ? "No users match your search." : "No other users found in the Users sheet."}</div>}
+          {usersLoading && !directoryUsers.length && <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500" role="status">Loading users...</div>}
         </div>
       </section>
     </div>

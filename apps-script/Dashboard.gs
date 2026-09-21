@@ -132,12 +132,12 @@ function addDisplayFields_(row) {
 }
 
 function getInstitutions(params) {
-  const page = Math.max(1, Number(params.page) || 1);
-  const pageSize = Math.min(100, Math.max(1, Number(params.pageSize) || 20));
+  const page = Math.max(1, Math.floor(Number(params.page) || 1));
+  const pageSize = Math.min(100, Math.max(1, Math.floor(Number(params.pageSize) || 20)));
   const query = String(params.query || "").trim().toLowerCase();
   const institutionType = String(params.institutionType || "").trim().toUpperCase();
   const region = String(params.region || "").trim().toLowerCase();
-  const filterKey = Utilities.base64EncodeWebSafe([query, institutionType, region].join("|")).slice(0, 120) || "ALL";
+  const filterKey = Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify([query, institutionType, region])));
   // CacheService cannot delete entries by prefix. Include this revision in every
   // page key so a refresh immediately makes every paginated/search cache stale.
   const revision = getResponseCacheRevision_();
@@ -234,13 +234,14 @@ function buildOCCOfficeGroups_() {
     });
   }
 
+  const properties = PropertiesService.getScriptProperties();
+  const completionDates = properties.getProperties();
   return Object.entries(groups)
     .map(([name, institutions]) => {
       const responded = institutions.filter(institution => institution.responded).length;
       const isComplete = institutions.length > 0 && responded === institutions.length;
       const completionKey = "OCC_COMPLETED_AT_" + encodeURIComponent(name);
-      const properties = PropertiesService.getScriptProperties();
-      let completedAt = properties.getProperty(completionKey);
+      let completedAt = completionDates[completionKey] || null;
 
       // The source register records completion as a checkbox, so retain the
       // first time an office is observed fully complete between dashboard reads.
@@ -264,6 +265,9 @@ function buildOCCOfficeGroups_() {
 }
 
 function clearDashboardCache() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
   // Bump the page-cache namespace because CacheService has no wildcard delete.
   PropertiesService.getScriptProperties().setProperty("CHILDCARE_RESPONSE_CACHE_REVISION", String(Date.now()));
   removeCaches_([
@@ -271,6 +275,9 @@ function clearDashboardCache() {
     cacheKey_("DASHBOARD"),
     cacheKey_("OCC")
   ]);
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function getResponseCacheRevision_() {

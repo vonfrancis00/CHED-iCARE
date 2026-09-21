@@ -1,7 +1,45 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
+// Auth is checked before these shared, short-lived data caches are consulted.
+// Never cache login, account operations or errors.
+const dataCache = new Map();
+const dataRequests = new Map();
+let dataRevision = 0;
+const DATA_CACHE_MS = 15000;
+
+function invalidateData() {
+  dataRevision += 1;
+  dataCache.clear();
+  dataRequests.clear();
+}
+
+async function readGoogleData(upstream, signal, cacheable) {
+  const key = upstream.toString();
+  const revision = dataRevision;
+  const cached = dataCache.get(key);
+  if (cacheable && cached && cached.expires > Date.now()) return cached.payload;
+  if (cacheable && dataRequests.has(key)) return dataRequests.get(key);
+  const pending = (async () => {
+    const response = await fetchGoogle(upstream, signal, upstream.searchParams.get('action') !== 'clearDashboardCache');
+    if (!response.ok) throw new Error(`Google returned HTTP ${response.status}`);
+    const payload = await response.json();
+    if (!payload || typeof payload !== 'object') throw new Error('Invalid payload');
+    if (cacheable && payload.success === true && revision === dataRevision) {
+      if (dataCache.size >= 100) dataCache.delete(dataCache.keys().next().value);
+      dataCache.set(key, { payload, expires: Date.now() + DATA_CACHE_MS });
+    }
+    return payload;
+  })();
+  if (cacheable) dataRequests.set(key, pending);
+  try {
+    return await pending;
+  } finally {
+    if (dataRequests.get(key) === pending) dataRequests.delete(key);
+  }
+}
+
 function session(req, secret) {
-  const token = (req.headers.cookie || '').split('; ').find(part => part.startsWith('childcare_session='))?.slice(18);
+  const token = (req.headers?.cookie || '').split('; ').find(part => part.startsWith('childcare_session='))?.slice(18);
   if (!token || !secret) return null;
   const [data, signature] = token.split('.');
   if (!data || !signature) return null;
@@ -24,7 +62,7 @@ export default async function handler(req, res, env = process.env) {
   res.setHeader('Cache-Control', 'private, no-store');
   const configuredCode = (env.SHEET_API_ACCESS_CODE || env.VITE_SHEET_API_ACCESS_CODE || '').trim();
   const secret = (env.SESSION_SECRET || configuredCode).trim();
-  const secure = env.NODE_ENV === 'production' || !!req.headers['x-forwarded-proto']?.includes('https');
+  const secure = env.NODE_ENV === 'production' || !!req.headers?.['x-forwarded-proto']?.includes('https');
   const input = new URL(req.url, 'https://local.invalid');
   const action = input.searchParams.get('action');
   if (!secret) return res.status(503).json({ success: false, message: 'Configure SESSION_SECRET on the server before enabling login.' });
@@ -59,7 +97,6 @@ export default async function handler(req, res, env = process.env) {
     const value = input.searchParams.get(key);
     if (value) upstream.searchParams.set(key, value);
   }
-  upstream.searchParams.set('_t', `${Date.now()}-${Math.random()}`);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 55000);
   try {
@@ -84,12 +121,10 @@ export default async function handler(req, res, env = process.env) {
       if (action === 'login' && payload.success && payload.user) setSession(res, payload.user, secret, secure);
       return res.status(payload.success ? 200 : action === 'login' ? 401 : 400).json(payload);
     }
-    const response = await fetchGoogle(upstream, controller.signal, action !== 'clearDashboardCache');
-    if (!response.ok) {
-      return res.status(502).json({ success: false, message: `Google's data service returned HTTP ${response.status}. Please retry.` });
-    }
-    const payload = await response.json();
-    if (!payload || typeof payload !== 'object') throw new Error('Invalid payload');
+    const cacheable = ['getDashboardData', 'getInstitutions', 'getSurveyResponses'].includes(action);
+    if (action === 'clearDashboardCache') invalidateData();
+    const payload = await readGoogleData(upstream, controller.signal, cacheable);
+    if (action === 'clearDashboardCache' && payload.success) invalidateData();
     return res.status(200).json(payload);
   } catch (error) {
     return res.status(error.name === 'AbortError' ? 504 : 502).json({

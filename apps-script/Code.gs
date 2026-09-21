@@ -28,11 +28,51 @@ function doGet(e) {
 function getUsersRegister_() {
   const sheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName(CONFIG.SHEETS.USERS);
   if (!sheet) throw new Error("Users sheet not found.");
-  const rows = sheet.getDataRange().getDisplayValues();
+  // getDataRange() can include thousands of blank, formatted rows. The user
+  // directory only needs rows that contain actual account data.
+  const lastRow = sheet.getLastRow();
+  const lastColumn = sheet.getLastColumn();
+  if (lastRow < 1 || lastColumn < 1) throw new Error("Users sheet is empty.");
+  const rows = sheet.getRange(1, 1, lastRow, lastColumn).getDisplayValues();
   const headers = (rows.shift() || []).map(value => value.trim().toLowerCase());
   const columns = Object.fromEntries(["email", "password", "name", "office", "role"].map(header => [header, headers.indexOf(header)]));
   if (Object.values(columns).some(index => index < 0)) throw new Error("Users sheet must have Email, Password, Name, Office and Role headers.");
   return { sheet, rows, columns };
+}
+
+// Authentication is on the critical path. Do not use getDataRange() here:
+// a Users sheet can have a large used range from formatting or old records,
+// even though login only needs its user columns. Reading only those columns keeps
+// sign-in fast as the workbook grows.
+function findLoginUser_(email, password) {
+  const sheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName(CONFIG.SHEETS.USERS);
+  if (!sheet) throw new Error("Users sheet not found.");
+
+  const lastRow = sheet.getLastRow();
+  const lastColumn = sheet.getLastColumn();
+  if (lastRow < 2 || lastColumn < 1) return null;
+
+  const headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0]
+    .map(value => String(value).trim().toLowerCase());
+  const columns = Object.fromEntries(["email", "password", "name", "office", "role"]
+    .map(header => [header, headers.indexOf(header)]));
+  if (["email", "password", "name", "office"].some(header => columns[header] < 0)) {
+    throw new Error("Users sheet must have Email, Password, Name and Office headers.");
+  }
+
+  const rowCount = lastRow - 1;
+  const requiredColumns = Object.values(columns).filter(column => column >= 0);
+  const firstColumn = Math.min.apply(null, requiredColumns);
+  const lastRequiredColumn = Math.max.apply(null, requiredColumns);
+  const rows = sheet.getRange(2, firstColumn + 1, rowCount, lastRequiredColumn - firstColumn + 1).getDisplayValues();
+  const users = rows.map(row => ({
+    email: String(row[columns.email - firstColumn] || "").trim().toLowerCase(),
+    password: String(row[columns.password - firstColumn] || ""),
+    name: String(row[columns.name - firstColumn] || "").trim(),
+    office: String(row[columns.office - firstColumn] || "").trim(),
+    role: columns.role >= 0 ? String(row[columns.role - firstColumn] || "").trim() : ""
+  })).filter(user => user.email);
+  return users.find(user => user.email === email && user.password === password) || null;
 }
 
 function normalizeRole_(value) {
@@ -69,20 +109,13 @@ function doPost(e) {
     const email = String(params.email || "").trim().toLowerCase();
     const password = String(params.password || "");
     if (!email || !password) return jsonResponse({ success: false, message: "Invalid email or password." });
-    const sheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName(CONFIG.SHEETS.USERS);
-    if (!sheet) throw new Error("Users sheet not found.");
-    const rows = sheet.getDataRange().getDisplayValues();
-    const headers = (rows.shift() || []).map(value => value.trim().toLowerCase());
-    const indices = ["email", "password", "name", "office"].map(name => headers.indexOf(name));
-    if (indices.some(index => index < 0)) throw new Error("Users sheet must have Email, Password, Name and Office headers.");
-    const roleIndex = headers.indexOf("role");
-    const row = rows.find(values => String(values[indices[0]] || "").trim().toLowerCase() === email && String(values[indices[1]] || "") === password);
-    const roleValue = row && roleIndex >= 0 ? String(row[roleIndex] || "").trim().toLowerCase().replace(/[\s_-]+/g, " ") : "";
-    return row
+    const user = findLoginUser_(email, password);
+    const roleValue = user ? user.role.toLowerCase().replace(/[\s_-]+/g, " ") : "";
+    return user
       ? jsonResponse({ success: true, user: {
-          email: row[indices[0]].trim(),
-          name: row[indices[2]].trim(),
-          office: row[indices[3]].trim(),
+          email: user.email,
+          name: user.name,
+          office: user.office,
           role: roleValue === "super admin" ? "super_admin" : "admin"
         } })
       : jsonResponse({ success: false, message: "Invalid email or password." });

@@ -1,6 +1,8 @@
 
 function getSpreadsheet_() {
-  return SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  // Reuse the workbook within this execution (dashboard reads two tabs).
+  if (!getSpreadsheet_.instance) getSpreadsheet_.instance = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  return getSpreadsheet_.instance;
 }
 
 function getResponseSheet_() {
@@ -90,7 +92,7 @@ function sumNumeric_(rows, header) {
 }
 
 function cacheKey_(name) {
-  return "CHILDCARE_DASHBOARD_EXACT_V5_" + name;
+  return "CHILDCARE_DASHBOARD_EXACT_V6_" + name;
 }
 
 function getOrBuildCache_(key, builder, seconds) {
@@ -132,7 +134,9 @@ function readCache_(cache, key) {
   try {
     const manifest = cache.get(key);
     if (!manifest) return null;
-    const { generation, chunks } = JSON.parse(manifest);
+    const entry = JSON.parse(manifest);
+    if (Object.prototype.hasOwnProperty.call(entry, "value")) return entry.value;
+    const { generation, chunks } = entry;
     if (!generation || !Number.isInteger(chunks) || chunks < 1 || chunks > 100) return null;
     const keys = Array.from({ length: chunks }, (_, index) => key + ":" + generation + ":" + index);
     const parts = cache.getAll(keys);
@@ -148,10 +152,15 @@ function putCache_(cache, key, value, seconds) {
     // ASCII JSON makes character length equal byte length, including Unicode
     // responses. Each piece stays below CacheService's 100 KB per-value limit.
     const json = JSON.stringify(value).replace(/[\u007f-\uffff]/g, character => "\\u" + character.charCodeAt(0).toString(16).padStart(4, "0"));
+    const ttl = seconds || CONFIG.CACHE_SECONDS;
+    // Most dashboards and pages fit in one entry: one read/write, no manifest.
+    if (json.length < 89000) {
+      cache.put(key, '{"value":' + json + '}', ttl);
+      return;
+    }
     const chunks = Math.ceil(json.length / 90000);
     if (chunks > 100) return;
     const generation = Utilities.getUuid();
-    const ttl = seconds || CONFIG.CACHE_SECONDS;
     const parts = {};
     for (let index = 0; index < chunks; index++) {
       parts[key + ":" + generation + ":" + index] = json.slice(index * 90000, (index + 1) * 90000);

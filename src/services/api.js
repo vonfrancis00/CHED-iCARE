@@ -4,7 +4,7 @@ import { demoDashboard, demoInstitutions } from "../data/demoData";
 const API_URL = import.meta.env.VITE_SHEET_API_URL?.trim();
 // Allow a cold Google Sheet read to finish; timeouts are not retried automatically.
 const API_TIMEOUT_MS = 60000;
-const CLIENT_CACHE_MS = 15 * 1000;
+const CLIENT_CACHE_MS = 5 * 60 * 1000;
 const RECORD_CACHE_MS = 5 * 60 * 1000;
 const responseCache = new Map();
 const pendingRequests = new Map();
@@ -27,22 +27,31 @@ async function request(action, params = {}) {
     return cached.promise;
   }
 
+  const revision = sheetDataRevision;
   const promise = fetchJson_(url, action).then(result => {
     if (action === "getInstitutions" && !Array.isArray(result.data)) {
       throw new Error("The data service returned invalid records. Please retry.");
     }
-    if (canCache) {
+    if (canCache && revision === sheetDataRevision) {
       if (responseCache.size >= 100) responseCache.delete(responseCache.keys().next().value);
       responseCache.set(cacheKey, { createdAt: Date.now(), data: result, promise: Promise.resolve(result) });
     }
+    if (!canCache) {
+      responseCache.clear();
+      pendingRequests.clear();
+      sheetDataRevision += 1;
+    }
     return result;
-  }).finally(() => pendingRequests.delete(cacheKey));
+  }).finally(() => {
+    if (pendingRequests.get(cacheKey) === promise) pendingRequests.delete(cacheKey);
+  });
   if (canCache) {
     pendingRequests.set(cacheKey, promise);
   }
 
   if (action === "clearDashboardCache") {
     responseCache.clear();
+    pendingRequests.clear();
     sheetDataRevision += 1;
   }
   return promise;

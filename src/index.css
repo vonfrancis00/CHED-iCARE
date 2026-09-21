@@ -204,7 +204,7 @@ h1, h2, h3, h4, h5, h6 { font-family: "Plus Jakarta Sans", "DM Sans", ui-sans-se
   .login-intro-brand { gap: 18px; font-size: 13px; }.login-intro-brand strong { font-size: 15px; }
   .login-intro h1 { max-width: 620px; margin: 22px 0 20px; font-size: clamp(52px, 4.2vw, 68px); }
   .login-intro-copy p { font-size: 16px; }.login-intro-meta { gap: 34px; padding-top: 24px; }
-  .login-panel { box-sizing: border-box; width: min(445px, calc(100% - 42px)); min-height: 572px; justify-self: end; align-self: center; margin: 0 10vw 0 0; padding: 36px 60px 30px; border-radius: 26px; background: rgb(255 255 255 / .94); }
+  .login-panel { box-sizing: border-box; width: min(445px, calc(100% - 42px)); min-height: 572px; justify-self: end; align-self: center; margin: 0 23vw 0 0; padding: 36px 60px 30px; border-radius: 26px; background: rgb(255 255 255 / .94); }
   .login-panel-footer { margin-top: auto; padding-top: 30px; }
   .login-intro-meta { margin-bottom: 112px; }
   .login-intro::after { bottom: 42px; }
@@ -214,14 +214,19 @@ h1, h2, h3, h4, h5, h6 { font-family: "Plus Jakarta Sans", "DM Sans", ui-sans-se
 
 /* Refine the hero hierarchy and readability. */
 @media (min-width: 821px) {
-  .login-page { background-image: linear-gradient(90deg, rgb(242 249 255 / .80) 0%, rgb(232 244 253 / .60) 43%, rgb(218 237 249 / .13) 72%), url('/CHED-building.jpg'); }
-  .login-intro-copy { transform: translateY(-40px); }
-  .login-intro-copy p { transform: translateY(72px); }
-  .login-intro h1 { font-size: clamp(50px, 3.9vw, 63px); }
+  .login-page { background-image: linear-gradient(90deg, rgb(242 250 255 / .68) 0%, rgb(232 246 255 / .35) 43%, rgb(218 237 249 / .04) 72%), url('/CHED-building.jpg'); }
+  .login-intro-copy { display: flex; flex: 1; flex-direction: column; align-items: flex-start; margin: 18px 0 0; transform: none; }
+  .login-intro-copy p { margin-top: auto; padding-top: 32px; padding-bottom: 48px; color: #164b78; transform: none; }
+  .login-intro h1 { margin-top: 16px; font-size: clamp(46px, 3.4vw, 58px); color: #073b82; }
+  .login-intro h1 em { color: #008dbd; }
+  .login-kicker { color: #0066a3; border-color: #159ee3; background: rgb(240 251 255 / .85); }
   .login-intro-brand img { width: 86px; height: 86px; }
   .login-intro-brand { gap: 14px; font-size: 11px; }.login-intro-brand strong { font-size: 13px; }
   .login-intro::after { display: none; }
 }
+
+.login-submit { background: linear-gradient(115deg, #124da4, #0085b5); }
+.login-submit:hover:not(:disabled) { background: linear-gradient(115deg, #104491, #00749f); }
 
 /* At compact desktop widths, keep the building's CHED facade visible beside the form. */
 @media (min-width: 821px) and (max-width: 1100px) {

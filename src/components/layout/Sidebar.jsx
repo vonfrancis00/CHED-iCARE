@@ -94,9 +94,9 @@ export default function Sidebar({ mobileOpen, onClose, user, onLogout }) {
               <span>{user.office || (user.role === "super_admin" ? "Super Admin" : "Admin")}</span>
             </div>
           </div>
-          <button type="button" onClick={onLogout} className="sidebar-signout" aria-label="Sign out" title="Sign out">
+          <button type="button" onClick={onLogout} className="sidebar-signout" aria-label="Log out" title="Log out">
             <span className="sidebar-signout-icon"><LogOut size={18} aria-hidden="true" /></span>
-            <span className="sidebar-label">Sign out</span>
+            <span className="sidebar-label">Log Out</span>
           </button>
         </footer>
       </aside>

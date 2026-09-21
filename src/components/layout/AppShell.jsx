@@ -27,12 +27,12 @@ export default function AppShell({ children, user, onLogout }) {
           <div className="logout-modal" role="dialog" aria-modal="true" aria-labelledby="logout-title" aria-describedby="logout-description" onKeyDown={(event) => { if (event.key === "Escape") setConfirmLogout(false); }}>
             <button type="button" className="logout-modal-close" onClick={() => setConfirmLogout(false)} aria-label="Close confirmation"><X size={20} /></button>
             <div className="logout-modal-icon"><LogOut size={26} aria-hidden="true" /></div>
-            <p className="logout-modal-eyebrow">Sign out</p>
+            <p className="logout-modal-eyebrow">Log out</p>
             <h2 id="logout-title">End your session?</h2>
             <p id="logout-description">You will need to sign in again to access the dashboard.</p>
             <div className="logout-modal-actions">
               <button type="button" className="logout-cancel" onClick={() => setConfirmLogout(false)} autoFocus>Cancel</button>
-              <button type="button" className="logout-confirm" onClick={handleLogout}>Sign out</button>
+              <button type="button" className="logout-confirm" onClick={handleLogout}>Log out</button>
             </div>
           </div>
         </div>

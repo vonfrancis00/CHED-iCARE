@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, CheckCircle2, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from 'lucide-react';
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('');
@@ -38,18 +38,11 @@ export default function Login({ onLogin }) {
           <h1>
             Childcare
             <br />
-            <em>Development</em> Dashboard
+            <em>Development</em>
+            <br />
+            Dashboard
           </h1>
-          <p>A single, reliable view of institutions and programs supporting Filipino families.</p>
-      </div>
-      <div className="login-intro-meta">
-        <span>
-          <CheckCircle2 size={16} /> 
-          Secure internal platform
-        </span>
-        <span>
-          Data-informed public service
-        </span>
+          <p>Monitor childcare institutions and programs in one place.</p>
       </div>
       <div className="login-orb login-orb-one" />
       <div className="login-orb login-orb-two" />
@@ -63,12 +56,11 @@ export default function Login({ onLogin }) {
         <div className="login-icon">
           <ShieldCheck size={26} />
         </div>
-          <p className="login-eyebrow">Secure access</p>
-          <h2>Welcome back</h2>
-          <p className="login-description">Sign in with your authorized CHED account to continue.</p>
+          <h2>Sign in</h2>
+          <p className="login-description">Use your CHED account to access the dashboard.</p>
         <form className="login-form" onSubmit={submit}>
           <div className="login-field">
-            <label htmlFor="login-email">CHED email address</label>
+            <label htmlFor="login-email">Email address</label>
           <div className="login-input-wrap">
             <Mail size={18} aria-hidden="true" />
             <input id="login-email" type="email" autoComplete="username" required value={email} 
@@ -91,12 +83,12 @@ export default function Login({ onLogin }) {
             </div>
           {error && <p className="login-error" role="alert">{error}</p>}
           <button className="login-submit" type="submit" disabled={loading}>
-            {loading ? 'Signing in…' : <>Sign in securely <ArrowRight size={18} aria-hidden="true" /></>}
+            {loading ? 'Signing in…' : <>Continue <ArrowRight size={18} aria-hidden="true" /></>}
           </button>
         </form>
         <p className="login-security-note">
           <LockKeyhole size={14} aria-hidden="true" /> 
-          Your access is protected and monitored.
+          Authorized personnel only.
         </p>
       </div>
       <p className="login-panel-footer">© {new Date().getFullYear()} Commission on Higher Education</p>
