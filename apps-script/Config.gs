@@ -3,7 +3,8 @@ const CONFIG = {
   SPREADSHEET_ID: getScriptProperty_("SPREADSHEET_ID", "1MrOU3ydtDTi5nAD4KGf6MQLfopMjfRl7-yGePeJxSWA"),
   SHEETS: {
     RESPONSES: "Form Responses 1",
-    OCC: "Per OCC"
+    OCC: "Per OCC",
+    USERS: "Users"
   },
   CACHE_SECONDS: 300,
   MAX_RESPONSE_ROWS: 5000,

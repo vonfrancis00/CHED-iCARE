@@ -1,7 +1,8 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import AppShell from "./components/layout/AppShell";
 import Loading from "./components/common/Loading";
+import Login from "./pages/Login";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Institutions = lazy(() => import("./pages/Institutions"));
@@ -14,22 +15,31 @@ const Reports = lazy(() => import("./pages/Reports"));
 const Settings = lazy(() => import("./pages/Settings"));
 
 export default function App() {
+  const [user, setUser] = useState(undefined);
+  useEffect(() => {
+    fetch('/api/sheet?action=session', { credentials: 'same-origin', cache: 'no-store' })
+      .then(response => response.json()).then(result => setUser(result.user || null)).catch(() => setUser(null));
+  }, []);
+  if (user === undefined) return <Loading label="Checking session..." />;
+  if (!user) return <Login onLogin={setUser} />;
   return (
-    <AppShell>
-      <Suspense fallback={<Loading label="Loading dashboard..." />}>
+    <Suspense fallback={<Loading label="Loading dashboard..." />}>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/institutions" element={<Institutions />} />
-          <Route path="/childcare" element={<Childcare />} />
-          <Route path="/solo-parents" element={<SoloParents />} />
-          <Route path="/geographic" element={<Geographic />} />
-          <Route path="/occ" element={<OCC />} />
-          <Route path="/responses" element={<SurveyResponses />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/*" element={<AppShell user={user} onLogout={() => {
+            fetch('/api/sheet?action=logout', { method: 'POST' }).finally(() => setUser(null));
+          }}><Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/institutions" element={<Institutions />} />
+            <Route path="/childcare" element={<Childcare />} />
+            <Route path="/solo-parents" element={<SoloParents />} />
+            <Route path="/geographic" element={<Geographic />} />
+            <Route path="/occ" element={<OCC />} />
+            <Route path="/responses" element={<SurveyResponses />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/settings" element={user.role === "super_admin" ? <Settings user={user} /> : <Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes></AppShell>} />
         </Routes>
-      </Suspense>
-    </AppShell>
+    </Suspense>
   );
 }

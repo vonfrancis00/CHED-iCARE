@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "seed:super-admin": "node --env-file=.env scripts/seed-super-admin.mjs"
   },
   "dependencies": {
     "jspdf": "^4.2.1",
@@ -23,5 +24,8 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.16",
     "vite": "^6.0.5"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true
   }
 }

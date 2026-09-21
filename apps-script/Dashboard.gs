@@ -135,14 +135,16 @@ function getInstitutions(params) {
   const page = Math.max(1, Number(params.page) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(params.pageSize) || 20));
   const query = String(params.query || "").trim().toLowerCase();
-  const queryKey = query ? Utilities.base64EncodeWebSafe(query).slice(0, 80) : "ALL";
+  const institutionType = String(params.institutionType || "").trim().toUpperCase();
+  const region = String(params.region || "").trim().toLowerCase();
+  const filterKey = Utilities.base64EncodeWebSafe([query, institutionType, region].join("|")).slice(0, 120) || "ALL";
   // CacheService cannot delete entries by prefix. Include this revision in every
   // page key so a refresh immediately makes every paginated/search cache stale.
   const revision = getResponseCacheRevision_();
-  return getOrBuildCache_(cacheKey_("INSTITUTIONS_PAGE_" + revision + "_" + page + "_" + pageSize + "_" + queryKey), () => buildInstitutionsPage_(page, pageSize, query));
+  return getOrBuildCache_(cacheKey_("INSTITUTIONS_PAGE_" + revision + "_" + page + "_" + pageSize + "_" + filterKey), () => buildInstitutionsPage_(page, pageSize, query, institutionType, region));
 }
 
-function buildInstitutionsPage_(page, pageSize, query) {
+function buildInstitutionsPage_(page, pageSize, query, institutionType, region) {
   // Share the dashboard's cached dataset for browsing AND searching. Once warm,
   // paging needs no spreadsheet reads and all totals refer to the same snapshot.
   const dataset = getRawDataset_();
@@ -150,9 +152,12 @@ function buildInstitutionsPage_(page, pageSize, query) {
   const institutionCount = new Set(rows.map(row => String(headerValue_(row, H.institution) || "").trim()).filter(Boolean)).size;
   const campusCount = new Set(rows.map(row => String(headerValue_(row, H.campus) || "").trim()).filter(Boolean)).size;
   const institutionTypes = countInstitutionTypes_(rows);
-  const matches = (query
-    ? rows.filter(row => Object.values(row).some(value => String(value == null ? "" : value).toLowerCase().includes(query)))
-    : rows.slice()).reverse();
+  const matches = rows.filter(row => {
+    const matchesQuery = !query || Object.values(row).some(value => String(value == null ? "" : value).toLowerCase().includes(query));
+    const matchesType = !institutionType || String(headerValue_(row, H.institutionType) || "").trim().toUpperCase() === institutionType;
+    const matchesRegion = !region || String(headerValue_(row, H.region) || "").trim().toLowerCase() === region;
+    return matchesQuery && matchesType && matchesRegion;
+  }).reverse();
   const start = (page - 1) * pageSize;
   return {
     success: true, source: "google-sheet", updatedAt: new Date().toISOString(),
@@ -160,7 +165,9 @@ function buildInstitutionsPage_(page, pageSize, query) {
     data: matches.slice(start, start + pageSize).map(addDisplayFields_),
     total: matches.length, page: page, pageSize: pageSize,
     institutionCount: institutionCount, campusCount: campusCount,
-    lucCount: institutionTypes.luc, sucCount: institutionTypes.suc
+    lucCount: institutionTypes.luc, sucCount: institutionTypes.suc,
+    regions: Array.from(new Set(rows.map(row => String(headerValue_(row, H.region) || "").trim()).filter(Boolean))).sort(),
+    filters: { institutionType: institutionType, region: region, query: query }
   };
 }
 

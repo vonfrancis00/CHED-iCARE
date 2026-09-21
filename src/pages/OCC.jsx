@@ -39,7 +39,7 @@ export default function OCC() {
           <div>
             <div className="mb-4 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-100"><Building2 size={15} /> Office oversight</div>
             <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl uppercase">OCC / Office Monitoring</h1>
-            <p className="mt-3 max-w-lg text-sm leading-6 text-blue-100">Overview of institutional assignments, survey completion, and monitoring progress across commissioner offices.</p>
+            <p className="mt-3 max-w-lg text-sm leading-6 text-blue-100">Overview of institutional assignments, survey completion, and monitoring progress across Chairperson and Commissioner offices.</p>
             <button type="button" onClick={refresh} disabled={refreshing} className="mt-6 inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-3.5 py-2 text-xs font-semibold transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300 disabled:opacity-50"><RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />{refreshing ? "Refreshing…" : "Refresh data"}</button>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">

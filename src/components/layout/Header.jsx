@@ -1,5 +1,6 @@
-import { Menu, RefreshCw, Bell } from "lucide-react";
+import { Menu, RefreshCw, Bell, LogOut } from "lucide-react";
 import { useLocation } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const titles = {
   "/": ["Dashboard", "Executive overview of childcare development survey responses"],
@@ -14,8 +15,13 @@ const titles = {
 };
 
 export default function Header({ onMenu }) {
+  const { user, logout } = useAuth();
   const location = useLocation();
   const [title, subtitle] = titles[location.pathname] || titles["/"];
+
+  function handleLogout() {
+    if (window.confirm("Are you sure you want to log out and end your session?")) logout();
+  }
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
@@ -30,7 +36,8 @@ export default function Header({ onMenu }) {
         <div className="flex items-center gap-2">
           <button className="rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"><RefreshCw size={18}/></button>
           <button className="rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"><Bell size={18}/></button>
-          <div className="hidden h-9 w-9 items-center justify-center rounded-full bg-teal-100 font-bold text-teal-700 sm:flex">A</div>
+          <div className="hidden text-right sm:block"><p className="max-w-40 truncate text-xs font-semibold text-slate-700">{user?.email}</p><p className="text-[10px] text-slate-500">{user?.role}</p></div>
+          <button type="button" onClick={handleLogout} aria-label="Sign out" title="Sign out" className="rounded-xl border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"><LogOut size={18}/></button>
         </div>
       </div>
     </header>

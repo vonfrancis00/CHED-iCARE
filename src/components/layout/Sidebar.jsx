@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Baby, BarChart3, BriefcaseBusiness, Building2, ChevronRight, ClipboardList, Clock3, FileText, Map, RefreshCw, Settings, Users, X } from "lucide-react";
+import { Baby, BarChart3, BriefcaseBusiness, Building2, ChevronRight, ClipboardList, Clock3, FileText, LogOut, Map, RefreshCw, Settings, UserRound, Users, X } from "lucide-react";
 import { useDashboard } from "../../hooks/useDashboard";
 
 const navGroups = [
@@ -66,7 +66,7 @@ function SidebarUpdateStatus() {
   );
 }
 
-export default function Sidebar({ mobileOpen, onClose }) {
+export default function Sidebar({ mobileOpen, onClose, user, onLogout }) {
   return (
     <>
       {mobileOpen && <button type="button" className="sidebar-backdrop" aria-label="Close navigation" onClick={onClose} />}
@@ -86,7 +86,18 @@ export default function Sidebar({ mobileOpen, onClose }) {
         </nav>
         <footer className="sidebar-footer">
           <SidebarUpdateStatus />
-          <SidebarLink item={["Settings", "/settings", Settings]} onClose={onClose} />
+          {user.role === "super_admin" && <SidebarLink item={["Settings", "/settings", Settings]} onClose={onClose} />}
+          <div className="sidebar-account" title={`${user.name || user.email}${user.office ? ` · ${user.office}` : ""}`}>
+            <span className="sidebar-icon"><UserRound size={22} aria-hidden="true" /></span>
+            <div className="sidebar-label sidebar-account-copy">
+              <strong>{user.name || user.email}</strong>
+              {user.office && <span>{user.office}</span>}
+            </div>
+          </div>
+          <button type="button" onClick={onLogout} className="sidebar-signout" aria-label="Sign out" title="Sign out">
+            <span className="sidebar-icon"><LogOut size={22} aria-hidden="true" /></span>
+            <span className="sidebar-label">Sign out</span>
+          </button>
         </footer>
       </aside>
     </>

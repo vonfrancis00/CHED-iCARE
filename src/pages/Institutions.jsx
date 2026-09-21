@@ -1,31 +1,68 @@
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Building2, ChevronLeft, ChevronRight, Eye, Search, X, Database, LoaderCircle } from "lucide-react";
 import { useInstitutionPage } from "../hooks/useInstitutionPage";
+import { getInstitutions } from "../services/api";
 import Loading from "../components/common/Loading";
 
+function matchesFilters(row, institutionType, region) {
+  const type = String(row["SUC/LUC"] || "").trim().toUpperCase();
+  const rowRegion = String(row.Region || "").trim().toLowerCase();
+  return (!institutionType || type === institutionType) && (!region || rowRegion === region.trim().toLowerCase());
+}
+
+function sortRegions(regions) {
+  return [...regions].sort((a, b) => {
+    const aNumber = /^Region\s+(\d+)$/i.exec(a)?.[1];
+    const bNumber = /^Region\s+(\d+)$/i.exec(b)?.[1];
+    if (aNumber && bNumber) return Number(aNumber) - Number(bNumber);
+    if (aNumber) return -1;
+    if (bNumber) return 1;
+    return a.localeCompare(b);
+  });
+}
 
 export default function Institutions() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const tableRef = useRef(null);
   const [q, setQ] = useState("");
+  const [institutionType, setInstitutionType] = useState("");
+  const [region, setRegion] = useState("");
+  const [filterPending, setFilterPending] = useState(false);
   const [selected, setSelected] = useState(null);
-  const { data, loading, error, reload } = useInstitutionPage(page, pageSize, q);
-  const rows = data?.data || [];
+  const filters = { institutionType, region };
+  const { data, loading, error, reload, hasCurrentData } = useInstitutionPage(page, pageSize, q, filters);
+  // The API filters records as well, but keep this guard at the UI boundary so
+  // a stale deployment or cached response can never show a LUC as a SUC.
+  const rows = (data?.data || []).filter(row => matchesFilters(row, institutionType, region));
   const headers = data?.headers || [];
   const total = Number(data?.total) || 0;
-  const institutionCount = Number(data?.institutionCount) || 0;
   const lucCount = Number(data?.lucCount) || 0;
   const sucCount = Number(data?.sucCount) || 0;
+  const regions = sortRegions(data?.regions || []);
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
   const firstRow = total ? (currentPage - 1) * pageSize + 1 : 0;
   const lastRow = Math.min(currentPage * pageSize, total);
-  const isSearching = loading;
+  const isSearching = loading && Boolean(q);
+  const isPageLoading = loading && Boolean(data);
+  const isFilterLoading = filterPending && !hasCurrentData && !error;
+  const visibleRows = isFilterLoading ? [] : rows;
   const loadInstitutions = reload;
   const changePage = nextPage => { setPage(nextPage); tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
   const changePageSize = nextPageSize => { setPage(1); setPageSize(nextPageSize); };
+
+  // Once this page is ready, warm the cache for the following one. A Next
+  // click can then use the already-running (or completed) request.
+  useEffect(() => {
+    if (loading || !data || page >= pageCount) return;
+    getInstitutions({ page: page + 1, pageSize, query: q.trim().toLowerCase(), institutionType: institutionType.trim().toUpperCase(), region: region.trim().toLowerCase() }).catch(() => {});
+  }, [data, loading, page, pageCount, pageSize, q, institutionType, region]);
+
+  useEffect(() => {
+    if (hasCurrentData || error) setFilterPending(false);
+  }, [error, hasCurrentData]);
 
   // Do not allow a failed initial request to mask its error screen with the
   // full-page spinner.
@@ -66,7 +103,7 @@ export default function Institutions() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -106,20 +143,8 @@ export default function Institutions() {
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Institutions</p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">{institutionCount}</p>
-            </div>
-            <div className="rounded-2xl bg-indigo-100 p-3 text-indigo-700">
-              <Building2 size={22} />
-            </div>
-          </div>
-        </div>
-
-        <div className="card p-5">
-          <div className="flex items-center justify-between">
-            <div>
               <p className="text-sm text-slate-500">Visible rows</p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">{rows.length}</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-900">{visibleRows.length}</p>
             </div>
             <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
               <Search size={22} />
@@ -129,16 +154,20 @@ export default function Institutions() {
       </div>
 
       <div className="card mb-5 p-4">
-        <div className="relative">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_220px]">
+          <div className="relative">
           <Search className="absolute left-3 top-3.5 text-slate-400" size={18}/>
-          <input value={q} onChange={e => { setPage(1); setQ(e.target.value); }} placeholder="Search any of the 31 fields..." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 outline-none focus:border-blue-500" aria-label="Search institutions" aria-busy={isSearching}/>
+          <input value={q} onChange={e => { setFilterPending(true); setPage(1); setQ(e.target.value); }} placeholder="Search any of the 31 fields..." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 outline-none focus:border-blue-500" aria-label="Search institutions" aria-busy={isSearching}/>
           {isSearching && <LoaderCircle className="absolute right-3 top-3.5 animate-spin text-blue-600" size={18} aria-label="Searching"/>}
+        </div>
+          <select value={institutionType} onChange={event => { setFilterPending(true); setPage(1); setInstitutionType(event.target.value); }} aria-label="Filter by institution type" className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 outline-none focus:border-blue-500"><option value="">All types</option><option value="LUC">LUC</option><option value="SUC">SUC</option></select>
+          <select value={region} onChange={event => { setFilterPending(true); setPage(1); setRegion(event.target.value); }} aria-label="Filter by region" className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 outline-none focus:border-blue-500"><option value="">All regions</option>{regions.map(item => <option key={item} value={item}>{item}</option>)}</select>
         </div>
         <p className="mt-2 text-xs text-slate-500">{total.toLocaleString()} matching response{total === 1 ? "" : "s"} · showing {firstRow.toLocaleString()}–{lastRow.toLocaleString()}</p>
       </div>
 
       <div ref={tableRef} className="card overflow-hidden scroll-mt-6">
-        {isSearching && <div className="flex items-center gap-2 border-b border-blue-100 bg-blue-50 px-5 py-2.5 text-xs font-medium text-blue-800"><LoaderCircle size={15} className="animate-spin"/> Finding matching institutions...</div>}
+        {(isPageLoading || isFilterLoading) && <div className="flex items-center gap-2 border-b border-blue-100 bg-blue-50 px-5 py-2.5 text-xs font-medium text-blue-800" role="status"><LoaderCircle size={15} className="animate-spin"/>{isFilterLoading ? "Applying filters…" : `Loading page ${page}…`}</div>}
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
@@ -153,7 +182,7 @@ export default function Institutions() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {rows.map(row => (
+              {visibleRows.map(row => (
                 <tr key={row.rowNumber} className="hover:bg-slate-50">
                   <td className="sticky left-0 bg-white px-5 py-4 font-semibold text-slate-900">{row["Name of Institution"] || "—"}</td>
                   <td className="px-5 py-4">{row["Name of Institution Campus"] || "—"}</td>
@@ -167,10 +196,10 @@ export default function Institutions() {
             </tbody>
           </table>
         </div>
-        {!rows.length && !loading && <div className="p-10 text-center text-sm text-slate-500">No matching responses.</div>}
+        {!visibleRows.length && !loading && !isFilterLoading && <div className="p-10 text-center text-sm text-slate-500">No matching responses.</div>}
         {total > 0 && <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="text-slate-500">Showing <span className="font-semibold text-slate-700">{firstRow}–{lastRow}</span> of {total.toLocaleString()}</div>
-          <div className="flex flex-wrap items-center gap-3"><label className="flex items-center gap-2 text-xs text-slate-500">Rows per page<select value={pageSize} onChange={event => changePageSize(Number(event.target.value))} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-blue-600"><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select></label><div className="flex items-center gap-1"><button type="button" onClick={() => changePage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} aria-label="Previous page" className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={16} /></button><span className="min-w-20 text-center text-xs font-medium text-slate-600">Page {currentPage} of {pageCount}</span><button type="button" onClick={() => changePage(Math.min(pageCount, currentPage + 1))} disabled={currentPage === pageCount} aria-label="Next page" className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"><ChevronRight size={16} /></button></div></div>
+          <div className="flex flex-wrap items-center gap-3"><label className="flex items-center gap-2 text-xs text-slate-500">Rows per page<select value={pageSize} onChange={event => changePageSize(Number(event.target.value))} disabled={isPageLoading} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-50"><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select></label><div className="flex items-center gap-1"><button type="button" onClick={() => changePage(Math.max(1, currentPage - 1))} disabled={isPageLoading || currentPage === 1} aria-label="Previous page" className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={16} /></button><span className="min-w-20 text-center text-xs font-medium text-slate-600" aria-live="polite">{isPageLoading ? `Loading ${page}…` : `Page ${currentPage} of ${pageCount}`}</span><button type="button" onClick={() => changePage(Math.min(pageCount, currentPage + 1))} disabled={isPageLoading || currentPage === pageCount} aria-label="Next page" aria-busy={isPageLoading} className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40">{isPageLoading ? <LoaderCircle size={16} className="animate-spin" /> : <ChevronRight size={16} />}</button></div></div>
         </div>}
       </div>
 

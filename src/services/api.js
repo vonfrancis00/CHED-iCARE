@@ -2,7 +2,6 @@
 import { demoDashboard, demoInstitutions } from "../data/demoData";
 
 const API_URL = import.meta.env.VITE_SHEET_API_URL?.trim();
-const API_ACCESS_CODE = import.meta.env.VITE_SHEET_API_ACCESS_CODE?.trim();
 // Allow a cold Google Sheet read to finish; timeouts are not retried automatically.
 const API_TIMEOUT_MS = 60000;
 const CLIENT_CACHE_MS = 15 * 1000;
@@ -68,9 +67,6 @@ function buildApiUrl_(action, params = {}, options = {}) {
     }
   });
 
-  if (options.includeCode && API_ACCESS_CODE) {
-    url.searchParams.set("code", API_ACCESS_CODE);
-  }
 
   if (action === "clearDashboardCache") {
     url.searchParams.set("_t", Date.now().toString());
