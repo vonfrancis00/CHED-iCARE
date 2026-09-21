@@ -7,7 +7,7 @@ import ProgramStatusChart from "../components/dashboard/ProgramStatusChart";
 import RegionalChart from "../components/dashboard/RegionalChart";
 import SoloParentChart from "../components/dashboard/SoloParentChart";
 import OCCChart from "../components/dashboard/OCCChart";
-import { Building2, Baby, Users, FileCheck, MapPin } from "lucide-react";
+import { Building2, Baby, Users, FileCheck, RefreshCw, ShieldCheck } from "lucide-react";
 
 export default function Dashboard() {
   const { data, loading, refreshing, error, reload } = useDashboard();
@@ -26,15 +26,33 @@ export default function Dashboard() {
         {error && <span className="text-amber-700">Could not refresh. Showing the last saved data.</span>}
         <button onClick={() => reload({ force: true })} disabled={refreshing} className="rounded-full bg-[#08264d] px-3 py-1.5 font-semibold text-white transition hover:bg-[#0e427d] disabled:opacity-50">Refresh</button>
       </div>
-      <div className="relative mb-7 overflow-hidden rounded-2xl border border-[#123b70] bg-[linear-gradient(115deg,#061a38_0%,#082b59_55%,#0e427d_100%)] px-5 py-5 shadow-[0_14px_30px_-18px_rgba(6,27,58,0.85)] sm:flex sm:flex-row sm:items-end sm:justify-between sm:px-6">
-        <div>
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-sky-300">Monitoring dashboard</p>
-          <h1 className="page-title font-extrabold uppercase !text-white">Childcare Development Overview</h1>
-          <p className="mt-2 text-sm leading-6 text-blue-100">Real-time monitoring of childcare development data, progress, and key performance indicators.</p>
+      <div className="relative mb-5 overflow-hidden rounded-2xl border border-[#123b70] bg-[linear-gradient(115deg,#061a38_0%,#082b59_55%,#0e427d_100%)] px-5 py-6 shadow-[0_14px_30px_-18px_rgba(6,27,58,0.85)] sm:px-7">
+        <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full border border-sky-200/15" />
+        <div className="pointer-events-none absolute right-16 top-8 h-28 w-28 rounded-full bg-cyan-300/10 blur-2xl" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex items-start gap-4">
+            <img src="/ched-logo.png" alt="Commission on Higher Education" className="mt-0.5 h-14 w-14 rounded-full bg-white/95 p-1.5 shadow-lg" />
+            <div>
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-sky-200">CHED Central Office · Monitoring dashboard</p>
+              <h1 className="page-title font-extrabold !text-white">Childcare Development Overview</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-100">A single, reliable view of institutional responses, program readiness, and support for Filipino families.</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+            <div className="flex items-center gap-2 text-xs text-sky-100"><ShieldCheck size={16} className="text-cyan-200" /> Secure internal platform</div>
+            <button onClick={() => reload({ force: true })} disabled={refreshing} className="inline-flex items-center gap-2 rounded-full border border-sky-200/30 bg-white/10 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-wait disabled:opacity-60">
+              <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} /> {refreshing ? "Refreshing..." : "Refresh data"}
+            </button>
+          </div>
         </div>
         {/* <div className="mt-4 shrink-0 rounded-full border border-sky-300/30 bg-white/10 px-4 py-2 text-xs font-semibold text-sky-100 shadow-sm backdrop-blur-sm sm:mt-0">
           Source: {data.source === "google-sheet" ? "Google Sheet" : "Demo data"}
         </div> */}
+      </div>
+
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-slate-500">
+        <span>{data.cachedAt || data.updatedAt ? `Last updated ${new Date(data.cachedAt || data.updatedAt).toLocaleString()}` : "Showing saved data"}</span>
+        {error && <span className="font-medium text-amber-700">Could not refresh; showing the last saved data.</span>}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">

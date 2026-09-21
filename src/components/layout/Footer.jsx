@@ -16,8 +16,8 @@ export default function Footer() {
           />
           </div>
 
-          <p className="text-medium text-center font-bold leading-5 text-[#c9d6e8]">
-          <span className="block font-bold uppercase text-[#f4f8ff] text-center">Childcare Development Dashboard</span>
+          <p className="text-center text-sm font-medium leading-6 tracking-[0.01em] text-[#b9cbe2]">
+          <span className="mb-1 block font-['Plus_Jakarta_Sans'] text-base font-bold tracking-[0.01em] text-[#f4f8ff]">Childcare Development Dashboard</span>
           Copyright &copy; Commission on Higher Education<br className="hidden sm:block" />
           <span className="sm:hidden"> · </span>
           All Rights Reserved

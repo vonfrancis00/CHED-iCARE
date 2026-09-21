@@ -81,21 +81,21 @@ export default function Sidebar({ mobileOpen, onClose, user, onLogout }) {
             <section className="sidebar-section" key={group.label} aria-label={group.label}>
               <div className="sidebar-section-title sidebar-label">{group.label}</div>
               {group.items.map((item) => <SidebarLink key={item[1]} item={item} onClose={onClose} />)}
+              {group.label === "Records" && user.role === "super_admin" && <SidebarLink item={["Settings", "/settings", Settings]} onClose={onClose} />}
             </section>
           ))}
         </nav>
         <footer className="sidebar-footer">
           <SidebarUpdateStatus />
-          {user.role === "super_admin" && <SidebarLink item={["Settings", "/settings", Settings]} onClose={onClose} />}
           <div className="sidebar-account" title={`${user.name || user.email}${user.office ? ` · ${user.office}` : ""}`}>
-            <span className="sidebar-icon"><UserRound size={22} aria-hidden="true" /></span>
+            <span className="sidebar-account-avatar"><UserRound size={20} aria-hidden="true" /></span>
             <div className="sidebar-label sidebar-account-copy">
               <strong>{user.name || user.email}</strong>
-              {user.office && <span>{user.office}</span>}
+              <span>{user.office || (user.role === "super_admin" ? "Super Admin" : "Admin")}</span>
             </div>
           </div>
           <button type="button" onClick={onLogout} className="sidebar-signout" aria-label="Sign out" title="Sign out">
-            <span className="sidebar-icon"><LogOut size={22} aria-hidden="true" /></span>
+            <span className="sidebar-signout-icon"><LogOut size={18} aria-hidden="true" /></span>
             <span className="sidebar-label">Sign out</span>
           </button>
         </footer>
