@@ -105,7 +105,8 @@ export default async function handler(req, res, env = process.env) {
     upstream.searchParams.set('pageSize', '20');
   }
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), action === 'login' ? 20000 : 55000);
+  // A cold authentication request needs the full upstream budget too.
+  const timer = setTimeout(() => controller.abort(), 55000);
   try {
     if (['login', 'createUser', 'updateUser', 'deleteUser'].includes(action)) {
       let body = '';

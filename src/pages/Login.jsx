@@ -6,21 +6,24 @@ export default function Login({ onLogin }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [slowLogin, setSlowLogin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   async function submit(event) {
     event.preventDefault();
     if (loading) return;
-    setError(''); setLoading(true);
+    setError(''); setLoading(true); setSlowLogin(false);
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 25000);
+    const slowTimer = window.setTimeout(() => setSlowLogin(true), 8000);
+    // Leave time for the server's 55-second deadline and its response.
+    const timeout = window.setTimeout(() => controller.abort(), 60000);
     try {
       const response = await fetch('/api/sheet?action=login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim(), password }), credentials: 'same-origin', signal: controller.signal });
       const result = await response.json();
       if (!response.ok || !result.success || !result.user) throw new Error(result.message || 'Unable to sign in.');
       onLogin(result.user);
     } catch (cause) { setError(cause.name === 'AbortError' ? 'Sign-in took too long. Please try again.' : cause.message || 'Unable to sign in. Please retry.'); }
-    finally { window.clearTimeout(timeout); setLoading(false); }
+    finally { window.clearTimeout(timeout); window.clearTimeout(slowTimer); setLoading(false); setSlowLogin(false); }
   }
 
   return <main className="login-page"><div className="login-shell">
@@ -86,6 +89,7 @@ export default function Login({ onLogin }) {
             </div>
             </div>
           {error && <p className="login-error" role="alert">{error}</p>}
+          {loading && slowLogin && <p className="login-description" role="status">Sign-in is taking longer than usual. Please keep this page open; your request is still processing.</p>}
           <button className="login-submit" type="submit" disabled={loading}>
             {loading ? 'Signing in…' : <>Continue <ArrowRight size={18} aria-hidden="true" /></>}
           </button>

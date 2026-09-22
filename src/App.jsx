@@ -37,11 +37,8 @@ export default function App() {
         setUser(result.user || null);
       }).catch(() => setUser(null));
   }, []);
-  useEffect(() => {
-    if (user !== null) return;
-    // Warm server memory while the user types; records stay behind login.
-    void fetch('/api/sheet?action=prepareRecords', { credentials: 'same-origin', cache: 'no-store' }).catch(() => {});
-  }, [user]);
+  // Fetch records after authentication so a cold data load does not compete
+  // with the user's first sign-in request.
   if (user === undefined) return <Loading label="Checking session..." />;
   if (!user) return <Login onLogin={(signedInUser) => {
     prefetchRecords();

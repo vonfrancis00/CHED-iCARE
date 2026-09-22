@@ -5,6 +5,36 @@ import vm from 'node:vm';
 import { Readable } from 'node:stream';
 import handler from '../api/sheet.js';
 
+test('a cold login can finish after 30 seconds without resubmitting', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async (_url, options) => {
+    calls++;
+    await new Promise((resolve, reject) => {
+      setTimeout(resolve, 30000);
+      options.signal.addEventListener('abort', () => reject(Object.assign(new Error('Aborted'), { name: 'AbortError' })), { once: true });
+    });
+    return Response.json({ success: true, user: { email: 'test@example.com' } });
+  };
+  const req = {
+    url: '/api/sheet?action=login', method: 'POST', headers: {},
+    async *[Symbol.asyncIterator]() { yield JSON.stringify({ email: 'test@example.com', password: 'test-password' }); }
+  };
+  const res = { headers: {}, setHeader(key, value) { this.headers[key] = value; }, status(code) { this.code = code; return this; }, json(payload) { this.payload = payload; return this; } };
+  try {
+    const pending = handler(req, res, { SESSION_SECRET: 'test-secret', SHEET_API_URL: 'https://script.google.com/macros/s/test/exec' });
+    // Let request-body parsing reach the upstream call before advancing time.
+    for (let i = 0; i < 10 && calls === 0; i++) await Promise.resolve();
+    assert.equal(calls, 1);
+    t.mock.timers.tick(30000);
+    const result = await pending;
+    assert.equal(result.code, 200);
+    assert.ok(result.headers['Set-Cookie']);
+    assert.equal(calls, 1);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
 test('login reads account details only for matching emails and respects password changes', () => {
   const rows = [
     ['Name', 'Email', 'Office', 'Password', 'Role'],
