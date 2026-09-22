@@ -75,14 +75,14 @@ export default async function handler(req, res, env = process.env) {
     return res.status(200).json({ success: true });
   }
   if (action === 'session' && req.method === 'GET') return res.status(200).json({ success: true, user: session(req, secret) });
-  if (!['prepareRecords', 'login', 'createUser', 'updateUser', 'deleteUser', 'listUsers', 'getDashboardData', 'getInstitutions', 'getSurveyResponses', 'clearDashboardCache'].includes(action)) {
+  if (!['prepareRecords', 'login', 'submitAccountRequest', 'createUser', 'updateUser', 'deleteUser', 'approveAccountRequest', 'listUsers', 'listAccountRequests', 'listRequestOffices', 'getDashboardData', 'getInstitutions', 'getSurveyResponses', 'clearDashboardCache'].includes(action)) {
     return res.status(400).json({ success: false, message: 'Unknown action.' });
   }
-  if (['login', 'createUser', 'updateUser', 'deleteUser'].includes(action) ? req.method !== 'POST' : req.method !== 'GET') return res.status(405).json({ success: false, message: 'Method not allowed.' });
+  if (['login', 'submitAccountRequest', 'createUser', 'updateUser', 'deleteUser', 'approveAccountRequest'].includes(action) ? req.method !== 'POST' : req.method !== 'GET') return res.status(405).json({ success: false, message: 'Method not allowed.' });
   const currentUser = session(req, secret);
-  if (action !== 'login' && !prepareRecords && !currentUser) return res.status(401).json({ success: false, message: 'Please sign in.' });
-  if (['createUser', 'updateUser', 'deleteUser', 'listUsers'].includes(action) && currentUser.role !== 'super_admin') return res.status(403).json({ success: false, message: 'Only a super admin can manage users.' });
-  if (['createUser', 'updateUser', 'deleteUser', 'listUsers'].includes(action) && !configuredCode) return res.status(503).json({ success: false, message: 'Configure the server-side Apps Script access code before managing users.' });
+  if (!['login', 'submitAccountRequest', 'listRequestOffices'].includes(action) && !prepareRecords && !currentUser) return res.status(401).json({ success: false, message: 'Please sign in.' });
+  if (['createUser', 'updateUser', 'deleteUser', 'approveAccountRequest', 'listUsers', 'listAccountRequests'].includes(action) && currentUser.role !== 'super_admin') return res.status(403).json({ success: false, message: 'Only a super admin can manage users.' });
+  if (['createUser', 'updateUser', 'deleteUser', 'approveAccountRequest', 'listUsers', 'listAccountRequests'].includes(action) && !configuredCode) return res.status(503).json({ success: false, message: 'Configure the server-side Apps Script access code before managing users.' });
   let upstream;
   try {
     upstream = new URL((env.SHEET_API_URL || env.VITE_SHEET_API_URL || '').trim());
@@ -93,7 +93,7 @@ export default async function handler(req, res, env = process.env) {
   upstream.search = '';
   upstream.searchParams.set('action', prepareRecords ? 'getInstitutions' : action);
   if (configuredCode && action !== 'login') upstream.searchParams.set('code', configuredCode);
-  if (action === 'listUsers') upstream.searchParams.set('actorEmail', currentUser.email);
+  if (['listUsers', 'listAccountRequests'].includes(action)) upstream.searchParams.set('actorEmail', currentUser.email);
   // Forward every record-filter parameter to Apps Script. Filtering must happen
   // upstream of pagination, otherwise a 20-row page can shrink to only the few
   // matching rows it happened to contain.
@@ -110,7 +110,7 @@ export default async function handler(req, res, env = process.env) {
   const timer = setTimeout(() => controller.abort(), 55000);
   let upstreamStartedAt;
   function recordLoginTiming() {
-    if (action !== 'login') return;
+    if (!['login', 'submitAccountRequest'].includes(action)) return;
     const now = performance.now();
     const timings = [`total;dur=${(now - startedAt).toFixed(1)}`];
     if (upstreamStartedAt !== undefined) {
@@ -120,27 +120,75 @@ export default async function handler(req, res, env = process.env) {
     res.setHeader('Server-Timing', timings.join(', '));
   }
   try {
-    if (['login', 'createUser', 'updateUser', 'deleteUser'].includes(action)) {
+    if (['login', 'submitAccountRequest', 'createUser', 'updateUser', 'deleteUser', 'approveAccountRequest'].includes(action)) {
       let body = '';
       for await (const chunk of req) {
         body += chunk;
         if (body.length > 4096) return res.status(413).json({ success: false, message: 'Request too large.' });
       }
       const credentials = JSON.parse(body);
-      const upstreamBody = action === 'login'
-        ? { code: configuredCode, email: credentials.email, password: credentials.password }
+      if (action === 'submitAccountRequest') {
+        credentials.name = String(credentials.name || '').trim();
+        credentials.email = String(credentials.email || '').trim().toLowerCase();
+        credentials.office = String(credentials.office || '').trim();
+        if (!credentials.name || !credentials.office || !/^[^\s@]+@ched\.gov\.ph$/.test(credentials.email)) {
+          return res.status(400).json({ success: false, message: 'Enter your name, a valid @ched.gov.ph email, and office.' });
+        }
+      }
+      const upstreamBody = action === 'login' || action === 'submitAccountRequest'
+        ? { code: configuredCode, action, email: credentials.email, password: credentials.password }
         : { code: configuredCode, action, actorEmail: currentUser.email,
             targetEmail: credentials.targetEmail, email: credentials.email, password: credentials.password,
-            name: credentials.name, office: credentials.office, role: credentials.role };
+            name: credentials.name, office: credentials.office, role: credentials.role, requestRow: credentials.requestRow };
+      if (action === 'submitAccountRequest') Object.assign(upstreamBody, { action, name: credentials.name, office: credentials.office });
       upstreamStartedAt = performance.now();
-      const response = await fetch(upstream, {
+      const sendPost = () => fetch(upstream, {
         method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(upstreamBody),
         redirect: 'follow', signal: controller.signal, cache: 'no-store'
       });
-      if (!response.ok) throw new Error(`Google returned HTTP ${response.status}`);
-      const payload = await response.json();
+      let response;
+      let payload;
+      try {
+        response = await sendPost();
+        if (!response.ok) throw new Error(`Google returned HTTP ${response.status}`);
+        payload = await response.json();
+      } catch (error) {
+        if (action !== 'submitAccountRequest') throw error;
+        payload = { success: false, message: 'Your request could not yet be confirmed. Please try again shortly.' };
+      }
+      // A write may have committed even if its response was lost. Read back the
+      // matching request; never repeat the write or assume a timeout is success.
+      if (action === 'submitAccountRequest' && !payload.success) {
+        const verification = new AbortController();
+        const verificationTimer = setTimeout(() => verification.abort(), 15000);
+        try {
+          const verificationUrl = new URL(upstream);
+          verificationUrl.search = '';
+          const checked = await fetch(verificationUrl, {
+            method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ ...upstreamBody, action: 'checkAccountRequest' }),
+            redirect: 'follow', signal: verification.signal, cache: 'no-store'
+          });
+          if (checked.ok) {
+            const confirmed = await checked.json();
+            if (confirmed.success === true) payload = confirmed;
+          }
+        } catch { /* Preserve the original failure if verification is unavailable. */ }
+        finally { clearTimeout(verificationTimer); }
+      }
+      // Login only reads credentials. Retry this specific service rejection once;
+      // never retry account writes or an invalid email/password response.
+      if (action === 'login' && payload.success === false && payload.message === 'Unauthorized request.') {
+        controller.signal.throwIfAborted();
+        response = await sendPost();
+        if (!response.ok) throw new Error(`Google returned HTTP ${response.status}`);
+        payload = await response.json();
+      }
       recordLoginTiming();
+      if (action === 'login' && payload.success === false && payload.message === 'Unauthorized request.') {
+        return res.status(503).json({ success: false, message: 'The sign-in service rejected the server access code. Please ask the administrator to check the Apps Script deployment and access-code configuration.' });
+      }
       if (action === 'login' && payload.success && payload.user) setSession(res, payload.user, secret, secure);
       return res.status(payload.success ? 200 : action === 'login' ? 401 : 400).json(payload);
     }
@@ -155,7 +203,7 @@ export default async function handler(req, res, env = process.env) {
     return res.status(error.name === 'AbortError' ? 504 : 502).json({
       success: false,
       message: error.name === 'AbortError'
-        ? action === 'login' ? 'Sign-in took too long. Please try again.' : 'Google took too long to respond. Please retry.'
+        ? action === 'login' ? 'Sign-in took too long. Please try again.' : action === 'submitAccountRequest' ? 'We could not confirm your request in time. It may already have been received. Wait a moment before retrying; duplicate requests will not be added.' : 'Google took too long to respond. Please retry.'
         : 'Unable to read the Google data response. Please retry.'
     });
   } finally {

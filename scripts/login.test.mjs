@@ -5,6 +5,38 @@ import vm from 'node:vm';
 import { Readable } from 'node:stream';
 import handler from '../api/sheet.js';
 
+test('login retries service authorization once, but persistent rejection never creates a session', async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  let recover = true;
+  globalThis.fetch = async (_url, options) => {
+    calls++;
+    const body = JSON.parse(options.body);
+    assert.equal(body.action, 'login');
+    assert.equal(body.code, 'server-code');
+    return Response.json(recover && calls === 2
+      ? { success: true, user: { email: 'test@ched.gov.ph' } }
+      : { success: false, message: 'Unauthorized request.' });
+  };
+  async function login() {
+    const req = Readable.from([JSON.stringify({ email: 'test@ched.gov.ph', password: 'test-password', code: 'untrusted-code' })]);
+    Object.assign(req, { url: '/api/sheet?action=login', method: 'POST', headers: {} });
+    const res = { headers: {}, setHeader(key, value) { this.headers[key] = value; }, status(code) { this.code = code; return this; }, json(payload) { this.payload = payload; return this; } };
+    return handler(req, res, { SHEET_API_ACCESS_CODE: 'server-code', SHEET_API_URL: 'https://script.google.com/macros/s/test/exec' });
+  }
+  try {
+    const recovered = await login();
+    assert.equal(calls, 2);
+    assert.equal(recovered.code, 200);
+    assert.ok(recovered.headers['Set-Cookie']);
+    recover = false;
+    const rejected = await login();
+    assert.equal(calls, 4);
+    assert.equal(rejected.code, 503);
+    assert.equal(rejected.headers['Set-Cookie'], undefined);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
 test('a cold login can finish after 30 seconds without resubmitting', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const originalFetch = globalThis.fetch;
@@ -48,7 +80,13 @@ test('login reads account details only for matching emails and respects password
     getLastColumn: () => rows[0].length,
     getRange(row, column, count, width) {
       reads.push([row, column, count, width]);
-      return { getDisplayValues: () => rows.slice(row - 1, row - 1 + count).map(value => value.slice(column - 1, column - 1 + width)) };
+      return {
+        getDisplayValues: () => rows.slice(row - 1, row - 1 + count).map(value => value.slice(column - 1, column - 1 + width)),
+        createTextFinder(value) {
+          const match = rows.slice(row - 1, row - 1 + count).findIndex(values => String(values[column - 1]).trim().toLowerCase() === String(value).toLowerCase());
+          return { matchCase() { return this; }, matchEntireCell() { return this; }, findNext: () => match < 0 ? null : { getRow: () => row + match } };
+        }
+      };
     }
   };
   const context = vm.createContext({

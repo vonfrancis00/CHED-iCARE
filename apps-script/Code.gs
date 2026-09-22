@@ -13,6 +13,10 @@ function doGet(e) {
         return jsonResponse(getSurveyResponses(params));
       case "listUsers":
         return jsonResponse(listUsers_(params));
+      case "listAccountRequests":
+        return jsonResponse(listAccountRequests_(params));
+      case "listRequestOffices":
+        return jsonResponse({ success: true, offices: getOCCOfficeGroups_().map(office => office.name).filter(Boolean).sort() });
       case "clearDashboardCache":
         clearDashboardCache();
         return jsonResponse({ success: true, message: "Dashboard cache cleared." });
@@ -64,12 +68,14 @@ function findLoginUser_(email, password) {
   const requiredColumns = Object.values(columns).filter(column => column >= 0);
   const firstColumn = Math.min.apply(null, requiredColumns);
   const lastRequiredColumn = Math.max.apply(null, requiredColumns);
-  // Read only the email directory, then fetch account details for matching rows.
-  // Always read the current password so edits/revocations take effect immediately.
-  const emails = sheet.getRange(2, columns.email + 1, rowCount, 1).getDisplayValues();
-  for (let index = 0; index < emails.length; index++) {
-    if (String(emails[index][0] || "").trim().toLowerCase() !== email) continue;
-    const row = sheet.getRange(index + 2, firstColumn + 1, 1, lastRequiredColumn - firstColumn + 1).getDisplayValues()[0];
+  // Let Sheets perform the indexed exact-match search. Reading every email into
+  // Apps Script was the slowest part of sign-in when a formatted Users sheet
+  // had thousands of rows. The password is still read live for the one match,
+  // so password changes and revocations take effect immediately.
+  const match = sheet.getRange(2, columns.email + 1, rowCount, 1)
+    .createTextFinder(email).matchCase(false).matchEntireCell(true).findNext();
+  if (match) {
+    const row = sheet.getRange(match.getRow(), firstColumn + 1, 1, lastRequiredColumn - firstColumn + 1).getDisplayValues()[0];
     const user = {
     email: String(row[columns.email - firstColumn] || "").trim().toLowerCase(),
     password: String(row[columns.password - firstColumn] || ""),
@@ -104,14 +110,39 @@ function listUsers_(params) {
   return { success: true, users };
 }
 
+function getAccountRequestsSheet_(spreadsheet) {
+  const ss = spreadsheet || SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  let sheet = ss.getSheetByName(CONFIG.SHEETS.ACCOUNT_REQUESTS);
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.SHEETS.ACCOUNT_REQUESTS);
+    sheet.getRange(1, 1, 1, 4).setValues([["Name", "CHED Email", "Office", "Requested At"]]);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function listAccountRequests_(params) {
+  const { rows, columns } = getUsersRegister_();
+  assertSuperAdmin_(params.actorEmail, rows, columns);
+  const sheet = getAccountRequestsSheet_();
+  const values = sheet.getLastRow() < 2 ? [] : sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getDisplayValues();
+  return { success: true, requests: values.filter(row => String(row[1] || "").trim()).map((row, index) => ({
+    row: index + 2, name: String(row[0] || "").trim(), email: String(row[1] || "").trim().toLowerCase(),
+    office: String(row[2] || "").trim(), requestedAt: String(row[3] || "").trim()
+  })) };
+}
+
 function doPost(e) {
   try {
     const params = JSON.parse(e.postData.contents || "{}");
     const action = String(params.action || "login").trim();
     validateRequest_(action, params);
+    if (action === "checkAccountRequest") return checkAccountRequest_(params);
+    if (action === "submitAccountRequest") return submitAccountRequest_(params);
     if (action === "createUser") return createUser_(params);
     if (action === "updateUser") return updateUser_(params);
     if (action === "deleteUser") return deleteUser_(params);
+    if (action === "approveAccountRequest") return approveAccountRequest_(params);
     if (action !== "login") throw new Error("Unknown action.");
     const email = String(params.email || "").trim().toLowerCase();
     const password = String(params.password || "");
@@ -130,6 +161,72 @@ function doPost(e) {
     console.error(error);
     return jsonResponse({ success: false, message: error.message });
   }
+}
+
+function checkAccountRequest_(params) {
+  const email = String(params.email || "").trim().toLowerCase();
+  const name = String(params.name || "").trim();
+  const office = String(params.office || "").trim();
+  const sheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName(CONFIG.SHEETS.ACCOUNT_REQUESTS);
+  const lastRow = sheet ? sheet.getLastRow() : 0;
+  const rows = lastRow < 2 ? [] : sheet.getRange(2, 1, lastRow - 1, 3).getDisplayValues();
+  const found = rows.some(row => String(row[1]).trim().toLowerCase() === email
+    && String(row[0]).trim() === name && String(row[2]).trim() === office);
+  return jsonResponse({ success: found, message: found ? "Your account request has been sent to the Super Admin." : "Your request could not yet be confirmed. Please try again shortly." });
+}
+
+function submitAccountRequest_(params) {
+  const name = String(params.name || "").trim();
+  const email = String(params.email || "").trim().toLowerCase();
+  const office = String(params.office || "").trim();
+  if (!name || !office || !/^[^\s@]+@ched\.gov\.ph$/.test(email)) return jsonResponse({ success: false, message: "Enter your name, a valid @ched.gov.ph email, and office." });
+  const lock = LockService.getScriptLock();
+  // Account requests are independent. Do not make a visitor wait ten seconds
+  // behind an unrelated write; they can retry promptly if one is in progress.
+  if (!lock.tryLock(1500)) return jsonResponse({ success: false, message: "Another account request is being saved. Please try again in a moment." });
+  try {
+    const spreadsheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+    const users = spreadsheet.getSheetByName(CONFIG.SHEETS.USERS);
+    if (!users) throw new Error("Users sheet not found.");
+    const lastColumn = users.getLastColumn();
+    if (!lastColumn) throw new Error("Users sheet is empty.");
+    const headers = users.getRange(1, 1, 1, lastColumn).getDisplayValues()[0];
+    const emailColumn = headers.findIndex(value => String(value).trim().toLowerCase() === "email");
+    if (emailColumn < 0) throw new Error("Users sheet must have an Email header.");
+    const userLastRow = users.getLastRow();
+    if (userLastRow >= 2 && users.getRange(2, emailColumn + 1, userLastRow - 1, 1)
+      .createTextFinder(email).matchCase(false).matchEntireCell(true).findNext()) {
+      return jsonResponse({ success: false, message: "An account already exists for this email." });
+    }
+    const sheet = getAccountRequestsSheet_(spreadsheet);
+    const lastRow = sheet.getLastRow();
+    if (lastRow >= 2 && sheet.getRange(2, 2, lastRow - 1, 1)
+      .createTextFinder(email).matchCase(false).matchEntireCell(true).findNext()) {
+      return jsonResponse({ success: false, message: "An account request for this email is already pending." });
+    }
+    sheet.appendRow([safeCellText_(name), email, safeCellText_(office), new Date()]);
+    SpreadsheetApp.flush(); // Commit before releasing the duplicate-check lock.
+    return jsonResponse({ success: true, message: "Your account request has been sent to the Super Admin." });
+  } finally { lock.releaseLock(); }
+}
+
+function approveAccountRequest_(params) {
+  const requestRow = Number(params.requestRow);
+  const email = String(params.email || "").trim().toLowerCase();
+  const name = String(params.name || "").trim(); const office = String(params.office || "").trim();
+  const password = String(params.password || ""); const role = String(params.role || "").trim().toLowerCase().replace(/[\s_-]+/g, " ");
+  if (!Number.isInteger(requestRow) || requestRow < 2 || !name || !office || !/^[^\s@]+@ched\.gov\.ph$/.test(email) || password.length < 8 || !["admin", "super admin"].includes(role)) return jsonResponse({ success: false, message: "Enter a valid account, role, and password of at least 8 characters." });
+  const lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    const { sheet, rows, columns } = getUsersRegister_(); assertSuperAdmin_(params.actorEmail, rows, columns);
+    const requestSheet = getAccountRequestsSheet_();
+    if (requestRow > requestSheet.getLastRow() || String(requestSheet.getRange(requestRow, 2).getDisplayValue()).trim().toLowerCase() !== email) return jsonResponse({ success: false, message: "This request is no longer pending. Refresh the list." });
+    if (rows.some(row => String(row[columns.email] || "").trim().toLowerCase() === email)) return jsonResponse({ success: false, message: "An account already exists for this email." });
+    const values = Array(sheet.getLastColumn()).fill(""); values[columns.email] = email; values[columns.password] = safeCellText_(password); values[columns.name] = safeCellText_(name); values[columns.office] = safeCellText_(office); values[columns.role] = role === "super admin" ? "Super Admin" : "Admin";
+    sheet.getRange(sheet.getLastRow() + 1, 1, 1, values.length).setNumberFormat("@").setValues([values]);
+    requestSheet.deleteRow(requestRow);
+    return jsonResponse({ success: true, message: "Request approved and account created.", user: { email, name, office, role: normalizeRole_(role) } });
+  } finally { lock.releaseLock(); }
 }
 
 function createUser_(params) {
@@ -242,10 +339,15 @@ function validateRequest_(action, params) {
     createUser: true,
     updateUser: true,
     deleteUser: true
+    ,submitAccountRequest: true,
+    checkAccountRequest: true,
+    listAccountRequests: true,
+    listRequestOffices: true,
+    approveAccountRequest: true
   };
   if (!allowedActions[action]) throw new Error("Unknown action.");
 
-  if (["listUsers", "createUser", "updateUser", "deleteUser"].includes(action) && !CONFIG.API_ACCESS_CODE) {
+  if (["listUsers", "createUser", "updateUser", "deleteUser", "listAccountRequests", "approveAccountRequest"].includes(action) && !CONFIG.API_ACCESS_CODE) {
     throw new Error("Configure API_ACCESS_CODE before managing users.");
   }
 

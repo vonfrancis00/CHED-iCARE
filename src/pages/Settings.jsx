@@ -44,6 +44,9 @@ export default function Settings({ user }) {
   const [usersError, setUsersError] = useState("");
   const [usersRefresh, setUsersRefresh] = useState(0);
   const [usersQuery, setUsersQuery] = useState("");
+  const [requests, setRequests] = useState([]);
+  const [requestsLoading, setRequestsLoading] = useState(true);
+  const [approvalRequest, setApprovalRequest] = useState(null);
   const newlyCreatedUsers = useRef(new Map());
   const deletedUsers = useRef(new Set());
   const mutationVersion = useRef(0);
@@ -85,6 +88,21 @@ export default function Settings({ user }) {
       }
     }
     loadUsers();
+    return () => controller.abort();
+  }, [usersRefresh]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    (async () => {
+      setRequestsLoading(true);
+      try {
+        const response = await fetch("/api/sheet?action=listAccountRequests", { credentials: "same-origin", cache: "no-store", signal: controller.signal });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || "Unable to load requests.");
+        setRequests(result.requests || []);
+      } catch (cause) { if (!controller.signal.aborted) setUsersError(cause.message || "Unable to load requests."); }
+      finally { if (!controller.signal.aborted) setRequestsLoading(false); }
+    })();
     return () => controller.abort();
   }, [usersRefresh]);
 
@@ -143,6 +161,14 @@ export default function Settings({ user }) {
     setConfirmPassword("");
     setShowPassword(false);
     setError("");
+    setApprovalRequest(null);
+  }
+
+  function openApprove(event, request) {
+    returnFocusRef.current = event.currentTarget;
+    setApprovalRequest(request); setEditingUser(null);
+    setForm({ name: request.name, email: request.email, office: request.office, password: "", role: "admin" });
+    setConfirmPassword(""); setShowForm(true); setSuccess("");
   }
 
   function openCreate(event) {
@@ -178,12 +204,12 @@ export default function Settings({ user }) {
     }
     setSaving(true);
     try {
-      const action = editingUser ? "updateUser" : "createUser";
+      const action = approvalRequest ? "approveAccountRequest" : editingUser ? "updateUser" : "createUser";
       const response = await fetch(`/api/sheet?action=${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ ...form, targetEmail: editingUser?.email, email: form.email.trim(), name: form.name.trim(), office: form.office.trim() })
+        body: JSON.stringify({ ...form, targetEmail: editingUser?.email, requestRow: approvalRequest?.row, email: form.email.trim(), name: form.name.trim(), office: form.office.trim() })
       });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || "Unable to add user.");
@@ -202,8 +228,9 @@ export default function Settings({ user }) {
       newlyCreatedUsers.current.set(account.email.toLowerCase(), account);
       setUsers(current => [...current.filter(item => item.email.toLowerCase() !== (editingUser?.email || account.email).toLowerCase()), account]
         .sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email)));
+      if (approvalRequest) setRequests(current => current.filter(item => item.row !== approvalRequest.row));
       closeForm();
-      setSuccess(result.message || "User added successfully.");
+      setSuccess(result.message || (approvalRequest ? "Request approved." : "User added successfully."));
     } catch (cause) {
       setError(cause.message || "Unable to add user. Please retry.");
     } finally {
@@ -267,8 +294,8 @@ export default function Settings({ user }) {
           <div className="flex items-start gap-4 border-b border-slate-100 px-6 py-6 sm:px-8">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#0b2c5b]"><UsersRound size={22} /></div>
             <div className="min-w-0 flex-1">
-              <h2 id="user-management-title" className="text-lg font-bold text-slate-900">{editingUser ? "Edit user" : "Add user"}</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-500">{editingUser ? `Update ${editingUser.name || editingUser.email}'s account details.` : "Create an account with an office assignment and the right level of access."}</p>
+              <h2 id="user-management-title" className="text-lg font-bold text-slate-900">{approvalRequest ? "Approve account request" : editingUser ? "Edit user" : "Add user"}</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-500">{approvalRequest ? "Set the password and access role before creating this account." : editingUser ? `Update ${editingUser.name || editingUser.email}'s account details.` : "Create an account with an office assignment and the right level of access."}</p>
             </div>
             <button type="button" onClick={closeForm} disabled={saving} aria-label="Close user form" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50"><X size={20} /></button>
           </div>
@@ -281,7 +308,7 @@ export default function Settings({ user }) {
                   <div className="mb-4 flex items-center gap-3"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-[#0b2c5b]">1</span><h3 className="text-sm font-bold text-slate-800">Account details</h3></div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div><label className="settings-label" htmlFor="new-user-name">Full name</label><input className="settings-input" id="new-user-name" name="name" value={form.name} onChange={update} required maxLength={120} autoComplete="off" placeholder="Enter full name" /></div>
-                    <div><label className="settings-label" htmlFor="new-user-email">CHED email</label><input className="settings-input" id="new-user-email" name="email" type="email" pattern="[^@\s]+@ched\.gov\.ph" title="Use a @ched.gov.ph email address" value={form.email} onChange={update} required disabled={editingUser?.email.toLowerCase() === user?.email?.toLowerCase()} maxLength={254} autoComplete="off" placeholder="name@ched.gov.ph" /><p className="mt-1.5 text-xs text-slate-500">Only @ched.gov.ph addresses are accepted.</p></div>
+                    <div><label className="settings-label" htmlFor="new-user-email">CHED email</label><input className="settings-input" id="new-user-email" name="email" type="email" title="Use a @ched.gov.ph email address" value={form.email} onChange={update} required disabled={editingUser?.email.toLowerCase() === user?.email?.toLowerCase()} maxLength={254} autoComplete="off" placeholder="name@ched.gov.ph" /><p className="mt-1.5 text-xs text-slate-500">Only @ched.gov.ph addresses are accepted.</p></div>
                     <div><label className="settings-label" htmlFor="new-user-office">Office</label><select className="settings-input" id="new-user-office" name="office" value={form.office} onChange={update} required disabled={!officeOptions.length}><option value="">{officesLoading ? "Loading offices..." : officesError && !officeOptions.length ? "Unable to load offices" : "Select an office"}</option>{officeOptions.map(office => <option key={office} value={office}>{office}</option>)}</select></div>
                     <div><label className="settings-label" htmlFor="new-user-role">Access role</label><select className="settings-input" id="new-user-role" name="role" value={form.role} onChange={update} disabled={editingUser?.email.toLowerCase() === user?.email?.toLowerCase()}><option value="admin">Admin</option><option value="super_admin">Super Admin</option></select><p className="mt-1.5 text-xs text-slate-500">{form.role === "super_admin" ? "Can manage users and access Settings." : "Can view dashboard pages, except Settings."}</p></div>
                   </div>
@@ -299,7 +326,7 @@ export default function Settings({ user }) {
 
                 <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-100 pt-6">
                   <button type="button" className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50" onClick={closeForm} disabled={saving}>Cancel</button>
-                  <button type="submit" className="settings-register min-h-11 disabled:cursor-wait disabled:opacity-60" disabled={saving || !officeOptions.length}>{editingUser ? <Pencil size={17} /> : <UserPlus size={17} />}{saving ? "Saving..." : editingUser ? "Save changes" : "Create user"}</button>
+                  <button type="submit" className="settings-register min-h-11 disabled:cursor-wait disabled:opacity-60" disabled={saving || !officeOptions.length}>{editingUser ? <Pencil size={17} /> : <UserPlus size={17} />}{saving ? "Saving..." : approvalRequest ? "Approve & create user" : editingUser ? "Save changes" : "Create user"}</button>
                 </div>
               </form>
           </div>
@@ -323,6 +350,12 @@ export default function Settings({ user }) {
         </div>,
         document.body
       )}
+
+      <section className="overflow-hidden rounded-[24px] border border-amber-200 bg-white shadow-sm" aria-labelledby="requests-list-title">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-amber-100 bg-amber-50/70 px-6 py-5 sm:px-8"><div><p className="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-700">Account access</p><h2 id="requests-list-title" className="mt-1 text-xl font-bold text-slate-900">Requesting Users</h2><p className="mt-1 text-sm text-slate-500">Review people who requested dashboard access.</p></div><span className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-amber-800">{requests.length} pending</span></div>
+        <ul className="divide-y divide-slate-100">{requests.map(request => <li key={request.row} className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 sm:px-8"><div><p className="font-bold text-slate-900">{request.name}</p><p className="mt-1 text-sm text-slate-500">{request.email} · {request.office}</p></div><button type="button" onClick={event => openApprove(event, request)} className="inline-flex items-center gap-2 rounded-xl bg-[#0b2c5b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-900"><CheckCircle2 size={16} />Review & approve</button></li>)}</ul>
+        {!requestsLoading && !requests.length && <p className="px-6 py-8 text-center text-sm text-slate-500">No account requests are pending.</p>}{requestsLoading && <p className="px-6 py-8 text-center text-sm text-slate-500">Loading requests...</p>}
+      </section>
 
       <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm" aria-labelledby="users-list-title">
         <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-blue-50/70 px-6 py-7 sm:px-8">

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, UserPlus, X } from 'lucide-react';
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('');
@@ -8,6 +8,57 @@ export default function Login({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [slowLogin, setSlowLogin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showRequest, setShowRequest] = useState(false);
+  const [request, setRequest] = useState({ name: '', email: '', office: '' });
+  const [requestLoading, setRequestLoading] = useState(false);
+  const [slowRequest, setSlowRequest] = useState(false);
+  const [requestError, setRequestError] = useState('');
+  const [requestSuccess, setRequestSuccess] = useState('');
+  const [offices, setOffices] = useState([]);
+
+  useEffect(() => {
+    if (!requestSuccess) return undefined;
+    const closeTimer = window.setTimeout(() => {
+      setShowRequest(false);
+      setRequestSuccess('');
+    }, 3500);
+    return () => window.clearTimeout(closeTimer);
+  }, [requestSuccess]);
+
+  async function openRequest() {
+    setShowRequest(true); setRequestError(''); setRequestSuccess('');
+    if (offices.length) return;
+    try {
+      const response = await fetch('/api/sheet?action=listRequestOffices', { credentials: 'same-origin' });
+      const result = await response.json();
+      if (result.success) setOffices(result.offices || []);
+    } catch { /* The form remains usable while offices load. */ }
+  }
+
+  async function submitRequest(event) {
+    event.preventDefault();
+    if (requestLoading || requestSuccess) return;
+    setRequestError('');
+    const details = { name: request.name.trim(), email: request.email.trim().toLowerCase(), office: request.office.trim() };
+    if (!details.name || !details.office || !/^[^\s@]+@ched\.gov\.ph$/.test(details.email)) {
+      setRequestError('Enter your name, a valid @ched.gov.ph email, and office.');
+      return;
+    }
+    setRequestLoading(true); setSlowRequest(false);
+    const controller = new AbortController();
+    const slowTimer = window.setTimeout(() => {
+      setSlowRequest(true);
+      setShowRequest(false);
+    }, 3000);
+    const timeout = window.setTimeout(() => controller.abort(), 75000);
+    try {
+      const response = await fetch('/api/sheet?action=submitAccountRequest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(details), signal: controller.signal });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.message || 'Unable to send request.');
+      setRequestSuccess(`${result.message || 'Your account request has been sent to the Super Admin.'} Your login credentials will be emailed to you.`); setRequest({ name: '', email: '', office: '' });
+    } catch (cause) { setRequestError(cause.name === 'AbortError' ? 'We could not confirm your request in time. It may already have been received. Wait a moment before retrying.' : cause.message || 'Unable to send request.'); }
+    finally { window.clearTimeout(timeout); window.clearTimeout(slowTimer); setRequestLoading(false); setSlowRequest(false); }
+  }
 
   async function submit(event) {
     event.preventDefault();
@@ -98,8 +149,27 @@ export default function Login({ onLogin }) {
           <LockKeyhole size={14} aria-hidden="true" /> 
           Authorized personnel only.
         </p>
+        {!showRequest && requestLoading && slowRequest && <p className="login-description" role="status">Your account request is being processed. Once approved, your login credentials will be emailed to you.</p>}
+        {!showRequest && requestSuccess && <p className="login-request-success" role="status">{requestSuccess}</p>}
+        {!showRequest && requestError && <p className="login-error" role="alert">{requestError}</p>}
+        <button type="button" className="login-request-link" onClick={openRequest} disabled={requestLoading}><UserPlus size={15} />{requestLoading ? 'Processing request…' : 'Request an account'}</button>
       </div>
       <p className="login-panel-footer">© {new Date().getFullYear()} Commission on Higher Education</p>
     </section>
+  {showRequest && <div className="login-request-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !requestLoading) setShowRequest(false); }}>
+    <section className="login-request-modal" role="dialog" aria-modal="true" aria-labelledby="request-account-title">
+      <button type="button" className="login-request-close" onClick={() => setShowRequest(false)} disabled={requestLoading} aria-label="Close"><X size={20} /></button>
+      <div className="login-icon"><UserPlus size={24} /></div><h2 id="request-account-title">Request an account</h2>
+      <p className="login-description">Your request will be reviewed by a Super Admin.</p>
+      <form className="login-form" onSubmit={submitRequest}>
+        <div className="login-field"><label htmlFor="request-name">Name</label><div className="login-input-wrap"><input id="request-name" required maxLength={120} value={request.name} onChange={e => setRequest(v => ({ ...v, name: e.target.value }))} placeholder="Enter your full name" /></div></div>
+        <div className="login-field"><label htmlFor="request-email">CHED Email</label><div className="login-input-wrap"><Mail size={18} /><input id="request-email" type="email" required value={request.email} onChange={e => setRequest(v => ({ ...v, email: e.target.value }))} placeholder="name@ched.gov.ph" /></div></div>
+        <div className="login-field"><label htmlFor="request-office">Office</label><select id="request-office" required value={request.office} onChange={e => setRequest(v => ({ ...v, office: e.target.value }))}><option value="">Select an office</option>{offices.map(office => <option key={office} value={office}>{office}</option>)}</select></div>
+        {requestError && <p className="login-error" role="alert">{requestError}</p>}{requestSuccess && <p className="login-request-success" role="status">{requestSuccess}</p>}
+        {requestLoading && slowRequest && <p className="login-description" role="status">Your request is still being processed. Please keep this window open.</p>}
+        <button className="login-submit" disabled={requestLoading || Boolean(requestSuccess)} type="submit">{requestLoading ? 'Sending…' : requestSuccess ? 'Request sent' : 'Send request'}</button>
+      </form>
+    </section>
+  </div>}
   </div></main>;
 }

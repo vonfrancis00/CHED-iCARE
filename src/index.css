@@ -227,6 +227,7 @@ h1, h2, h3, h4, h5, h6 { font-family: "Plus Jakarta Sans", "DM Sans", ui-sans-se
 
 .login-submit { background: linear-gradient(115deg, #124da4, #0085b5); }
 .login-submit:hover:not(:disabled) { background: linear-gradient(115deg, #104491, #00749f); }
+.login-request-link { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; margin-top: 14px; color: #0b5c8c; font-size: 13px; font-weight: 700; }.login-request-link:hover { text-decoration: underline; }.login-request-backdrop { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 20px; background: rgb(2 15 35 / .55); backdrop-filter: blur(5px); }.login-request-modal { position: relative; width: min(100%, 440px); border-radius: 22px; padding: 30px; background: #fff; box-shadow: 0 28px 70px rgb(0 5 17 / .35); }.login-request-modal h2 { margin: 0 0 8px; color: #09254d; font-size: 25px; }.login-request-modal select { min-height: 50px; width: 100%; border: 1px solid #c9d9e9; border-radius: 12px; padding: 0 13px; color: #0b2c5b; background: #fff; }.login-request-close { position: absolute; top: 16px; right: 16px; padding: 7px; color: #607795; border-radius: 8px; }.login-request-close:hover { background: #eef5fc; }.login-request-success { margin: 0; border-radius: 9px; padding: 10px 12px; color: #166534; background: #ecfdf5; font-size: 13px; }
 
 /* At compact desktop widths, keep the building's CHED facade visible beside the form. */
 @media (min-width: 821px) and (max-width: 1100px) {
