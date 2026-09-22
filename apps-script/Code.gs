@@ -6,7 +6,7 @@ function doGet(e) {
 
     switch (action) {
       case "getDashboardData":
-        return jsonResponse(getDashboardData());
+        return jsonResponse(getDashboardData(params));
       case "getInstitutions":
         return jsonResponse(getInstitutions(params));
       case "getSurveyResponses":

@@ -25,13 +25,25 @@ const H = {
   region: "Region"
 };
 
-function getDashboardData() {
-  return getOrBuildCache_(cacheKey_("DASHBOARD"), () => buildDashboardData_());
+function getDashboardData(params) {
+  const institutionType = String((params || {}).institutionType || "").trim().toUpperCase();
+  const region = String((params || {}).region || "").trim().toLowerCase();
+  const filterKey = Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify([institutionType, region])));
+  return getOrBuildCache_(cacheKey_("DASHBOARD_FAST_V1_" + getResponseCacheRevision_() + "_" + filterKey), () => buildDashboardData_(institutionType, region));
 }
 
-function buildDashboardData_() {
-  const dataset = getRawDataset_();
-  const rows = dataset.rows;
+function buildDashboardData_(institutionType, region, sharedDataset, sharedOffices) {
+  const dataset = sharedDataset || getRawDataset_();
+  const allRows = dataset.rows;
+  const availableRegions = Array.from(new Set(allRows
+    .filter(row => !institutionType || String(headerValue_(row, H.institutionType) || "").trim().toUpperCase() === institutionType)
+    .map(row => String(headerValue_(row, H.region) || "").trim())
+    .filter(Boolean))).sort();
+  const rows = allRows.filter(row => {
+    const matchesType = !institutionType || String(headerValue_(row, H.institutionType) || "").trim().toUpperCase() === institutionType;
+    const matchesRegion = !region || String(headerValue_(row, H.region) || "").trim().toLowerCase() === region;
+    return matchesType && matchesRegion;
+  });
   const institutionTypes = countInstitutionTypes_(rows);
 
   const facilityFaculty = countQuestion_(rows, H.facilityFaculty);
@@ -57,13 +69,15 @@ function buildDashboardData_() {
     }
   ];
 
-  const occOffices = getOCCOfficeGroups_();
+  const occOffices = sharedOffices || getOCCOfficeGroups_();
 
   const result = {
     success: true,
     source: "google-sheet",
     updatedAt: new Date().toISOString(),
     cachedAt: dataset.cachedAt,
+    filters: { institutionType, region },
+    availableRegions,
 
     overview: {
       totalResponses: rows.length,
@@ -107,6 +121,26 @@ function buildDashboardData_() {
     headers: dataset.headers
   };
 
+  // Send only aggregate summaries for interactive filtering, never full response rows.
+  // Reuse this execution's dataset and offices without additional spreadsheet reads.
+  if (!sharedDataset && !institutionType && !region) {
+    result.filterViews = {};
+    ["", "LUC", "SUC"].forEach(type => {
+      const base = buildDashboardData_(type, "", dataset, occOffices);
+      [""].concat(base.availableRegions).forEach(label => {
+        const regionKey = label.toLowerCase();
+        const view = label ? buildDashboardData_(type, regionKey, dataset, occOffices) : base;
+        result.filterViews[JSON.stringify([type, regionKey])] = {
+          overview: view.overview,
+          facilityQuestions: view.facilityQuestions,
+          programQuestions: view.programQuestions,
+          soloParents: view.soloParents,
+          regions: view.regions,
+          availableRegions: base.availableRegions
+        };
+      });
+    });
+  }
   return result;
 }
 

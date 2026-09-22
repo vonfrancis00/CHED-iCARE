@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { useDashboard } from "../hooks/useDashboard";
 import Loading from "../components/common/Loading";
 import StatCard from "../components/dashboard/StatCard";
@@ -10,7 +11,11 @@ import OCCChart from "../components/dashboard/OCCChart";
 import { Building2, Baby, Users, FileCheck, RefreshCw, ShieldCheck } from "lucide-react";
 
 export default function Dashboard() {
-  const { data, loading, refreshing, error, reload } = useDashboard();
+  const [institutionType, setInstitutionType] = useState("");
+  const [region, setRegion] = useState("");
+  const { data: snapshot, loading, refreshing, error, reload } = useDashboard();
+  const filterView = snapshot?.filterViews?.[JSON.stringify([institutionType, region.toLowerCase()])];
+  const data = filterView ? { ...snapshot, ...filterView } : snapshot;
 
   if (loading && !data) return <Loading label="Reading Google Sheet data..." />;
   if (!data) return <div className="card p-8"><h2 className="font-semibold">Unable to load dashboard</h2><p className="mt-2 text-sm text-slate-500">{error}</p><button onClick={reload} className="mt-4 rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white">Retry</button></div>;
@@ -18,6 +23,11 @@ export default function Dashboard() {
   const o = data.overview;
   const occOffices = (data.occOffices?.length ? data.occOffices : data.occDistribution || [])
     .filter((office) => String(office.name || "").toLowerCase().includes("office"));
+  const regions = data.availableRegions || data.regions?.map(item => item.name) || [];
+  const selectType = type => {
+    setInstitutionType(type);
+    setRegion("");
+  };
   return (
     <div className="dashboard-overview rounded-3xl border border-[#bfd0e5] bg-[#f6f9fd]/85 p-4 shadow-[0_20px_55px_-42px_rgba(6,27,58,0.6)] backdrop-blur-sm sm:p-6">
       <div role="status" className="hidden">
@@ -54,6 +64,26 @@ export default function Dashboard() {
         <span>{data.cachedAt || data.updatedAt ? `Last updated ${new Date(data.cachedAt || data.updatedAt).toLocaleString()}` : "Showing saved data"}</span>
         {error && <span className="font-medium text-amber-700">Could not refresh; showing the last saved data.</span>}
       </div>
+
+      <section aria-label="Dashboard filters" className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Filter dashboard</p>
+            <p className="mt-0.5 text-xs text-slate-500">Choose an institution type, then narrow results by region.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-lg bg-slate-100 p-1" role="group" aria-label="Institution type">
+              {[['', 'All'], ['LUC', 'LUC'], ['SUC', 'SUC']].map(([value, label]) => <button key={label} type="button" aria-pressed={institutionType === value} disabled={!snapshot.filterViews} onClick={() => selectType(value)} className={`rounded-md px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${institutionType === value ? "bg-blue-700 text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}>{label}</button>)}
+            </div>
+            <label className="sr-only" htmlFor="dashboard-region">Region</label>
+            <select id="dashboard-region" disabled={!snapshot.filterViews} value={region} onChange={event => setRegion(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100">
+              <option value="">All regions</option>
+              {regions.map(item => <option key={item} value={item}>{item}</option>)}
+            </select>
+          </div>
+        </div>
+        {!snapshot.filterViews && <p role="status" className="mt-3 text-xs text-amber-700">Fast filters are unavailable. Update the dashboard service, then refresh data.</p>}
+      </section>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard label="Survey Responses" value={o.totalResponses} hint={`LUCs: ${o.lucResponses ?? 0} · SUCs: ${o.sucResponses ?? 0}`} icon={Building2} />

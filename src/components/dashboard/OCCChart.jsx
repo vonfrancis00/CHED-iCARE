@@ -31,6 +31,10 @@ export default function OCCChart({ data = [] }) {
           const assigned = Number(item.value) || 0;
           const responded = Number(item.responded) || 0;
           const progress = assigned ? Math.min((responded / assigned) * 100, 100) : 0;
+          const completedDate = assigned > 0 && responded === assigned && item.completedAt
+            ? new Date(item.completedAt)
+            : null;
+          const hasCompletedDate = completedDate && !Number.isNaN(completedDate.getTime());
 
           return (
             <div
@@ -48,6 +52,11 @@ export default function OCCChart({ data = [] }) {
                 <div className="mt-1 text-xs text-slate-500">
                   {responded.toLocaleString()} of {assigned.toLocaleString()} surveys completed
                 </div>
+                {hasCompletedDate && (
+                  <time dateTime={item.completedAt} className="mt-1 block text-xs font-medium text-emerald-700">
+                    Date completed: {completedDate.toLocaleString("en-PH", { year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Manila" })}
+                  </time>
+                )}
               </div>
 
               <div className="relative min-w-0">

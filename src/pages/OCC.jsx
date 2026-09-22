@@ -8,6 +8,11 @@ const number = value => (Number(value) || 0).toLocaleString();
 const percent = (checked, total) => total ? Math.min(100, Math.max(0, Math.round(checked / total * 100))) : 0;
 
 const normalizeOffice = value => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+const completedDate = office => {
+  if (percent(Number(office?.responded) || 0, Number(office?.value) || 0) !== 100 || !office?.completedAt) return null;
+  const date = new Date(office.completedAt);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
 
 export default function OCC({ user }) {
   const [selectedOfficeName, setSelectedOfficeName] = useState("");
@@ -75,7 +80,7 @@ export default function OCC({ user }) {
             const value = Number(office.value) || 0;
             const responded = Number(office.responded) || 0;
             const progress = percent(responded, value);
-            const completedAt = progress === 100 && office.completedAt ? new Date(office.completedAt) : null;
+            const completedAt = completedDate(office);
             const active = selectedOfficeName === office.name;
             return <button key={office.name} type="button" aria-expanded={active} aria-controls="occ-institution-register" onClick={() => setSelectedOfficeName(active ? "" : office.name)} className={`group overflow-hidden rounded-2xl border bg-white text-left transition duration-200 hover:border-blue-400 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${active ? "border-blue-600 ring-1 ring-blue-600" : "border-slate-200"}`}><div className="p-5"><div className="flex items-start gap-3"><span className={`rounded-xl p-2.5 ${active ? "bg-blue-700 text-white" : "bg-slate-100 text-slate-500"}`}><Building2 size={20} /></span><div className="min-w-0 flex-1"><h3 className="text-sm font-semibold leading-6 text-slate-900">{office.name}</h3><p className="mt-0.5 text-xs text-slate-500">{number(value)} assigned institutions</p></div><ArrowRight size={17} className={`mt-2 shrink-0 ${active ? "text-blue-700" : "text-slate-300 group-hover:text-blue-700"}`} /></div><div className="mb-2 mt-6 flex items-center justify-between text-xs"><span className="text-slate-500">Survey progress</span><span className="font-semibold tabular-nums text-slate-800">{progress}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-indigo-600" style={{ width: `${progress}%` }} /></div></div><div className={`flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3 text-xs ${active ? "border-blue-100 bg-blue-50" : "border-slate-100 bg-slate-50/70"}`}><span className="inline-flex items-center gap-1.5 font-medium text-blue-700"><CheckCircle2 size={14} />{number(responded)} accomplished</span>{completedAt ? <time dateTime={office.completedAt} className="inline-flex items-center gap-1.5 font-medium text-emerald-700"><Clock3 size={14} />Completed {completedAt.toLocaleString()}</time> : <span className="text-slate-500">{number(Math.max(0, value - responded))} pending</span>}</div></button>;
           })}
@@ -90,6 +95,7 @@ export default function OCC({ user }) {
             <p className="mt-1 text-sm text-slate-500">Your institution register is shown below.</p>
           </div>
         </div>
+        {completedDate(selected) && <div className="flex items-center gap-1.5 border-t border-emerald-100 bg-emerald-50 px-5 py-3 text-xs font-medium text-emerald-700 sm:px-6"><Clock3 size={14} /><time dateTime={selected.completedAt}>Completed {completedDate(selected).toLocaleString()}</time></div>}
       </section>}
       <div id="occ-institution-register">{selected ? <OCCSheetView key={selected.name} offices={[selected]} selectedOfficeName={selected.name} isOpen /> : <div className="flex items-center gap-4 rounded-xl border border-dashed border-slate-300 p-6 text-slate-500"><Building2 size={24} className="shrink-0 text-slate-400" /><div><p className="text-sm font-medium text-slate-700">{isSuperAdmin ? "Explore an office" : "No office assignment found"}</p><p className="mt-1 text-xs">{isSuperAdmin ? "Choose an office above to view institutions and their survey status." : "Ask a super admin to assign your account to an OCC / Office."}</p></div></div>}</div>
     </div>
