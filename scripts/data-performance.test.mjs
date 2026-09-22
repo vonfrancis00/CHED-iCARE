@@ -5,6 +5,40 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import handler from '../api/sheet.js';
 
+test('compact datasets round-trip and a refresh cannot reuse an old dataset', () => {
+  const entries = new Map();
+  const cache = {
+    get: key => entries.get(key),
+    put: (key, value) => entries.set(key, value)
+  };
+  const context = vm.createContext({
+    CONFIG: { CACHE_SECONDS: 300 }, console,
+    CacheService: { getScriptCache: () => cache },
+    LockService: { getScriptLock() { throw new Error('Reads must not lock account writes'); } }
+  });
+  vm.runInContext(readFileSync(new URL('../apps-script/Utils.gs', import.meta.url), 'utf8'), context);
+  let revision = '1';
+  let builds = 0;
+  context.getResponseCacheRevision_ = () => revision;
+  context.buildRawDataset_ = () => {
+    builds++;
+    return { headers: ['Institution', 'Answer'], cachedAt: 'now', rows: [
+      { rowNumber: 4, Institution: 'Niño', Answer: false },
+      { rowNumber: 7, Institution: '', Answer: 0 }
+    ] };
+  };
+  const first = context.getRawDataset_();
+  assert.equal(first.rows[0].Institution, 'Niño');
+  assert.equal(first.rows[0].Answer, false);
+  assert.equal(first.rows[1].rowNumber, 7);
+  assert.equal(first.rows[1].Answer, 0);
+  assert.equal(JSON.stringify(context.getRawDataset_()), JSON.stringify(first));
+  assert.equal(builds, 1);
+  revision = '2';
+  context.getRawDataset_();
+  assert.equal(builds, 2);
+});
+
 test('authenticated reads share requests; refresh invalidates old results; errors are not cached', async () => {
   const env = { SESSION_SECRET: 'test-secret', SHEET_API_URL: 'https://script.google.com/macros/s/test/exec' };
   const data = Buffer.from(JSON.stringify({ user: { email: 'test@example.com', role: 'admin' }, expires: Date.now() + 60000 })).toString('base64url');

@@ -4,6 +4,25 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import handler from '../api/sheet.js';
 
+test('an explicit account rejection does not make a second Google request', async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls++;
+    return Response.json({ success: false, message: 'An account already exists for this email.' });
+  };
+  try {
+    const req = {
+      url: '/api/sheet?action=submitAccountRequest', method: 'POST', headers: {},
+      async *[Symbol.asyncIterator]() { yield JSON.stringify({ name: 'Applicant', email: 'new@ched.gov.ph', office: 'Office' }); }
+    };
+    const res = { setHeader() {}, status(code) { this.code = code; return this; }, json(payload) { return { code: this.code, payload }; } };
+    const result = await handler(req, res, { SESSION_SECRET: 'test', SHEET_API_URL: 'https://script.google.com/macros/s/test/exec' });
+    assert.equal(result.code, 400);
+    assert.equal(calls, 1);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
 test('a lost write response is successful only when read-back confirms the saved request', async () => {
   const originalFetch = globalThis.fetch;
   const actions = [];
@@ -11,6 +30,7 @@ test('a lost write response is successful only when read-back confirms the saved
   globalThis.fetch = async (_url, options) => {
     const body = JSON.parse(options.body);
     actions.push(body.action);
+    if (body.action === 'submitAccountRequest') throw new Error('Connection lost after write');
     return Response.json(body.action === 'checkAccountRequest'
       ? { success: saved, message: saved ? 'Request saved.' : 'Not confirmed.' }
       : { success: false, message: 'Unknown action.' });

@@ -16,7 +16,7 @@ function doGet(e) {
       case "listAccountRequests":
         return jsonResponse(listAccountRequests_(params));
       case "listRequestOffices":
-        return jsonResponse({ success: true, offices: getOCCOfficeGroups_().map(office => office.name).filter(Boolean).sort() });
+        return jsonResponse({ success: true, offices: getRequestOffices_() });
       case "clearDashboardCache":
         clearDashboardCache();
         return jsonResponse({ success: true, message: "Dashboard cache cleared." });
@@ -56,12 +56,27 @@ function findLoginUser_(email, password) {
   const lastColumn = sheet.getLastColumn();
   if (lastRow < 2 || lastColumn < 1) return null;
 
-  const headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0]
+  // Small registers are faster in one batch than a header read, search, and
+  // matched-row read. Credentials stay live; never cache passwords or logins.
+  const smallRegister = lastRow <= 250 && lastColumn <= 30
+    ? sheet.getRange(1, 1, lastRow, lastColumn).getDisplayValues() : null;
+  const headers = (smallRegister ? smallRegister[0] : sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0])
     .map(value => String(value).trim().toLowerCase());
   const columns = Object.fromEntries(["email", "password", "name", "office", "role"]
     .map(header => [header, headers.indexOf(header)]));
   if (["email", "password", "name", "office"].some(header => columns[header] < 0)) {
     throw new Error("Users sheet must have Email, Password, Name and Office headers.");
+  }
+
+  if (smallRegister) {
+    const row = smallRegister.slice(1).find(values => String(values[columns.email] || "").trim().toLowerCase() === email);
+    if (!row || String(row[columns.password] || "") !== password) return null;
+    return {
+      email, password,
+      name: String(row[columns.name] || "").trim(),
+      office: String(row[columns.office] || "").trim(),
+      role: columns.role >= 0 ? String(row[columns.role] || "").trim() : ""
+    };
   }
 
   const rowCount = lastRow - 1;

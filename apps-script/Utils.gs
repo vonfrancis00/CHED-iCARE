@@ -12,7 +12,23 @@ function getResponseSheet_() {
 }
 
 function getRawDataset_() {
-  return getOrBuildCache_(cacheKey_("DATASET"), () => buildRawDataset_());
+  // Store headers once instead of repeating long survey questions in every
+  // cached row. Page builders retain their existing named-field interface.
+  const packed = getOrBuildCache_(cacheKey_("DATASET_" + getResponseCacheRevision_()), () => {
+    const dataset = buildRawDataset_();
+    return {
+      headers: dataset.headers, cachedAt: dataset.cachedAt,
+      rows: dataset.rows.map(row => [row.rowNumber].concat(dataset.headers.map(header => row[header])))
+    };
+  });
+  return {
+    headers: packed.headers, cachedAt: packed.cachedAt, rowCount: packed.rows.length,
+    rows: packed.rows.map(values => {
+      const row = { rowNumber: values[0] };
+      packed.headers.forEach((header, index) => { row[header] = values[index + 1]; });
+      return row;
+    })
+  };
 }
 
 function buildRawDataset_() {
@@ -92,7 +108,7 @@ function sumNumeric_(rows, header) {
 }
 
 function cacheKey_(name) {
-  return "CHILDCARE_DASHBOARD_EXACT_V6_" + name;
+  return "CHILDCARE_DASHBOARD_EXACT_V7_" + name;
 }
 
 function getOrBuildCache_(key, builder, seconds) {
@@ -100,34 +116,11 @@ function getOrBuildCache_(key, builder, seconds) {
   const cached = readCache_(cache, key);
   if (cached !== null) return cached;
 
-  // Function-local state avoids a top-level declaration in Apps Script's shared
-  // global scope. Nested dataset/office builds still share the outer lock.
-  if (getOrBuildCache_.buildInProgress) {
-    const value = builder();
-    putCache_(cache, key, value, seconds);
-    return value;
-  }
-
-  const lock = LockService.getScriptLock();
-  if (lock.tryLock(5000)) {
-    try {
-      getOrBuildCache_.buildInProgress = true;
-      const secondRead = readCache_(cache, key);
-      if (secondRead !== null) return secondRead;
-
-      const value = builder();
-      putCache_(cache, key, value, seconds);
-      return value;
-    } finally {
-      getOrBuildCache_.buildInProgress = false;
-      lock.releaseLock();
-    }
-  }
-
-  // Do not start competing sheet reads while another request warms the cache.
-  const completed = readCache_(cache, key);
-  if (completed !== null) return completed;
-  throw new Error("Data is being refreshed. Please retry shortly.");
+  // Read-only cache builds must not hold the account-write lock. Concurrent
+  // misses may build twice; generation-specific chunks publish atomically.
+  const value = builder();
+  putCache_(cache, key, value, seconds);
+  return value;
 }
 
 function readCache_(cache, key) {

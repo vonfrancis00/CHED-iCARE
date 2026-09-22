@@ -230,6 +230,16 @@ function getOCCOfficeGroups_() {
   return getOrBuildCache_(cacheKey_("OCC"), () => buildOCCOfficeGroups_());
 }
 
+function getRequestOffices_() {
+  return getOrBuildCache_(cacheKey_("REQUEST_OFFICES_" + getResponseCacheRevision_()), () => {
+    const sheet = getSpreadsheet_().getSheetByName(CONFIG.SHEETS.OCC);
+    if (!sheet || sheet.getLastColumn() < 2) return [];
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getDisplayValues()[0];
+    return Array.from(new Set(headers.filter((value, index) => index % 4 === 1)
+      .map(value => String(value || "").trim()).filter(Boolean))).sort();
+  });
+}
+
 function buildOCCOfficeGroups_() {
   const ss = getSpreadsheet_();
   const sheet = ss.getSheetByName(CONFIG.SHEETS.OCC);
@@ -315,5 +325,8 @@ function clearDashboardCache() {
 }
 
 function getResponseCacheRevision_() {
-  return PropertiesService.getScriptProperties().getProperty("CHILDCARE_RESPONSE_CACHE_REVISION") || "0";
+  if (getResponseCacheRevision_.value === undefined) {
+    getResponseCacheRevision_.value = PropertiesService.getScriptProperties().getProperty("CHILDCARE_RESPONSE_CACHE_REVISION") || "0";
+  }
+  return getResponseCacheRevision_.value;
 }

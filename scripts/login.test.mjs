@@ -68,7 +68,7 @@ test('a cold login can finish after 30 seconds without resubmitting', async (t) 
   } finally { globalThis.fetch = originalFetch; }
 });
 
-test('login reads account details only for matching emails and respects password changes', () => {
+test('small registers use one live batch read and respect password changes', () => {
   const rows = [
     ['Name', 'Email', 'Office', 'Password', 'Role'],
     ['Other', 'other@example.com', 'Office', 'other-password', 'admin'],
@@ -95,13 +95,17 @@ test('login reads account details only for matching emails and respects password
   });
   vm.runInContext(readFileSync(new URL('../apps-script/Code.gs', import.meta.url), 'utf8'), context);
   assert.equal(context.findLoginUser_('test@example.com', 'correct-password').name, 'Test');
-  assert.deepEqual(reads, [[1, 1, 1, 5], [2, 2, 2, 1], [3, 1, 1, 5]]);
+  assert.deepEqual(reads, [[1, 1, 3, 5]]);
   rows[2][3] = 'new-password';
   assert.equal(context.findLoginUser_('test@example.com', 'correct-password'), null);
   assert.equal(context.findLoginUser_('test@example.com', 'new-password').role, 'super_admin');
   reads.length = 0;
   assert.equal(context.findLoginUser_('missing@example.com', 'anything'), null);
-  assert.equal(reads.length, 2);
+  assert.equal(reads.length, 1);
+  while (rows.length < 251) rows.push(['Other', 'other@example.com', 'Office', 'password', 'admin']);
+  reads.length = 0;
+  assert.equal(context.findLoginUser_('test@example.com', 'new-password').name, 'Test');
+  assert.deepEqual(reads, [[1, 1, 1, 5], [2, 2, 250, 1], [3, 1, 1, 5]]);
 });
 
 test('login issues a session only for successful upstream authentication', async () => {

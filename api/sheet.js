@@ -149,17 +149,19 @@ export default async function handler(req, res, env = process.env) {
       });
       let response;
       let payload;
+      let uncertainWrite = false;
       try {
         response = await sendPost();
         if (!response.ok) throw new Error(`Google returned HTTP ${response.status}`);
         payload = await response.json();
       } catch (error) {
         if (action !== 'submitAccountRequest') throw error;
+        uncertainWrite = true;
         payload = { success: false, message: 'Your request could not yet be confirmed. Please try again shortly.' };
       }
       // A write may have committed even if its response was lost. Read back the
       // matching request; never repeat the write or assume a timeout is success.
-      if (action === 'submitAccountRequest' && !payload.success) {
+      if (action === 'submitAccountRequest' && uncertainWrite) {
         const verification = new AbortController();
         const verificationTimer = setTimeout(() => verification.abort(), 15000);
         try {
@@ -192,7 +194,7 @@ export default async function handler(req, res, env = process.env) {
       if (action === 'login' && payload.success && payload.user) setSession(res, payload.user, secret, secure);
       return res.status(payload.success ? 200 : action === 'login' ? 401 : 400).json(payload);
     }
-    const cacheable = prepareRecords || ['getDashboardData', 'getInstitutions', 'getSurveyResponses'].includes(action);
+    const cacheable = prepareRecords || ['listRequestOffices', 'getDashboardData', 'getInstitutions', 'getSurveyResponses'].includes(action);
     if (action === 'clearDashboardCache') invalidateData();
     const payload = await readGoogleData(upstream, controller.signal, cacheable);
     if (prepareRecords) return res.status(payload.success ? 200 : 502).json({ success: Boolean(payload.success) });
