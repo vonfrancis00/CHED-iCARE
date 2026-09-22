@@ -9,14 +9,18 @@ export default function Login({ onLogin }) {
   const [showPassword, setShowPassword] = useState(false);
 
   async function submit(event) {
-    event.preventDefault(); setError(''); setLoading(true);
+    event.preventDefault();
+    if (loading) return;
+    setError(''); setLoading(true);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 25000);
     try {
-      const response = await fetch('/api/sheet?action=login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim(), password }), credentials: 'same-origin' });
+      const response = await fetch('/api/sheet?action=login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim(), password }), credentials: 'same-origin', signal: controller.signal });
       const result = await response.json();
       if (!response.ok || !result.success || !result.user) throw new Error(result.message || 'Unable to sign in.');
       onLogin(result.user);
-    } catch (cause) { setError(cause.message || 'Unable to sign in. Please retry.'); }
-    finally { setLoading(false); }
+    } catch (cause) { setError(cause.name === 'AbortError' ? 'Sign-in took too long. Please try again.' : cause.message || 'Unable to sign in. Please retry.'); }
+    finally { window.clearTimeout(timeout); setLoading(false); }
   }
 
   return <main className="login-page"><div className="login-shell">

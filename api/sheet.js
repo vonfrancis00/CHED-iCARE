@@ -5,7 +5,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 const dataCache = new Map();
 const dataRequests = new Map();
 let dataRevision = 0;
-const DATA_CACHE_MS = 15000;
+const DATA_CACHE_MS = 5 * 60 * 1000;
 
 function invalidateData() {
   dataRevision += 1;
@@ -65,18 +65,21 @@ export default async function handler(req, res, env = process.env) {
   const secure = env.NODE_ENV === 'production' || !!req.headers?.['x-forwarded-proto']?.includes('https');
   const input = new URL(req.url, 'https://local.invalid');
   const action = input.searchParams.get('action');
+  // This fixed warm-up only prepares server memory. It never returns records
+  // or accepts filters/URLs from an unauthenticated visitor.
+  const prepareRecords = action === 'prepareRecords';
   if (!secret) return res.status(503).json({ success: false, message: 'Configure SESSION_SECRET on the server before enabling login.' });
   if (action === 'logout' && req.method === 'POST') {
     res.setHeader('Set-Cookie', `childcare_session=; HttpOnly; SameSite=Lax; Path=/api/sheet; Max-Age=0${secure ? '; Secure' : ''}`);
     return res.status(200).json({ success: true });
   }
   if (action === 'session' && req.method === 'GET') return res.status(200).json({ success: true, user: session(req, secret) });
-  if (!['login', 'createUser', 'updateUser', 'deleteUser', 'listUsers', 'getDashboardData', 'getInstitutions', 'getSurveyResponses', 'clearDashboardCache'].includes(action)) {
+  if (!['prepareRecords', 'login', 'createUser', 'updateUser', 'deleteUser', 'listUsers', 'getDashboardData', 'getInstitutions', 'getSurveyResponses', 'clearDashboardCache'].includes(action)) {
     return res.status(400).json({ success: false, message: 'Unknown action.' });
   }
   if (['login', 'createUser', 'updateUser', 'deleteUser'].includes(action) ? req.method !== 'POST' : req.method !== 'GET') return res.status(405).json({ success: false, message: 'Method not allowed.' });
   const currentUser = session(req, secret);
-  if (action !== 'login' && !currentUser) return res.status(401).json({ success: false, message: 'Please sign in.' });
+  if (action !== 'login' && !prepareRecords && !currentUser) return res.status(401).json({ success: false, message: 'Please sign in.' });
   if (['createUser', 'updateUser', 'deleteUser', 'listUsers'].includes(action) && currentUser.role !== 'super_admin') return res.status(403).json({ success: false, message: 'Only a super admin can manage users.' });
   if (['createUser', 'updateUser', 'deleteUser', 'listUsers'].includes(action) && !configuredCode) return res.status(503).json({ success: false, message: 'Configure the server-side Apps Script access code before managing users.' });
   let upstream;
@@ -87,18 +90,22 @@ export default async function handler(req, res, env = process.env) {
     return res.status(503).json({ success: false, message: 'The production data source is not configured correctly.' });
   }
   upstream.search = '';
-  upstream.searchParams.set('action', action);
+  upstream.searchParams.set('action', prepareRecords ? 'getInstitutions' : action);
   if (configuredCode && action !== 'login') upstream.searchParams.set('code', configuredCode);
   if (action === 'listUsers') upstream.searchParams.set('actorEmail', currentUser.email);
   // Forward every record-filter parameter to Apps Script. Filtering must happen
   // upstream of pagination, otherwise a 20-row page can shrink to only the few
   // matching rows it happened to contain.
-  for (const key of ['page', 'pageSize', 'query', 'institutionType', 'region']) {
+  for (const key of prepareRecords ? [] : ['page', 'pageSize', 'query', 'institutionType', 'region']) {
     const value = input.searchParams.get(key);
     if (value) upstream.searchParams.set(key, value);
   }
+  if (prepareRecords) {
+    upstream.searchParams.set('page', '1');
+    upstream.searchParams.set('pageSize', '20');
+  }
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 55000);
+  const timer = setTimeout(() => controller.abort(), action === 'login' ? 20000 : 55000);
   try {
     if (['login', 'createUser', 'updateUser', 'deleteUser'].includes(action)) {
       let body = '';
@@ -117,19 +124,23 @@ export default async function handler(req, res, env = process.env) {
         body: JSON.stringify(upstreamBody),
         redirect: 'follow', signal: controller.signal, cache: 'no-store'
       });
+      if (!response.ok) throw new Error(`Google returned HTTP ${response.status}`);
       const payload = await response.json();
       if (action === 'login' && payload.success && payload.user) setSession(res, payload.user, secret, secure);
       return res.status(payload.success ? 200 : action === 'login' ? 401 : 400).json(payload);
     }
-    const cacheable = ['getDashboardData', 'getInstitutions', 'getSurveyResponses'].includes(action);
+    const cacheable = prepareRecords || ['getDashboardData', 'getInstitutions', 'getSurveyResponses'].includes(action);
     if (action === 'clearDashboardCache') invalidateData();
     const payload = await readGoogleData(upstream, controller.signal, cacheable);
+    if (prepareRecords) return res.status(payload.success ? 200 : 502).json({ success: Boolean(payload.success) });
     if (action === 'clearDashboardCache' && payload.success) invalidateData();
     return res.status(200).json(payload);
   } catch (error) {
     return res.status(error.name === 'AbortError' ? 504 : 502).json({
       success: false,
-      message: error.name === 'AbortError' ? 'Google took too long to respond. Please retry.' : 'Unable to read the Google data response. Please retry.'
+      message: error.name === 'AbortError'
+        ? action === 'login' ? 'Sign-in took too long. Please try again.' : 'Google took too long to respond. Please retry.'
+        : 'Unable to read the Google data response. Please retry.'
     });
   } finally {
     clearTimeout(timer);

@@ -64,15 +64,22 @@ function findLoginUser_(email, password) {
   const requiredColumns = Object.values(columns).filter(column => column >= 0);
   const firstColumn = Math.min.apply(null, requiredColumns);
   const lastRequiredColumn = Math.max.apply(null, requiredColumns);
-  const rows = sheet.getRange(2, firstColumn + 1, rowCount, lastRequiredColumn - firstColumn + 1).getDisplayValues();
-  const users = rows.map(row => ({
+  // Read only the email directory, then fetch account details for matching rows.
+  // Always read the current password so edits/revocations take effect immediately.
+  const emails = sheet.getRange(2, columns.email + 1, rowCount, 1).getDisplayValues();
+  for (let index = 0; index < emails.length; index++) {
+    if (String(emails[index][0] || "").trim().toLowerCase() !== email) continue;
+    const row = sheet.getRange(index + 2, firstColumn + 1, 1, lastRequiredColumn - firstColumn + 1).getDisplayValues()[0];
+    const user = {
     email: String(row[columns.email - firstColumn] || "").trim().toLowerCase(),
     password: String(row[columns.password - firstColumn] || ""),
     name: String(row[columns.name - firstColumn] || "").trim(),
     office: String(row[columns.office - firstColumn] || "").trim(),
     role: columns.role >= 0 ? String(row[columns.role - firstColumn] || "").trim() : ""
-  })).filter(user => user.email);
-  return users.find(user => user.email === email && user.password === password) || null;
+    };
+    if (user.email === email && user.password === password) return user;
+  }
+  return null;
 }
 
 function normalizeRole_(value) {
