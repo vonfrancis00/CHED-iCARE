@@ -32,6 +32,7 @@ h1, h2, h3, h4, h5, h6 { font-family: "Plus Jakarta Sans", "DM Sans", ui-sans-se
 .login-brand, .login-eyebrow { color: #0b2c5b; }.login-icon { color: #0b2c5b; background: #e8f1fb; box-shadow: inset 0 0 0 1px #c8dcf2; }.login-card h1 { color: #061b3e; }.login-description, .login-note { color: #526b88; }.login-form label { color: #173b67; }.login-input-wrap { border-color: #bdd0e5; color: #52749b; background: #fff; }.login-input-wrap input { color: #0b2c5b; }.login-submit { color: #fff; background: #0b2c5b; }.login-submit:hover { background: #061b3e; }.login-error { color: #b91c1c; }.login-note { border-top-color: #d8e4f0; }.login-note code { color: #0b2c5b; }
 .logout-modal { border-color: #c8d8ea; background: #fff; box-shadow: 0 28px 70px rgb(0 5 17 / .4); }.logout-modal-close { color: #55708f; }.logout-modal-close:hover { background: #e8f1fb; color: #061b3e; }.logout-modal-icon { color: #0b2c5b; background: #e8f1fb; box-shadow: inset 0 0 0 1px #c8dcf2; }.logout-modal-eyebrow { color: #0b2c5b; }.logout-modal h2 { color: #061b3e; }.logout-modal p:not(.logout-modal-eyebrow) { color: #526b88; }.logout-cancel { border-color: #bdd0e5; color: #0b2c5b; background: #fff; }.logout-cancel:hover { background: #eef5fc; }.logout-confirm { color: #fff; background: #0b2c5b; box-shadow: 0 6px 14px rgb(11 44 91 / .22); }.logout-confirm:hover { background: #061b3e; }
 
+
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -93,6 +94,8 @@ h1, h2, h3, h4, h5, h6 { font-family: "Plus Jakarta Sans", "DM Sans", ui-sans-se
 .sidebar-icon { display: flex; align-items: center; justify-content: center; width: 79px; flex: 0 0 79px; }
 .sidebar-link-copy { display: flex; flex: 0 0 170px; min-width: 0; flex-direction: column; gap: 3px; white-space: nowrap; font-size: 13px; font-weight: 600; }
 .sidebar-link-copy small { font-size: 10px; font-weight: 400; color: #8da0ba; }
+.sidebar-link-title { display: inline-flex; align-items: flex-start; gap: 6px; }
+.sidebar-notification-dot { width: 7px; height: 7px; flex: 0 0 7px; margin-top: 2px; border: 1px solid #fecaca; border-radius: 999px; background: #ef4444; box-shadow: 0 0 0 2px #12345f; }
 .sidebar-chevron { flex-shrink: 0; margin: 0 10px; }
 .sidebar-link:hover { background: #102b50; color: #e0f2fe; }
 .sidebar-link.is-active { background: #12345f; color: #68d7ff; box-shadow: inset 0 0 0 1px #2a507e; }

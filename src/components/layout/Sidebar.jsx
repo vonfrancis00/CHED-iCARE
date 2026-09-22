@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { Baby, BarChart3, BriefcaseBusiness, Building2, ChevronRight, ClipboardList, Clock3, FileText, LogOut, Map, RefreshCw, Settings, UserRound, Users, X } from "lucide-react";
 import { useDashboard } from "../../hooks/useDashboard";
@@ -5,7 +6,7 @@ import { useDashboard } from "../../hooks/useDashboard";
 const navGroups = [
   {
     label: "Overview",
-    items: [["Dashboard", "/", BarChart3, "Live summary"]]
+    items: [["Dashboard", "/", BarChart3, "Live Summary"]]
   },
   {
     label: "Monitoring",
@@ -13,8 +14,8 @@ const navGroups = [
       ["Institutions", "/institutions", Building2, "Colleges and Universities"],
       ["Childcare", "/childcare", Baby, "Facilities"],
       ["Solo Parents", "/solo-parents", Users, "Beneficiaries"],
-      ["Geographic", "/geographic", Map, "Regional view"],
-      ["OCC / Office", "/occ", BriefcaseBusiness, "Office comparison"]
+      ["Geographic", "/geographic", Map, "Regional View"],
+      ["OCC / Office", "/occ", BriefcaseBusiness, "Office Comparison"]
     ]
   },
   {
@@ -27,18 +28,18 @@ const navGroups = [
 ];
 
 
-function SidebarLink({ item: [label, path, Icon, description], onClose }) {
+function SidebarLink({ item: [label, path, Icon, description], onClose, hasNotification = false }) {
   const handleClick = () => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     onClose();
   };
 
   return (
-    <NavLink to={path} end={path === "/"} onClick={handleClick} aria-label={label}
+    <NavLink to={path} end={path === "/"} onClick={handleClick} aria-label={hasNotification ? `${label}: new access request` : label}
       className={({ isActive }) => `sidebar-link${isActive ? " is-active" : ""}`}>
       <span className="sidebar-icon"><Icon size={22} aria-hidden="true" /></span>
       <span className="sidebar-label sidebar-link-copy">
-        <span>{label}</span>
+        <span className="sidebar-link-title">{label}{hasNotification && <span className="sidebar-notification-dot" aria-hidden="true" />}</span>
         {description && <small>{description}</small>}
       </span>
       <ChevronRight className="sidebar-label sidebar-chevron" size={16} aria-hidden="true" />
@@ -67,6 +68,44 @@ function SidebarUpdateStatus() {
 }
 
 export default function Sidebar({ mobileOpen, onClose, user, onLogout }) {
+  const [hasAccountRequests, setHasAccountRequests] = useState(false);
+
+  useEffect(() => {
+    if (user?.role !== "super_admin") {
+      setHasAccountRequests(false);
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    const checkRequests = async () => {
+      try {
+        const response = await fetch("/api/sheet?action=listAccountRequests", {
+          credentials: "same-origin",
+          cache: "no-store",
+          signal: controller.signal
+        });
+        const result = await response.json();
+        if (response.ok && result.success) setHasAccountRequests((result.requests || []).length > 0);
+      } catch (error) {
+        if (error.name !== "AbortError") setHasAccountRequests(false);
+      }
+    };
+
+    checkRequests();
+    const interval = window.setInterval(checkRequests, 60000);
+    return () => {
+      controller.abort();
+      window.clearInterval(interval);
+    };
+  }, [user?.role]);
+
+  const navigationGroups = navGroups.map(group => ({
+    ...group,
+    items: group.items.map(item => item[1] === "/occ" && user?.role === "admin"
+      ? ["My Office", item[1], item[2], "Your office assignments"]
+      : item)
+  }));
+
   return (
     <>
       {mobileOpen && <button type="button" className="sidebar-backdrop" aria-label="Close navigation" onClick={onClose} />}
@@ -77,11 +116,11 @@ export default function Sidebar({ mobileOpen, onClose, user, onLogout }) {
           <button type="button" className="sidebar-close" onClick={onClose} aria-label="Close navigation"><X size={20} /></button>
         </header>
         <nav className="sidebar-nav" aria-label="Dashboard sections">
-          {navGroups.map((group) => (
+          {navigationGroups.map((group) => (
             <section className="sidebar-section" key={group.label} aria-label={group.label}>
               <div className="sidebar-section-title sidebar-label">{group.label}</div>
               {group.items.map((item) => <SidebarLink key={item[1]} item={item} onClose={onClose} />)}
-              {group.label === "Records" && user.role === "super_admin" && <SidebarLink item={["Settings", "/settings", Settings]} onClose={onClose} />}
+              {group.label === "Records" && user.role === "super_admin" && <SidebarLink item={["Settings", "/settings", Settings]} onClose={onClose} hasNotification={hasAccountRequests} />}
             </section>
           ))}
         </nav>

@@ -1,4 +1,33 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
+
+async function readLoginResponse(sendPost, signal) {
+  // Credential verification only reads the register. Retry once from the
+  // deployment URL, including failed redirects and unreadable response bodies.
+  // Both attempts share the caller's existing 55-second deadline.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    signal.throwIfAborted();
+    let response;
+    try {
+      response = await sendPost();
+      if (!response.ok) throw new Error(`Google returned HTTP ${response.status}`);
+      const payload = await response.json();
+      if (!payload || typeof payload.success !== 'boolean' || (payload.success && !payload.user)) {
+        throw new Error('Invalid login response');
+      }
+      if (attempt === 0 && !payload.success && payload.message === 'Unauthorized request.') {
+        await delay(500, undefined, { signal });
+        continue;
+      }
+      return payload;
+    } catch (error) {
+      const temporary = !response || response.ok || [404, 429, 500, 502, 503, 504].includes(response.status);
+      if (attempt > 0 || signal.aborted || !temporary) throw error;
+      await response?.body?.cancel().catch(() => {});
+      await delay(500, undefined, { signal });
+    }
+  }
+}
 
 // Auth is checked before these shared, short-lived data caches are consulted.
 // Never cache login, account operations or errors.
@@ -151,9 +180,13 @@ export default async function handler(req, res, env = process.env) {
       let payload;
       let uncertainWrite = false;
       try {
-        response = await sendPost();
-        if (!response.ok) throw new Error(`Google returned HTTP ${response.status}`);
-        payload = await response.json();
+        if (action === 'login') {
+          payload = await readLoginResponse(sendPost, controller.signal);
+        } else {
+          response = await sendPost();
+          if (!response.ok) throw new Error(`Google returned HTTP ${response.status}`);
+          payload = await response.json();
+        }
       } catch (error) {
         if (action !== 'submitAccountRequest') throw error;
         uncertainWrite = true;
@@ -178,14 +211,6 @@ export default async function handler(req, res, env = process.env) {
           }
         } catch { /* Preserve the original failure if verification is unavailable. */ }
         finally { clearTimeout(verificationTimer); }
-      }
-      // Login only reads credentials. Retry this specific service rejection once;
-      // never retry account writes or an invalid email/password response.
-      if (action === 'login' && payload.success === false && payload.message === 'Unauthorized request.') {
-        controller.signal.throwIfAborted();
-        response = await sendPost();
-        if (!response.ok) throw new Error(`Google returned HTTP ${response.status}`);
-        payload = await response.json();
       }
       recordLoginTiming();
       if (action === 'login' && payload.success === false && payload.message === 'Unauthorized request.') {

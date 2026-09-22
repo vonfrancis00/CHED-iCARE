@@ -29,7 +29,7 @@ function getDashboardData(params) {
   const institutionType = String((params || {}).institutionType || "").trim().toUpperCase();
   const region = String((params || {}).region || "").trim().toLowerCase();
   const filterKey = Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify([institutionType, region])));
-  return getOrBuildCache_(cacheKey_("DASHBOARD_FAST_V1_" + getResponseCacheRevision_() + "_" + filterKey), () => buildDashboardData_(institutionType, region));
+  return getOrBuildCache_(cacheKey_("DASHBOARD_FAST_V4_" + getResponseCacheRevision_() + "_" + filterKey), () => buildDashboardData_(institutionType, region));
 }
 
 function buildDashboardData_(institutionType, region, sharedDataset, sharedOffices) {
@@ -38,7 +38,7 @@ function buildDashboardData_(institutionType, region, sharedDataset, sharedOffic
   const availableRegions = Array.from(new Set(allRows
     .filter(row => !institutionType || String(headerValue_(row, H.institutionType) || "").trim().toUpperCase() === institutionType)
     .map(row => String(headerValue_(row, H.region) || "").trim())
-    .filter(Boolean))).sort();
+    .filter(Boolean))).sort(compareRegionNames_);
   const rows = allRows.filter(row => {
     const matchesType = !institutionType || String(headerValue_(row, H.institutionType) || "").trim().toUpperCase() === institutionType;
     const matchesRegion = !region || String(headerValue_(row, H.region) || "").trim().toLowerCase() === region;
@@ -111,7 +111,11 @@ function buildDashboardData_(institutionType, region, sharedDataset, sharedOffic
 
     soloParents,
 
-    regions: buildLocationDistribution_(rows),
+    // Once a region is selected, every remaining row belongs to that region.
+    // Group by institution instead so the chart remains useful and shows each
+    // institution's recorded campus-response count.
+    regions: buildLocationDistribution_(rows, Boolean(region)),
+    locationDistributionGroup: region ? "institution" : "region",
 
     occDistribution: occOffices.map(({ name, value, responded, pending }) => ({ name, value, responded, pending })),
     occOffices,
@@ -136,6 +140,7 @@ function buildDashboardData_(institutionType, region, sharedDataset, sharedOffic
           programQuestions: view.programQuestions,
           soloParents: view.soloParents,
           regions: view.regions,
+          locationDistributionGroup: view.locationDistributionGroup,
           availableRegions: base.availableRegions
         };
       });
@@ -151,6 +156,20 @@ function countInstitutionTypes_(rows) {
     if (type === "SUC") counts.suc++;
     return counts;
   }, { luc: 0, suc: 0 });
+}
+
+function compareRegionNames_(left, right) {
+  const leftName = String(left || "").trim();
+  const rightName = String(right || "").trim();
+  const leftNumber = /^Region\s+(\d+)$/i.exec(leftName);
+  const rightNumber = /^Region\s+(\d+)$/i.exec(rightName);
+
+  // Put the numbered regions first in their natural order, then named regions.
+  // This yields Region 1 ... Region 12, followed by CAR, NCR, and so on.
+  if (leftNumber && rightNumber) return Number(leftNumber[1]) - Number(rightNumber[1]);
+  if (leftNumber) return -1;
+  if (rightNumber) return 1;
+  return leftName.localeCompare(rightName);
 }
 
 function addDisplayFields_(row) {
@@ -200,7 +219,7 @@ function buildInstitutionsPage_(page, pageSize, query, institutionType, region) 
     total: matches.length, page: page, pageSize: pageSize,
     institutionCount: institutionCount, campusCount: campusCount,
     lucCount: institutionTypes.luc, sucCount: institutionTypes.suc,
-    regions: Array.from(new Set(rows.map(row => String(headerValue_(row, H.region) || "").trim()).filter(Boolean))).sort(),
+    regions: Array.from(new Set(rows.map(row => String(headerValue_(row, H.region) || "").trim()).filter(Boolean))).sort(compareRegionNames_),
     filters: { institutionType: institutionType, region: region, query: query }
   };
 }
@@ -214,10 +233,12 @@ function buildInstitutions_() {
   return { success: true, source: "google-sheet", updatedAt: new Date().toISOString(), cachedAt: dataset.cachedAt, headers: dataset.headers, data: dataset.rows.slice().reverse().map(addDisplayFields_) };
 }
 
-function buildLocationDistribution_(rows) {
+function buildLocationDistribution_(rows, groupByInstitution) {
   const counts = {};
   rows.forEach(row => {
-    const group = String(headerValue_(row, H.region) ?? "").trim() || "Not specified";
+    const group = groupByInstitution
+      ? String(headerValue_(row, H.institution) ?? "").trim() || "Unnamed institution"
+      : String(headerValue_(row, H.region) ?? "").trim() || "Not specified";
     counts[group] = (counts[group] || 0) + 1;
   });
 

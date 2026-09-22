@@ -10,6 +10,17 @@ import SoloParentChart from "../components/dashboard/SoloParentChart";
 import OCCChart from "../components/dashboard/OCCChart";
 import { Building2, Baby, Users, FileCheck, RefreshCw, ShieldCheck } from "lucide-react";
 
+function sortDashboardRegions(regions) {
+  return [...regions].sort((left, right) => {
+    const leftNumber = /^Region\s+(\d+)$/i.exec(String(left || "").trim());
+    const rightNumber = /^Region\s+(\d+)$/i.exec(String(right || "").trim());
+    if (leftNumber && rightNumber) return Number(leftNumber[1]) - Number(rightNumber[1]);
+    if (leftNumber) return -1;
+    if (rightNumber) return 1;
+    return String(left || "").localeCompare(String(right || ""));
+  });
+}
+
 export default function Dashboard() {
   const [institutionType, setInstitutionType] = useState("");
   const [region, setRegion] = useState("");
@@ -23,7 +34,7 @@ export default function Dashboard() {
   const o = data.overview;
   const occOffices = (data.occOffices?.length ? data.occOffices : data.occDistribution || [])
     .filter((office) => String(office.name || "").toLowerCase().includes("office"));
-  const regions = data.availableRegions || data.regions?.map(item => item.name) || [];
+  const regions = sortDashboardRegions(data.availableRegions || data.regions?.map(item => item.name) || []);
   const selectType = type => {
     setInstitutionType(type);
     setRegion("");
@@ -98,7 +109,7 @@ export default function Dashboard() {
         <ProgramStatusChart data={data.programQuestions} />
       </div>
 
-      <RegionalChart data={data.regions} />
+      <RegionalChart data={data.regions} groupedByInstitution={data.locationDistributionGroup === "institution"} />
 
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
         <SoloParentChart data={data.soloParents} />

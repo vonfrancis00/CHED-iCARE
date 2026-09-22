@@ -131,6 +131,37 @@ test('login issues a session only for successful upstream authentication', async
     const failed = await login();
     assert.equal(failed.code, 502);
     assert.equal(failed.headers['Set-Cookie'], undefined);
-    assert.equal(calls, 3, 'Credentials are neither cached nor automatically retried');
+    assert.equal(calls, 4, 'Only the temporary service failure is retried once');
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('login recovers once from temporary Google failures but never retries invalid credentials', async () => {
+  const originalFetch = globalThis.fetch;
+  const env = { SESSION_SECRET: 'test-secret', SHEET_API_URL: 'https://script.google.com/macros/s/test/exec' };
+  const user = { email: 'test@example.com' };
+  try {
+    for (const failure of [
+      () => new Response('Unavailable', { status: 503 }),
+      () => new Response('<html>Temporary Google error</html>'),
+      () => Response.json(null),
+      () => { throw new TypeError('fetch failed'); },
+    ]) {
+      for (const valid of [true, false]) {
+        let calls = 0;
+        globalThis.fetch = async (_url, options) => {
+          assert.equal(options.method, 'POST');
+          calls++;
+          if (calls === 1) return failure();
+          return Response.json(valid ? { success: true, user } : { success: false, message: 'Invalid email or password.' });
+        };
+        const req = Readable.from([JSON.stringify({ email: user.email, password: 'test-password' })]);
+        Object.assign(req, { url: '/api/sheet?action=login', method: 'POST', headers: {} });
+        const res = { headers: {}, setHeader(key, value) { this.headers[key] = value; }, status(code) { this.code = code; return this; }, json(payload) { this.payload = payload; return this; } };
+        await handler(req, res, env);
+        assert.equal(calls, 2);
+        assert.equal(res.code, valid ? 200 : 401);
+        assert.equal(Boolean(res.headers['Set-Cookie']), valid);
+      }
+    }
   } finally { globalThis.fetch = originalFetch; }
 });

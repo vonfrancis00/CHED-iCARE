@@ -154,13 +154,29 @@ export default function Institutions() {
       </div>
 
       <div className="card mb-5 p-4">
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_220px]">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_220px]">
           <div className="relative">
           <Search className="absolute left-3 top-3.5 text-slate-400" size={18}/>
           <input value={q} onChange={e => { setFilterPending(true); setPage(1); setQ(e.target.value); }} placeholder="Search any of the 31 fields..." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 outline-none focus:border-blue-500" aria-label="Search institutions" aria-busy={isSearching}/>
           {isSearching && <LoaderCircle className="absolute right-3 top-3.5 animate-spin text-blue-600" size={18} aria-label="Searching"/>}
         </div>
-          <select value={institutionType} onChange={event => { setFilterPending(true); setPage(1); setInstitutionType(event.target.value); }} aria-label="Filter by institution type" className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 outline-none focus:border-blue-500"><option value="">All types</option><option value="LUC">LUC</option><option value="SUC">SUC</option></select>
+          <div
+            role="group"
+            aria-label="Filter by institution type"
+            className="inline-flex rounded-xl bg-slate-100 p-1"
+          >
+            {[['', 'All'], ['LUC', 'LUC'], ['SUC', 'SUC']].map(([value, label]) => (
+              <button
+                key={value || 'all'}
+                type="button"
+                aria-pressed={institutionType === value}
+                onClick={() => { setFilterPending(true); setPage(1); setInstitutionType(value); }}
+                className={`rounded-lg px-4 py-2.5 text-sm font-semibold transition ${institutionType === value ? "bg-blue-700 text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <select value={region} onChange={event => { setFilterPending(true); setPage(1); setRegion(event.target.value); }} aria-label="Filter by region" className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 outline-none focus:border-blue-500"><option value="">All regions</option>{regions.map(item => <option key={item} value={item}>{item}</option>)}</select>
         </div>
         <p className="mt-2 text-xs text-slate-500">{total.toLocaleString()} matching response{total === 1 ? "" : "s"} · showing {firstRow.toLocaleString()}–{lastRow.toLocaleString()}</p>

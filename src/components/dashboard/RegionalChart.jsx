@@ -4,11 +4,14 @@ import ChartCard from "./ChartCard";
 
 const COLORS = ["#1d4ed8", "#2563eb", "#1e3a8a", "#38bdf8", "#4f46e5", "#0f172a"];
 
-export default function RegionalChart({ data = [] }) {
+export default function RegionalChart({ data = [], groupedByInstitution = false }) {
   const safeData = Array.isArray(data) ? data : [];
+  const subtitle = groupedByInstitution
+    ? "Institution names and their campus-response counts"
+    : "Campus counts grouped by the sheet's Region column";
 
   return (
-    <ChartCard title="Campus Location Distribution" subtitle="Campus counts grouped by the sheet’s Region column" className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/80">
+    <ChartCard title="Campus Location Distribution" subtitle={subtitle} className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/80">
       <div className="h-[360px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={safeData} margin={{ top: 18, right: 12, left: 4, bottom: 28 }}>
