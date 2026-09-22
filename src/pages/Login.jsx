@@ -89,7 +89,7 @@ export default function Login({ onLogin }) {
             </div>
             </div>
           {error && <p className="login-error" role="alert">{error}</p>}
-          {loading && slowLogin && <p className="login-description" role="status">Sign-in is taking longer than usual. Please keep this page open; your request is still processing.</p>}
+          {loading && slowLogin && <p className="login-description" role="status">Verifying your account… You will be signed in automatically when verification finishes.</p>}
           <button className="login-submit" type="submit" disabled={loading}>
             {loading ? 'Signing in…' : <>Continue <ArrowRight size={18} aria-hidden="true" /></>}
           </button>

@@ -31,6 +31,7 @@ test('a cold login can finish after 30 seconds without resubmitting', async (t) 
     const result = await pending;
     assert.equal(result.code, 200);
     assert.ok(result.headers['Set-Cookie']);
+    assert.match(result.headers['Server-Timing'], /request;dur=[\d.]+, google;dur=[\d.]+/);
     assert.equal(calls, 1);
   } finally { globalThis.fetch = originalFetch; }
 });

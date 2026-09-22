@@ -59,6 +59,7 @@ function setSession(res, user, secret, secure) {
 
 // Keep Google's ContentService redirects on the server, outside the browser.
 export default async function handler(req, res, env = process.env) {
+  const startedAt = performance.now();
   res.setHeader('Cache-Control', 'private, no-store');
   const configuredCode = (env.SHEET_API_ACCESS_CODE || env.VITE_SHEET_API_ACCESS_CODE || '').trim();
   const secret = (env.SESSION_SECRET || configuredCode).trim();
@@ -107,6 +108,17 @@ export default async function handler(req, res, env = process.env) {
   const controller = new AbortController();
   // A cold authentication request needs the full upstream budget too.
   const timer = setTimeout(() => controller.abort(), 55000);
+  let upstreamStartedAt;
+  function recordLoginTiming() {
+    if (action !== 'login') return;
+    const now = performance.now();
+    const timings = [`total;dur=${(now - startedAt).toFixed(1)}`];
+    if (upstreamStartedAt !== undefined) {
+      timings.push(`request;dur=${(upstreamStartedAt - startedAt).toFixed(1)}`);
+      timings.push(`google;dur=${(now - upstreamStartedAt).toFixed(1)}`);
+    }
+    res.setHeader('Server-Timing', timings.join(', '));
+  }
   try {
     if (['login', 'createUser', 'updateUser', 'deleteUser'].includes(action)) {
       let body = '';
@@ -120,6 +132,7 @@ export default async function handler(req, res, env = process.env) {
         : { code: configuredCode, action, actorEmail: currentUser.email,
             targetEmail: credentials.targetEmail, email: credentials.email, password: credentials.password,
             name: credentials.name, office: credentials.office, role: credentials.role };
+      upstreamStartedAt = performance.now();
       const response = await fetch(upstream, {
         method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(upstreamBody),
@@ -127,6 +140,7 @@ export default async function handler(req, res, env = process.env) {
       });
       if (!response.ok) throw new Error(`Google returned HTTP ${response.status}`);
       const payload = await response.json();
+      recordLoginTiming();
       if (action === 'login' && payload.success && payload.user) setSession(res, payload.user, secret, secure);
       return res.status(payload.success ? 200 : action === 'login' ? 401 : 400).json(payload);
     }
@@ -137,6 +151,7 @@ export default async function handler(req, res, env = process.env) {
     if (action === 'clearDashboardCache' && payload.success) invalidateData();
     return res.status(200).json(payload);
   } catch (error) {
+    recordLoginTiming();
     return res.status(error.name === 'AbortError' ? 504 : 502).json({
       success: false,
       message: error.name === 'AbortError'
