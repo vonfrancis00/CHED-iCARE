@@ -178,7 +178,7 @@ export default function OCCSheetView({ offices = [], selectedOfficeName = "", is
             </div>
       {previewOpen && <div className="occ-print-preview fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-slate-950/50 p-4 sm:p-8" role="dialog" aria-modal="true" aria-label="Print list preview">
         <div className="occ-print-content w-full rounded-sm bg-white shadow-2xl">
-          <div className="print-actions flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-7">
+          <div className="print-actions flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:px-7">
             <div>
               <p className="text-sm font-semibold text-slate-900">
                 Document preview

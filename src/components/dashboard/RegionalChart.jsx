@@ -12,7 +12,7 @@ export default function RegionalChart({ data = [], groupedByInstitution = false 
 
   return (
     <ChartCard title="Campus Location Distribution" subtitle={subtitle} className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/80">
-      <div className="h-[360px]">
+      <div className="chart-scroll" tabIndex={0} role="region" aria-label="Scrollable chart"><div className="h-[360px]" style={{ minWidth: Math.max(440, safeData.length * 65) }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={safeData} margin={{ top: 18, right: 12, left: 4, bottom: 28 }}>
             <defs>
@@ -48,7 +48,7 @@ export default function RegionalChart({ data = [], groupedByInstitution = false 
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-      </div>
+      </div></div>
     </ChartCard>
   );
 }

@@ -325,7 +325,7 @@ export default function Settings({ user }) {
       {success && <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800" role="status"><CheckCircle2 size={18} className="mt-0.5 shrink-0" />{success}</div>}
       {showForm && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" onMouseDown={event => { if (event.target === event.currentTarget && !saving) closeForm(); }}>
-        <section ref={modalRef} role="dialog" aria-modal="true" className="max-h-[calc(100vh-2rem)] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl" aria-labelledby="user-management-title">
+        <section ref={modalRef} role="dialog" aria-modal="true" className="max-h-[calc(100dvh-2rem)] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl" aria-labelledby="user-management-title">
           <div className="flex items-start gap-4 border-b border-slate-100 px-6 py-6 sm:px-8">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#0b2c5b]"><UsersRound size={22} /></div>
             <div className="min-w-0 flex-1">
@@ -372,7 +372,7 @@ export default function Settings({ user }) {
 
       {deleteTarget && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" onMouseDown={event => { if (event.target === event.currentTarget && !deleting) setDeleteTarget(null); }}>
-          <section ref={deleteModalRef} role="alertdialog" aria-modal="true" aria-labelledby="delete-user-title" aria-describedby="delete-user-description" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
+          <section ref={deleteModalRef} role="alertdialog" aria-modal="true" aria-labelledby="delete-user-title" aria-describedby="delete-user-description" className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-700"><Trash2 size={22} /></div>
             <h2 id="delete-user-title" className="mt-5 text-xl font-bold text-slate-900">Delete this user?</h2>
             <p id="delete-user-description" className="mt-2 text-sm leading-6 text-slate-600">This will remove <strong>{deleteTarget.name || deleteTarget.email}</strong> ({deleteTarget.email}) from the Users sheet.</p>

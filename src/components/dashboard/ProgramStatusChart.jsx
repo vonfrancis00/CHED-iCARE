@@ -7,7 +7,7 @@ export default function ProgramStatusChart({ data = [] }) {
 
   return (
     <ChartCard title="Documented Childcare Program Responses" subtitle="Counts directly from the three documented-program questions" className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/80">
-      <div className="h-[360px]">
+      <div className="chart-scroll" tabIndex={0} role="region" aria-label="Scrollable chart"><div className="h-[360px]" style={{ minWidth: Math.max(440, safeData.length * 65) }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={safeData} margin={{ top: 12, right: 12, left: 4, bottom: 24 }}>
             <defs>
@@ -38,7 +38,7 @@ export default function ProgramStatusChart({ data = [] }) {
             <Bar dataKey="planned" name="Plans / Work" fill="url(#programPlanned)" radius={[8, 8, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
-      </div>
+      </div></div>
     </ChartCard>
   );
 }

@@ -54,7 +54,7 @@ export default function Geographic() {
               <MapPinned size={14} />
               Regional overview
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl uppercase">Geographic Analysis</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight sm:text-4xl uppercase">Geographic Analysis</h1>
             <p className="mt-3 max-w-2xl text-sm text-blue-100 sm:text-base">
               Overview of campus distribution and regional coverage across participating institutions.
             </p>

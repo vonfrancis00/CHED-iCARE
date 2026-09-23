@@ -39,7 +39,7 @@ export default function OCCChart({ data = [] }) {
           return (
             <div
               key={item.name}
-              className="grid gap-4 px-5 py-4 lg:grid-cols-[44px_minmax(240px,360px)_1fr_92px] lg:items-center"
+              className="grid gap-4 px-5 py-4 lg:grid-cols-[36px_minmax(0,1fr)] 2xl:grid-cols-[36px_minmax(0,1fr)_minmax(60px,1fr)_64px] lg:items-center"
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-sm font-bold tabular-nums text-slate-600">
                 {index + 1}

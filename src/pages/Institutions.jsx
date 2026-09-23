@@ -77,7 +77,7 @@ export default function Institutions() {
               <Building2 size={14} />
               Institution registry
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl uppercase">Institutions</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight sm:text-4xl uppercase">Institutions</h1>
             <p className="mt-3 max-w-2xl text-sm text-blue-100 sm:text-base">
               Overview of participating institutions, campuses, facilities, and childcare development programs.
             </p>
@@ -233,12 +233,12 @@ function DetailsModal({ row, headers, onClose }) {
       onClick={onClose}
     >
       <div
-        className="max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-[26px] border border-blue-200/20 bg-white shadow-[0_28px_80px_rgba(2,6,23,0.45)]"
+        className="flex max-h-[92dvh] w-full flex-col max-w-6xl overflow-hidden rounded-[26px] border border-blue-200/20 bg-white shadow-[0_28px_80px_rgba(2,6,23,0.45)]"
         onClick={event => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between border-b border-slate-200 bg-gradient-to-r from-[#0b1f3a] via-[#0e294d] to-[#123c6d] px-5 py-4 text-white sm:px-6">
-          <div className="flex items-center gap-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-blue-100 shadow-inner shadow-white/10">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 bg-gradient-to-r from-[#0b1f3a] via-[#0e294d] to-[#123c6d] px-5 py-4 text-white sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="hidden h-11 w-11 shrink-0 items-center sm:flex justify-center rounded-xl border border-white/15 bg-white/10 text-blue-100 shadow-inner shadow-white/10">
               <Building2 size={20} />
             </div>
             <div>
@@ -250,14 +250,14 @@ function DetailsModal({ row, headers, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white transition hover:bg-white/10"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white transition hover:bg-white/10"
             aria-label="Close institution details"
           >
             <X size={18} />
           </button>
         </div>
 
-        <div className="max-h-[calc(92vh-108px)] overflow-y-auto bg-slate-100/90 p-4 sm:p-5">
+        <div className="min-h-0 overflow-y-auto bg-slate-100/90 p-4 sm:p-5">
           <div className="rounded-[22px] border border-slate-200 bg-white/85 p-3 shadow-inner shadow-slate-200/60 sm:p-4">
             <div className="grid gap-4 md:grid-cols-2">
               {headers.map(header => {

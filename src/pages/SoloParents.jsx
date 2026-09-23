@@ -31,7 +31,7 @@ export default function SoloParents() {
               <HeartHandshake size={14} />
               Family support
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl uppercase">Solo Parents</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight sm:text-4xl uppercase">Solo Parents</h1>
             <p className="mt-3 max-w-2xl text-sm text-blue-100 sm:text-base">
               Overview of solo parent enrollment, gender distribution, and community support across participating institutions.
             </p>
