@@ -142,18 +142,19 @@ export default function Login({ onLogin }) {
           {error && <p className="login-error" role="alert">{error}</p>}
           {loading && slowLogin && <p className="login-description" role="status">Verifying your account… You will be signed in automatically when verification finishes.</p>}
           <button className="login-submit" type="submit" disabled={loading}>
-            {loading ? 'Signing in…' : <>Continue <ArrowRight size={18} aria-hidden="true" /></>}
+            {loading ? 'Signing in…' : <>Access Dashboard <ArrowRight size={18} aria-hidden="true" /></>}
           </button>
         </form>
-        <p className="login-security-note">
-          <LockKeyhole size={14} aria-hidden="true" /> 
-          Authorized personnel only.
-        </p>
+        
         {!showRequest && requestLoading && slowRequest && <p className="login-description" role="status">Your account request is being processed. Once approved, your login credentials will be emailed to you.</p>}
         {!showRequest && requestSuccess && <p className="login-request-success" role="status">{requestSuccess}</p>}
         {!showRequest && requestError && <p className="login-error" role="alert">{requestError}</p>}
         <button type="button" className="login-request-link" onClick={openRequest} disabled={requestLoading}><UserPlus size={15} />{requestLoading ? 'Processing request…' : 'Request an account'}</button>
       </div>
+      <p className="login-security-note">
+          <LockKeyhole size={14} aria-hidden="true" /> 
+          Authorized personnel only.
+        </p>
       <p className="login-panel-footer">© {new Date().getFullYear()} Commission on Higher Education</p>
     </section>
   {showRequest && <div className="login-request-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !requestLoading) setShowRequest(false); }}>

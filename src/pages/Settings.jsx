@@ -2,7 +2,7 @@ import { accountFetch } from "../services/accountApi";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  AlertCircle, Building2, CheckCircle2, Eye, EyeOff, KeyRound,
+  AlertCircle, Building2, CheckCircle2, ChevronDown, Eye, EyeOff, KeyRound,
   Mail, Pencil, RefreshCw, Search, ShieldCheck, Trash2, UserPlus, UsersRound, X
 } from "lucide-react";
 import { useDashboard } from "../hooks/useDashboard";
@@ -67,6 +67,13 @@ export default function Settings({ user }) {
   const directoryUsers = users.filter(account => String(account.email || "").trim().toLowerCase() !== currentUserEmail);
   const visibleUsers = directoryUsers.filter(account => [account.name, account.email, account.office, account.role]
     .some(value => String(value || "").toLowerCase().includes(usersQuery.trim().toLowerCase())));
+  const usersByOffice = new Map();
+  for (const account of visibleUsers) {
+    const office = String(account.office || "").trim() || "No office assigned";
+    if (!usersByOffice.has(office)) usersByOffice.set(office, []);
+    usersByOffice.get(office).push(account);
+  }
+  const officeGroups = [...usersByOffice.entries()].sort(([a], [b]) => a.localeCompare(b));
   const superAdminCount = directoryUsers.filter(account => account.role === "super_admin").length;
 
   useEffect(() => {
@@ -401,7 +408,7 @@ export default function Settings({ user }) {
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-700">Directory</p>
                 <h2 id="users-list-title" className="mt-1 text-xl font-bold tracking-tight text-slate-900">Dashboard Users</h2>
-                <p className="mt-1 text-sm text-slate-500">People with access to the childcare dashboard.</p>
+                <p className="mt-1 text-sm text-slate-500">Select an office to view its dashboard users.</p>
               </div>
             </div>
             <button ref={refreshButtonRef} type="button" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-[#0b2c5b] shadow-sm transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-60" onClick={() => setUsersRefresh(value => value + 1)} disabled={usersLoading}>
@@ -425,7 +432,17 @@ export default function Settings({ user }) {
           </div>
           {usersError && <div className="mt-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert"><AlertCircle size={18} className="shrink-0" />{usersError}</div>}
           <ul className="mt-5 space-y-3">
-            {visibleUsers.map((account, index) => (
+            {officeGroups.map(([office, officeUsers]) => (
+              <li key={office}>
+                <details className="group/office overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/50">
+                  <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 text-[#0b2c5b] transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-blue-600 [&::-webkit-details-marker]:hidden">
+                    <Building2 size={20} className="shrink-0" aria-hidden="true" />
+                    <span className="min-w-0 flex-1 break-words text-sm font-bold">{office}</span>
+                    <span className="shrink-0 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">{officeUsers.length} {officeUsers.length === 1 ? "user" : "users"}</span>
+                    <ChevronDown size={18} className="shrink-0 transition-transform group-open/office:rotate-180" aria-hidden="true" />
+                  </summary>
+                  <ul className="space-y-3 border-t border-slate-200 p-3 sm:p-4">
+            {officeUsers.map((account, index) => (
               <li key={`${account.email}-${index}`} className="group grid gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-200 hover:bg-blue-50/30 hover:shadow-md lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto_auto] lg:items-center lg:gap-5 sm:px-5 sm:py-4">
                 <div className="flex min-w-0 items-center gap-4">
                   <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-sm font-bold ${account.role === "super_admin" ? "bg-blue-100 text-blue-800" : "bg-slate-100 text-slate-700"}`}>{initials(account.name, account.email)}</div>
@@ -437,6 +454,10 @@ export default function Settings({ user }) {
                   <button type="button" onClick={event => openEdit(event, account)} aria-label={`Edit ${account.name || account.email}`} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-800"><Pencil size={16} /></button>
                   <button type="button" onClick={event => openDelete(event, account)} disabled={account.email.toLowerCase() === user?.email?.toLowerCase()} aria-label={`Delete ${account.name || account.email}`} title={account.email.toLowerCase() === user?.email?.toLowerCase() ? "You cannot delete your own account" : "Delete user"} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40"><Trash2 size={16} /></button>
                 </div>
+              </li>
+            ))}
+                  </ul>
+                </details>
               </li>
             ))}
           </ul>

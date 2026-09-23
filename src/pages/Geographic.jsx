@@ -34,6 +34,16 @@ export default function Geographic() {
   }
 
   const regions = data?.regions ?? [];
+  const chartRegions = snapshot?.filterViews ? regions.map((item) => {
+    const countForType = (type) => {
+      if (institutionType && institutionType !== type) return 0;
+      const view = snapshot.filterViews[JSON.stringify([type, region.toLowerCase()])];
+      return Number(view?.regions?.find(entry => entry.name === item.name)?.value || 0);
+    };
+    const luc = countForType("LUC");
+    const suc = countForType("SUC");
+    return { ...item, luc, suc, other: Math.max(0, Number(item.value || 0) - luc - suc) };
+  }) : regions;
   const availableRegions = sortRegions(data?.availableRegions ?? snapshot?.availableRegions ?? []);
   const totalCampuses = regions.reduce((sum, region) => sum + Number(region.value || 0), 0);
   const topRegion = [...regions].sort((a, b) => Number(b.value || 0) - Number(a.value || 0))[0];
@@ -142,7 +152,7 @@ export default function Geographic() {
         </div>
       </section>
 
-      <RegionalChart data={regions} groupedByInstitution={groupedByInstitution} />
+      <RegionalChart data={chartRegions} groupedByInstitution={groupedByInstitution} splitByType={Boolean(snapshot?.filterViews)} />
 
       {regions.length > 0 ? (
         <section className="card p-5 sm:p-6">

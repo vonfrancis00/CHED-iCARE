@@ -32,12 +32,21 @@ export default function Dashboard() {
   if (!data) return <div className="card p-8"><h2 className="font-semibold">Unable to load dashboard</h2><p className="mt-2 text-sm text-slate-500">{error}</p><button onClick={reload} className="mt-4 rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white">Retry</button></div>;
 
   const o = data.overview;
+  const chartRegions = snapshot?.filterViews ? (data.regions ?? []).map((item) => {
+    const countForType = (type) => {
+      if (institutionType && institutionType !== type) return 0;
+      const view = snapshot.filterViews[JSON.stringify([type, region.toLowerCase()])];
+      return Number(view?.regions?.find(entry => entry.name === item.name)?.value || 0);
+    };
+    const luc = countForType("LUC");
+    const suc = countForType("SUC");
+    return { ...item, luc, suc, other: Math.max(0, Number(item.value || 0) - luc - suc) };
+  }) : data.regions;
   const occOffices = (data.occOffices?.length ? data.occOffices : data.occDistribution || [])
     .filter((office) => String(office.name || "").toLowerCase().includes("office"));
-  const regions = sortDashboardRegions(data.availableRegions || data.regions?.map(item => item.name) || []);
+  const regions = sortDashboardRegions(snapshot.availableRegions || snapshot.regions?.map(item => item.name) || []);
   const selectType = type => {
     setInstitutionType(type);
-    setRegion("");
   };
   return (
     <div className="dashboard-overview rounded-3xl border border-[#bfd0e5] bg-[#f6f9fd]/85 p-4 shadow-[0_20px_55px_-42px_rgba(6,27,58,0.6)] backdrop-blur-sm sm:p-6">
@@ -109,7 +118,7 @@ export default function Dashboard() {
         <ProgramStatusChart data={data.programQuestions} />
       </div>
 
-      <RegionalChart data={data.regions} groupedByInstitution={data.locationDistributionGroup === "institution"} />
+      <RegionalChart data={chartRegions} groupedByInstitution={data.locationDistributionGroup === "institution"} splitByType={Boolean(snapshot?.filterViews)} />
 
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
         <SoloParentChart data={data.soloParents} />
