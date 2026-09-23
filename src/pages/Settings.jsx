@@ -77,6 +77,12 @@ export default function Settings({ user }) {
   const superAdminCount = directoryUsers.filter(account => account.role === "super_admin").length;
 
   useEffect(() => {
+    if (!success) return;
+    const timeout = window.setTimeout(() => setSuccess(""), 3000);
+    return () => window.clearTimeout(timeout);
+  }, [success]);
+
+  useEffect(() => {
     const controller = new AbortController();
     async function loadUsers() {
       const versionAtStart = mutationVersion.current;
@@ -225,6 +231,7 @@ export default function Settings({ user }) {
 
   function openDelete(event, account) {
     returnFocusRef.current = event.currentTarget;
+    setSuccess("");
     setDeleteError("");
     setDeleteTarget(account);
   }
@@ -272,7 +279,7 @@ export default function Settings({ user }) {
           .map(item => item.row > approvalRequest.row ? { ...item, row: item.row - 1 } : item));
       }
       closeForm();
-      setSuccess(result.message || (approvalRequest ? "Request approved." : "User added successfully."));
+      setSuccess(editingUser ? "User edited successfully." : result.message || (approvalRequest ? "Request approved." : "User added successfully."));
     } catch (cause) {
       setError(cause.message || "Unable to add user. Please retry.");
     } finally {
@@ -297,7 +304,7 @@ export default function Settings({ user }) {
       newlyCreatedUsers.current.delete(deleteTarget.email.toLowerCase());
       deletedUsers.current.add(deleteTarget.email.toLowerCase());
       setUsers(current => current.filter(account => account.email.toLowerCase() !== deleteTarget.email.toLowerCase()));
-      setSuccess(result.message || "User deleted successfully.");
+      setSuccess("User deleted successfully.");
       setDeleteTarget(null);
     } catch (cause) {
       setDeleteError(cause.message || "Unable to delete user. Please retry.");
@@ -318,25 +325,34 @@ export default function Settings({ user }) {
             <p className="mt-3 max-w-xl text-sm leading-6 text-blue-100">Manage who can access the childcare dashboard and assign each person to an office.</p>
           </div>
           <button type="button" className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-[#0b2c5b] shadow-lg shadow-blue-950/20 transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white" onClick={openCreate} aria-haspopup="dialog">
-            <UserPlus size={18} />Add user
+            <UserPlus size={18} />Add New User
           </button>
         </div>
       </section>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <DetailCard icon={ShieldCheck} label="Your access" value="Super Admin" detail={user?.email || "User management access"} />
-        <DetailCard icon={Building2} label="Office directory" value={officesLoading && !offices.length ? "Loading..." : `${offices.length} offices`} detail="Options from the OCC office register" />
+        <DetailCard icon={Building2} label="Office directory" value={officesLoading && !offices.length ? "Loading..." : `${offices.length} offices`} detail="Options from the OCC register" />
         <DetailCard icon={Mail} label="Account email" value="@ched.gov.ph" detail="Required for every new dashboard user" />
       </div>
 
-      {success && <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800" role="status"><CheckCircle2 size={18} className="mt-0.5 shrink-0" />{success}</div>}
+      {success && createPortal(
+        <div className="fixed right-4 top-4 z-[110] flex w-[calc(100%-2rem)] max-w-md items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 shadow-lg">
+          <div role="status" className="flex flex-1 items-start gap-3">
+            <CheckCircle2 size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <span>{success}</span>
+          </div>
+          <button type="button" onClick={() => setSuccess("")} aria-label="Dismiss success message" className="shrink-0 rounded p-1 hover:bg-emerald-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700"><X size={16} /></button>
+        </div>,
+        document.body
+      )}
       {showForm && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" onMouseDown={event => { if (event.target === event.currentTarget && !saving) closeForm(); }}>
         <section ref={modalRef} role="dialog" aria-modal="true" className="max-h-[calc(100dvh-2rem)] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl" aria-labelledby="user-management-title">
           <div className="flex items-start gap-4 border-b border-slate-100 px-6 py-6 sm:px-8">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#0b2c5b]"><UsersRound size={22} /></div>
             <div className="min-w-0 flex-1">
-              <h2 id="user-management-title" className="text-lg font-bold text-slate-900">{approvalRequest ? "Approve account request" : editingUser ? "Edit user" : "Add user"}</h2>
+              <h2 id="user-management-title" className="text-lg font-bold text-slate-900">{approvalRequest ? "Approve account request" : editingUser ? "Edit user" : "Add New User"}</h2>
               <p className="mt-1 text-sm leading-6 text-slate-500">{approvalRequest ? "Set the password and access role before creating this account." : editingUser ? `Update ${editingUser.name || editingUser.email}'s account details.` : "Create an account with an office assignment and the right level of access."}</p>
             </div>
             <button type="button" onClick={closeForm} disabled={saving} aria-label="Close user form" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50"><X size={20} /></button>
@@ -368,7 +384,7 @@ export default function Settings({ user }) {
 
                 <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-100 pt-6">
                   <button type="button" className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50" onClick={closeForm} disabled={saving}>Cancel</button>
-                  <button type="submit" className="settings-register min-h-11 disabled:cursor-wait disabled:opacity-60" disabled={saving || !officeOptions.length}>{editingUser ? <Pencil size={17} /> : <UserPlus size={17} />}{saving ? "Saving..." : approvalRequest ? "Approve & create user" : editingUser ? "Save changes" : "Create user"}</button>
+                  <button type="submit" className="settings-register min-h-11 disabled:cursor-wait disabled:opacity-60" disabled={saving || !officeOptions.length}>{editingUser ? <Pencil size={17} /> : <UserPlus size={17} />}{saving ? "Saving..." : approvalRequest ? "Approve & Save User" : editingUser ? "Save changes" : "Create user"}</button>
                 </div>
               </form>
           </div>
@@ -395,7 +411,7 @@ export default function Settings({ user }) {
 
       <section className="overflow-hidden rounded-[24px] border border-amber-200 bg-white shadow-sm" aria-labelledby="requests-list-title">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-amber-100 bg-amber-50/70 px-6 py-5 sm:px-8"><div><p className="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-700">Account access</p><h2 id="requests-list-title" className="mt-1 text-xl font-bold text-slate-900">Requesting Users</h2><p className="mt-1 text-sm text-slate-500">Review people who requested dashboard access.</p></div><span className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-amber-800">{requests.length} pending</span></div>
-        <ul className="divide-y divide-slate-100">{requests.map(request => <li key={request.row} className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 sm:px-8"><div><p className="font-bold text-slate-900">{request.name}</p><p className="mt-1 text-sm text-slate-500">{request.email} Â· {request.office}</p></div><button type="button" onClick={event => openApprove(event, request)} className="inline-flex items-center gap-2 rounded-xl bg-[#0b2c5b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-900"><CheckCircle2 size={16} />Review & approve</button></li>)}</ul>
+        <ul className="divide-y divide-slate-100">{requests.map(request => <li key={request.row} className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 sm:px-8"><div><p className="font-bold text-slate-900">{request.name}</p><p className="mt-1 text-sm text-slate-500">{request.email} &middot; {request.office}</p></div><button type="button" onClick={event => openApprove(event, request)} className="inline-flex items-center gap-2 rounded-xl bg-[#0b2c5b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-900"><CheckCircle2 size={16} />Review & Approve</button></li>)}</ul>
         {requestsError && <div className="px-6 py-4 text-sm text-red-800" role="alert">{requestsError} <button type="button" disabled={requestsLoading} onClick={() => setUsersRefresh(value => value + 1)} className="font-semibold underline">Retry</button></div>}
         {!requestsLoading && !requestsError && !requests.length && <p className="px-6 py-8 text-center text-sm text-slate-500">No account requests are pending.</p>}{requestsLoading && <p className="px-6 py-8 text-center text-sm text-slate-500">Loading requests...</p>}
       </section>
@@ -412,13 +428,12 @@ export default function Settings({ user }) {
               </div>
             </div>
             <button ref={refreshButtonRef} type="button" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-[#0b2c5b] shadow-sm transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-60" onClick={() => setUsersRefresh(value => value + 1)} disabled={usersLoading}>
-              <RefreshCw size={16} className={usersLoading ? "animate-spin" : ""} aria-hidden="true" />Refresh list
+              <RefreshCw size={16} className={usersLoading ? "animate-spin" : ""} aria-hidden="true" />Refresh
             </button>
           </div>
           <div className="mt-6 flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700"><span className="h-2 w-2 rounded-full bg-blue-600" />{directoryUsers.length} other users</span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700"><ShieldCheck size={13} className="text-blue-700" />{superAdminCount} super admins</span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700"><UsersRound size={13} className="text-blue-700" />{directoryUsers.length - superAdminCount} admins</span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700"><ShieldCheck size={13} className="text-blue-700" />{superAdminCount} Super Admins</span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700"><UsersRound size={13} className="text-blue-700" />{directoryUsers.length - superAdminCount} Admins</span>
           </div>
         </div>
 

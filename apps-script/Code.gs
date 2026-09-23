@@ -243,7 +243,8 @@ function approveAccountRequest_(params) {
     const values = Array(sheet.getLastColumn()).fill(""); values[columns.email] = email; values[columns.password] = safeCellText_(password); values[columns.name] = safeCellText_(name); values[columns.office] = safeCellText_(office); values[columns.role] = role === "super admin" ? "Super Admin" : "Admin";
     sheet.getRange(sheet.getLastRow() + 1, 1, 1, values.length).setNumberFormat("@").setValues([values]);
     requestSheet.deleteRow(requestRow);
-    return jsonResponse({ success: true, message: "Request approved and account created.", user: { email, name, office, role: normalizeRole_(role) } });
+    const notification = sendAccountApprovalEmail_({ email, name, password });
+    return jsonResponse({ success: true, message: notification.message, emailSent: notification.emailSent, user: { email, name, office, role: normalizeRole_(role) } });
   } finally { lock.releaseLock(); }
 }
 
@@ -320,6 +321,22 @@ function updateUser_(params) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// Run once from the Apps Script editor as the spreadsheet owner.
+// This setup helper is deliberately not exposed through doGet/doPost.
+function setupUsersSheetPermissions() {
+  const sheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName(CONFIG.SHEETS.USERS);
+  if (!sheet) throw new Error("Users sheet not found.");
+  const protections = sheet.getProtections(SpreadsheetApp.ProtectionType.SHEET)
+    .concat(sheet.getProtections(SpreadsheetApp.ProtectionType.RANGE));
+  // Check all permissions first so an ordinary permissions failure does not
+  // leave the sheet only partially unprotected.
+  if (protections.some(protection => !protection.canEdit())) {
+    throw new Error("Run setupUsersSheetPermissions as the spreadsheet owner or an account allowed to manage every protection on the Users sheet.");
+  }
+  protections.forEach(protection => protection.remove());
+  console.log("Removed " + protections.length + " protection(s) from the Users sheet. Dashboard user management still requires a super admin.");
 }
 
 function deleteUser_(params) {

@@ -134,7 +134,8 @@ export default function Sidebar({ mobileOpen, onClose, user, onLogout }) {
             <span className="sidebar-account-avatar"><UserRound size={20} aria-hidden="true" /></span>
             <div className="sidebar-label sidebar-account-copy">
               <strong>{user.name || user.email}</strong>
-              <span>{user.office || (user.role === "super_admin" ? "Super Admin" : "Admin")}</span>
+              <span>{user.role === "super_admin" ? "Super Admin" : "Admin"}</span>
+              {user.office && <span>{user.office}</span>}
             </div>
           </div>
           <button type="button" onClick={onLogout} className="sidebar-signout" aria-label="Log out" title="Log out">
