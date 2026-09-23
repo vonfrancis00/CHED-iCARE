@@ -6,7 +6,7 @@ export default function ProgramStatusChart({ data = [] }) {
   const safeData = Array.isArray(data) ? data : [];
 
   return (
-    <ChartCard title="Documented Childcare Program Responses" subtitle="Counts directly from the three documented-program questions" className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/80">
+    <ChartCard title="Documented Childcare Program Responses" subtitle="Institutional survey responses on the availability of documented childcare programs for faculty, non-teaching personnel, students, and community members." className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/80">
       <div className="chart-scroll" tabIndex={0} role="region" aria-label="Scrollable chart"><div className="h-[360px]" style={{ minWidth: Math.max(440, safeData.length * 65) }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={safeData} margin={{ top: 12, right: 12, left: 4, bottom: 24 }}>
