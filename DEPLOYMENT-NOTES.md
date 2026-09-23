@@ -1,43 +1,43 @@
-# Loading reliability update
+# Deployment and timeout handling
 
-Idle recovery: dashboard polling pauses while the tab is hidden or offline and
-resumes when visible/online. The production proxy retries temporary Google
-HTTP/network failures up to three times within ONE 55-second deadline. The
-browser makes only one request, so a recovered Google 404 does not become a
-browser network error. Exhausted failures still report an honest error.
+Deploy the repository to Vercel, including `api/`, `lib/`, and `vercel.json`.
+A static `dist` upload or `vite preview` alone cannot run the authenticated API.
+Local `npm run dev` uses the same API handler as production.
 
-After deployment, reload existing tabs. In browser Network tools, data requests
-must go to `/api/sheet`, not directly to `script.google.com`. Old console entries
-remain until cleared; a successful retry cannot remove those historical errors.
+Set these environment variables before building:
 
-Production requests now use the Vercel function at `/api/sheet`. Google redirects
-are followed on the server. Deploy the `api` directory and `vercel.json` along
-with the frontend (deploying only `dist` will not include the function).
-The function reads the existing `VITE_SHEET_API_URL` and
-`VITE_SHEET_API_ACCESS_CODE` Vercel environment variables, so no new service is
-required. `SHEET_API_URL` and `SHEET_API_ACCESS_CODE` are optional server overrides;
-the access code must still match the frontend code. Local Vite development keeps
-using Google directly; `vite preview` alone does not run the production function.
+- `VITE_SHEET_API_URL`: the stable Apps Script `/exec` deployment URL.
+- `SHEET_API_ACCESS_CODE`: the server-only code matching the Apps Script configuration.
+- `SESSION_SECRET`: a long, random server-only signing secret.
+- Optional `SHEET_API_URL`: server override for the same deployment.
 
-The frontend keeps the last saved dashboard visible when refresh fails, shows
-its update time, and allows a 60-second request without automatically retrying
-a timeout. First visits still require a successful Google response.
+Do not put the access code or session secret in a `VITE_` variable. Existing
+`VITE_SHEET_API_ACCESS_CODE` is supported for compatibility; migrate it to
+`SHEET_API_ACCESS_CODE` and rebuild. Restart Vite after changing `.env`.
 
-The Apps Script cache now stores large JSON datasets in chunks below the
-per-entry size limit. Nested builds use one outer script lock. Cache keys use
-a new version so existing entries cannot be misread.
+The Vercel function has a 60-second maximum duration. Reads have a shared
+55-second deadline. Account submissions reserve 15 seconds of that budget for
+read-back verification after an uncertain write. Writes are not automatically
+repeated. Google result downloads retry the completed response without
+re-executing the spreadsheet operation. Settings requests stop waiting after
+60 seconds and show an error with a retry option.
+
+Authenticated duplicate data reads share an in-flight request. Duplicate account
+reads share only while running, keyed by action and actor email; account results
+are not cached. Dashboard/record data is cached for five minutes. Polling pauses
+for hidden/offline tabs, and notification requests do not overlap.
 
 ## Publish
 
-1. Copy the updated `apps-script/Utils.gs` into the matching Apps Script project.
-2. Update the existing Web App deployment to a new version. Keeping the same
-   deployment preserves its `/exec` URL.
-3. Deploy this frontend through the existing Vercel workflow.
-4. Load the dashboard once, then simulate a failed/offline refresh. Existing
-   figures should remain visible with a refresh warning and last-update time.
+1. If the deployed Apps Script differs from `apps-script/`, replace the matching
+   `Code.gs`, `Config.gs`, `Dashboard.gs`, and `Utils.gs` files and update the
+   existing Web App deployment to a new version, retaining its `/exec` URL.
+2. Confirm that the deployment runs as its owner and permits the server to call
+   it, with the configured access code enforced by the script.
+3. Set the environment variables in Vercel and deploy the whole repository.
+4. Reload the site, sign in, and verify dashboard, Settings directory, office
+   reports and PDF export. Reload existing local tabs after restarting Vite.
 
-Local verification: `node scripts/cache-check.mjs` and `npm run build`.
-
-No shared Vercel cache is configured in this update. That requires a chosen
-persistent cache service and server-side access configuration; browser-local
-saved data only helps browsers that have already loaded the dashboard.
+Run `npm test` and `npm run build` before publishing. Automated tests mock Google;
+live Google availability and deployment credentials must also be checked.
+A successful build cannot guarantee that an external Google service never times out.

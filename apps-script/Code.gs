@@ -141,10 +141,13 @@ function listAccountRequests_(params) {
   assertSuperAdmin_(params.actorEmail, rows, columns);
   const sheet = getAccountRequestsSheet_();
   const values = sheet.getLastRow() < 2 ? [] : sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getDisplayValues();
-  return { success: true, requests: values.filter(row => String(row[1] || "").trim()).map((row, index) => ({
+  // Preserve each row's real sheet position. Filtering first would renumber
+  // rows when the sheet has an empty row, causing approvals to target the
+  // wrong request.
+  return { success: true, requests: values.map((row, index) => ({
     row: index + 2, name: String(row[0] || "").trim(), email: String(row[1] || "").trim().toLowerCase(),
     office: String(row[2] || "").trim(), requestedAt: String(row[3] || "").trim()
-  })) };
+  })).filter(request => request.email) };
 }
 
 function doPost(e) {

@@ -1,3 +1,4 @@
+import { accountFetch } from "../services/accountApi";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -46,6 +47,7 @@ export default function Settings({ user }) {
   const [usersQuery, setUsersQuery] = useState("");
   const [requests, setRequests] = useState([]);
   const [requestsLoading, setRequestsLoading] = useState(true);
+  const [requestsError, setRequestsError] = useState("");
   const [approvalRequest, setApprovalRequest] = useState(null);
   const newlyCreatedUsers = useRef(new Map());
   const deletedUsers = useRef(new Set());
@@ -56,6 +58,8 @@ export default function Settings({ user }) {
   const refreshButtonRef = useRef(null);
   const savingRef = useRef(saving);
   savingRef.current = saving;
+  const showFormRef = useRef(showForm);
+  showFormRef.current = showForm;
   const deletingRef = useRef(deleting);
   deletingRef.current = deleting;
   const officeOptions = [...new Set([...offices, ...(editingUser?.office ? [editingUser.office] : [])])].sort((a, b) => a.localeCompare(b));
@@ -72,7 +76,7 @@ export default function Settings({ user }) {
       setUsersLoading(true);
       setUsersError("");
       try {
-        const response = await fetch("/api/sheet?action=listUsers", { credentials: "same-origin", cache: "no-store", signal: controller.signal });
+        const response = await accountFetch("/api/sheet?action=listUsers", { credentials: "same-origin", cache: "no-store", signal: controller.signal });
         const result = await response.json();
         if (!response.ok || !result.success || !Array.isArray(result.users)) throw new Error(result.message || "Unable to load users.");
         if (versionAtStart !== mutationVersion.current) return;
@@ -93,17 +97,41 @@ export default function Settings({ user }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    (async () => {
-      setRequestsLoading(true);
+    let checking = false;
+    async function loadRequests(initial = false) {
+      if (checking || controller.signal.aborted || showFormRef.current || savingRef.current) return;
+      if (!initial && (document.visibilityState === "hidden" || !navigator.onLine)) return;
+      checking = true;
+      const versionAtStart = mutationVersion.current;
+      if (initial) setRequestsLoading(true);
       try {
-        const response = await fetch("/api/sheet?action=listAccountRequests", { credentials: "same-origin", cache: "no-store", signal: controller.signal });
+        const response = await accountFetch("/api/sheet?action=listAccountRequests", { credentials: "same-origin", cache: "no-store", signal: controller.signal });
         const result = await response.json();
-        if (!response.ok || !result.success) throw new Error(result.message || "Unable to load requests.");
-        setRequests(result.requests || []);
-      } catch (cause) { if (!controller.signal.aborted) setUsersError(cause.message || "Unable to load requests."); }
-      finally { if (!controller.signal.aborted) setRequestsLoading(false); }
-    })();
-    return () => controller.abort();
+        // A read started before an approval must not restore deleted requests
+        // or overwrite the adjusted sheet row numbers.
+        if (controller.signal.aborted || showFormRef.current || savingRef.current || versionAtStart !== mutationVersion.current) return;
+        if (!response.ok || !result.success || !Array.isArray(result.requests)) throw new Error(result.message || "Unable to load requests.");
+        setRequests(result.requests);
+        setRequestsError("");
+      } catch (cause) { if (!controller.signal.aborted) setRequestsError(cause.message || "Unable to load requests."); }
+      finally {
+        checking = false;
+        if (!controller.signal.aborted) setRequestsLoading(false);
+      }
+    }
+    const refreshRequests = () => loadRequests();
+    loadRequests(true);
+    const interval = window.setInterval(refreshRequests, 15000);
+    window.addEventListener("focus", refreshRequests);
+    window.addEventListener("online", refreshRequests);
+    document.addEventListener("visibilitychange", refreshRequests);
+    return () => {
+      controller.abort();
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshRequests);
+      window.removeEventListener("online", refreshRequests);
+      document.removeEventListener("visibilitychange", refreshRequests);
+    };
   }, [usersRefresh]);
 
   useEffect(() => {
@@ -205,7 +233,7 @@ export default function Settings({ user }) {
     setSaving(true);
     try {
       const action = approvalRequest ? "approveAccountRequest" : editingUser ? "updateUser" : "createUser";
-      const response = await fetch(`/api/sheet?action=${action}`, {
+      const response = await accountFetch(`/api/sheet?action=${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
@@ -228,7 +256,14 @@ export default function Settings({ user }) {
       newlyCreatedUsers.current.set(account.email.toLowerCase(), account);
       setUsers(current => [...current.filter(item => item.email.toLowerCase() !== (editingUser?.email || account.email).toLowerCase()), account]
         .sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email)));
-      if (approvalRequest) setRequests(current => current.filter(item => item.row !== approvalRequest.row));
+      if (approvalRequest) {
+        // Deleting a Google Sheet row moves every later request up one row.
+        // Keep their identifiers in sync so the next request can be approved
+        // immediately, without requiring a browser refresh.
+        setRequests(current => current
+          .filter(item => item.row !== approvalRequest.row)
+          .map(item => item.row > approvalRequest.row ? { ...item, row: item.row - 1 } : item));
+      }
       closeForm();
       setSuccess(result.message || (approvalRequest ? "Request approved." : "User added successfully."));
     } catch (cause) {
@@ -243,7 +278,7 @@ export default function Settings({ user }) {
     setDeleting(true);
     setDeleteError("");
     try {
-      const response = await fetch("/api/sheet?action=deleteUser", {
+      const response = await accountFetch("/api/sheet?action=deleteUser", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
@@ -353,8 +388,9 @@ export default function Settings({ user }) {
 
       <section className="overflow-hidden rounded-[24px] border border-amber-200 bg-white shadow-sm" aria-labelledby="requests-list-title">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-amber-100 bg-amber-50/70 px-6 py-5 sm:px-8"><div><p className="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-700">Account access</p><h2 id="requests-list-title" className="mt-1 text-xl font-bold text-slate-900">Requesting Users</h2><p className="mt-1 text-sm text-slate-500">Review people who requested dashboard access.</p></div><span className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-amber-800">{requests.length} pending</span></div>
-        <ul className="divide-y divide-slate-100">{requests.map(request => <li key={request.row} className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 sm:px-8"><div><p className="font-bold text-slate-900">{request.name}</p><p className="mt-1 text-sm text-slate-500">{request.email} · {request.office}</p></div><button type="button" onClick={event => openApprove(event, request)} className="inline-flex items-center gap-2 rounded-xl bg-[#0b2c5b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-900"><CheckCircle2 size={16} />Review & approve</button></li>)}</ul>
-        {!requestsLoading && !requests.length && <p className="px-6 py-8 text-center text-sm text-slate-500">No account requests are pending.</p>}{requestsLoading && <p className="px-6 py-8 text-center text-sm text-slate-500">Loading requests...</p>}
+        <ul className="divide-y divide-slate-100">{requests.map(request => <li key={request.row} className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 sm:px-8"><div><p className="font-bold text-slate-900">{request.name}</p><p className="mt-1 text-sm text-slate-500">{request.email} Â· {request.office}</p></div><button type="button" onClick={event => openApprove(event, request)} className="inline-flex items-center gap-2 rounded-xl bg-[#0b2c5b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-900"><CheckCircle2 size={16} />Review & approve</button></li>)}</ul>
+        {requestsError && <div className="px-6 py-4 text-sm text-red-800" role="alert">{requestsError} <button type="button" disabled={requestsLoading} onClick={() => setUsersRefresh(value => value + 1)} className="font-semibold underline">Retry</button></div>}
+        {!requestsLoading && !requestsError && !requests.length && <p className="px-6 py-8 text-center text-sm text-slate-500">No account requests are pending.</p>}{requestsLoading && <p className="px-6 py-8 text-center text-sm text-slate-500">Loading requests...</p>}
       </section>
 
       <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm" aria-labelledby="users-list-title">

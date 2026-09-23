@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
+import { fetchAppsScript } from '../lib/google-response.js';
 
 async function readLoginResponse(sendPost, signal) {
   // Credential verification only reads the register. Retry once from the
@@ -47,7 +48,8 @@ async function readGoogleData(upstream, signal, cacheable) {
   const revision = dataRevision;
   const cached = dataCache.get(key);
   if (cacheable && cached && cached.expires > Date.now()) return cached.payload;
-  if (cacheable && dataRequests.has(key)) return dataRequests.get(key);
+  const shareable = cacheable || ['listUsers', 'listAccountRequests'].includes(upstream.searchParams.get('action'));
+  if (shareable && dataRequests.has(key)) return dataRequests.get(key);
   const pending = (async () => {
     const response = await fetchGoogle(upstream, signal, upstream.searchParams.get('action') !== 'clearDashboardCache');
     if (!response.ok) throw new Error(`Google returned HTTP ${response.status}`);
@@ -59,7 +61,7 @@ async function readGoogleData(upstream, signal, cacheable) {
     }
     return payload;
   })();
-  if (cacheable) dataRequests.set(key, pending);
+  if (shareable) dataRequests.set(key, pending);
   try {
     return await pending;
   } finally {
@@ -68,12 +70,12 @@ async function readGoogleData(upstream, signal, cacheable) {
 }
 
 function session(req, secret) {
-  const token = (req.headers?.cookie || '').split('; ').find(part => part.startsWith('childcare_session='))?.slice(18);
+  const token = (req.headers?.cookie || '').split(';').map(part => part.trim()).find(part => part.startsWith('childcare_session='))?.slice(18);
   if (!token || !secret) return null;
   const [data, signature] = token.split('.');
   if (!data || !signature) return null;
   const expected = createHmac('sha256', secret).update(data).digest('hex');
-  if (signature.length !== expected.length || !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
+  if (!/^[a-f0-9]{64}$/.test(signature) || !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
   try {
     const payload = JSON.parse(Buffer.from(data, 'base64url').toString());
     return payload.expires > Date.now() ? payload.user : null;
@@ -136,7 +138,7 @@ export default async function handler(req, res, env = process.env) {
   }
   const controller = new AbortController();
   // A cold authentication request needs the full upstream budget too.
-  const timer = setTimeout(() => controller.abort(), 55000);
+  const timer = setTimeout(() => controller.abort(), action === 'submitAccountRequest' ? 40000 : 55000);
   let upstreamStartedAt;
   function recordLoginTiming() {
     if (!['login', 'submitAccountRequest'].includes(action)) return;
@@ -150,12 +152,24 @@ export default async function handler(req, res, env = process.env) {
   }
   try {
     if (['login', 'submitAccountRequest', 'createUser', 'updateUser', 'deleteUser', 'approveAccountRequest'].includes(action)) {
-      let body = '';
-      for await (const chunk of req) {
-        body += chunk;
-        if (body.length > 4096) return res.status(413).json({ success: false, message: 'Request too large.' });
+      // Vercel parses JSON bodies; Vite supplies the raw IncomingMessage.
+      let body = req.body;
+      if (body === undefined) {
+        body = '';
+        for await (const chunk of req) {
+          body += chunk;
+          if (Buffer.byteLength(body) > 4096) return res.status(413).json({ success: false, message: 'Request too large.' });
+        }
       }
-      const credentials = JSON.parse(body);
+      if (Buffer.isBuffer(body)) body = body.toString('utf8');
+      if (Buffer.byteLength(typeof body === 'string' ? body : JSON.stringify(body)) > 4096) return res.status(413).json({ success: false, message: 'Request too large.' });
+      let credentials;
+      try {
+        credentials = typeof body === 'string' ? JSON.parse(body) : body;
+        if (!credentials || typeof credentials !== 'object' || Array.isArray(credentials)) throw new Error();
+      } catch {
+        return res.status(400).json({ success: false, message: 'Invalid JSON request body.' });
+      }
       if (action === 'submitAccountRequest') {
         credentials.name = String(credentials.name || '').trim();
         credentials.email = String(credentials.email || '').trim().toLowerCase();
@@ -171,7 +185,7 @@ export default async function handler(req, res, env = process.env) {
             name: credentials.name, office: credentials.office, role: credentials.role, requestRow: credentials.requestRow };
       if (action === 'submitAccountRequest') Object.assign(upstreamBody, { action, name: credentials.name, office: credentials.office });
       upstreamStartedAt = performance.now();
-      const sendPost = () => fetch(upstream, {
+      const sendPost = () => fetchAppsScript(upstream, {
         method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(upstreamBody),
         redirect: 'follow', signal: controller.signal, cache: 'no-store'
@@ -200,7 +214,7 @@ export default async function handler(req, res, env = process.env) {
         try {
           const verificationUrl = new URL(upstream);
           verificationUrl.search = '';
-          const checked = await fetch(verificationUrl, {
+          const checked = await fetchAppsScript(verificationUrl, {
             method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ ...upstreamBody, action: 'checkAccountRequest' }),
             redirect: 'follow', signal: verification.signal, cache: 'no-store'
@@ -217,6 +231,10 @@ export default async function handler(req, res, env = process.env) {
         return res.status(503).json({ success: false, message: 'The sign-in service rejected the server access code. Please ask the administrator to check the Apps Script deployment and access-code configuration.' });
       }
       if (action === 'login' && payload.success && payload.user) setSession(res, payload.user, secret, secure);
+      if (['createUser', 'updateUser', 'deleteUser', 'approveAccountRequest', 'submitAccountRequest'].includes(action)) {
+        // A following directory refresh must not join a read started before this write.
+        dataRequests.clear();
+      }
       return res.status(payload.success ? 200 : action === 'login' ? 401 : 400).json(payload);
     }
     const cacheable = prepareRecords || ['listRequestOffices', 'getDashboardData', 'getInstitutions', 'getSurveyResponses'].includes(action);
@@ -248,10 +266,10 @@ async function fetchGoogle(upstream, signal, canRetry) {
     const attemptController = new AbortController();
     const onParentAbort = () => attemptController.abort();
     signal.addEventListener('abort', onParentAbort, { once: true });
-    // A stalled connection should not consume the entire request budget.
-    const attemptTimer = setTimeout(() => attemptController.abort(), canRetry ? 17000 : 55000);
+    // Cold Sheets reads can exceed 17 seconds. Let the shared deadline bound
+    // the read instead of repeatedly cancelling otherwise healthy executions.
     try {
-      response = await fetch(upstream, { signal: attemptController.signal, redirect: 'follow', cache: 'no-store' });
+      response = await fetchAppsScript(upstream, { signal: attemptController.signal, cache: 'no-store' });
       // Keep both deadlines active while reading the body, not only headers.
       const body = await response.arrayBuffer();
       response = new Response(body, { status: response.status, headers: response.headers });
@@ -259,7 +277,6 @@ async function fetchGoogle(upstream, signal, canRetry) {
       response = undefined;
       if (signal.aborted || !canRetry || attempt === 2) throw error;
     } finally {
-      clearTimeout(attemptTimer);
       signal.removeEventListener('abort', onParentAbort);
     }
     if (response && (!canRetry || ![404, 429, 500, 502, 503, 504].includes(response.status) || attempt === 2)) return response;

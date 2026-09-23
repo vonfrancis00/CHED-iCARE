@@ -1,3 +1,4 @@
+import { accountFetch } from "../../services/accountApi";
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { Baby, BarChart3, BriefcaseBusiness, Building2, ChevronRight, ClipboardList, Clock3, FileText, LogOut, Map, RefreshCw, Settings, UserRound, Users, X } from "lucide-react";
@@ -77,18 +78,21 @@ export default function Sidebar({ mobileOpen, onClose, user, onLogout }) {
     }
 
     const controller = new AbortController();
+    let checking = false;
     const checkRequests = async () => {
+      if (checking || document.visibilityState === 'hidden' || !navigator.onLine) return;
+      checking = true;
       try {
-        const response = await fetch("/api/sheet?action=listAccountRequests", {
+        const response = await accountFetch("/api/sheet?action=listAccountRequests", {
           credentials: "same-origin",
           cache: "no-store",
           signal: controller.signal
         });
         const result = await response.json();
-        if (response.ok && result.success) setHasAccountRequests((result.requests || []).length > 0);
+        if (!controller.signal.aborted && response.ok && result.success) setHasAccountRequests((result.requests || []).length > 0);
       } catch (error) {
-        if (error.name !== "AbortError") setHasAccountRequests(false);
-      }
+        // Keep the last known notification during a temporary service failure.
+      } finally { checking = false; }
     };
 
     checkRequests();
@@ -126,7 +130,7 @@ export default function Sidebar({ mobileOpen, onClose, user, onLogout }) {
         </nav>
         <footer className="sidebar-footer">
           <SidebarUpdateStatus />
-          <div className="sidebar-account" title={`${user.name || user.email}${user.office ? ` · ${user.office}` : ""}`}>
+          <div className="sidebar-account" title={`${user.name || user.email}${user.office ? ` Â· ${user.office}` : ""}`}>
             <span className="sidebar-account-avatar"><UserRound size={20} aria-hidden="true" /></span>
             <div className="sidebar-label sidebar-account-copy">
               <strong>{user.name || user.email}</strong>

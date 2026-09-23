@@ -58,7 +58,7 @@ export default function App() {
             <Route path="/geographic" element={<Geographic />} />
             <Route path="/occ" element={<OCC user={user} />} />
             <Route path="/responses" element={<SurveyResponses />} />
-            <Route path="/reports" element={<Reports />} />
+            <Route path="/reports" element={<Reports user={user} />} />
             <Route path="/settings" element={user.role === "super_admin" ? <Settings user={user} /> : <Navigate to="/" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes></AppShell>} />
