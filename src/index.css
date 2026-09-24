@@ -17,6 +17,26 @@ body { margin: 0; min-width: 320px; }
 .chart-scroll { overflow-x: auto; padding-bottom: 8px; }
 .chart-scroll:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
 .app-content .overflow-x-auto table { min-width: 640px; }
+/* Fill the directory card while keeping wide response details scrollable. */
+.app-content .institution-directory .institution-groups { width: 100%; min-width: 0; table-layout: fixed; }
+.institution-count-column { width: 180px; }
+.institution-group-row { transition: background-color .16s ease; }
+.institution-group-row:hover { background: #f5f9ff; }
+.institution-group-row.is-expanded { background: #edf5ff; box-shadow: inset 3px 0 #2563eb; }
+.institution-toggle { border-radius: 8px; }
+.institution-toggle:focus-visible { outline: 2px solid #2563eb; outline-offset: 6px; }
+.institution-symbol { color: #53739b; background: #f0f5fb; border: 1px solid #e1eaf5; }
+.is-expanded .institution-symbol { color: #1d4ed8; background: #dbeafe; border-color: #bfdbfe; }
+.institution-response-count { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 112px; padding: 7px 12px; border: 1px solid #dbe7f7; border-radius: 10px; color: #24518b; background: #f0f6ff; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.institution-response-table { min-width: 1000px !important; }
+.institution-response-table th { color: #54708f; font-size: 10px; line-height: 1.6; }
+.institution-response-table td { color: #405570; font-size: 13px; line-height: 1.6; }
+.institution-response-table tbody tr:nth-child(even) { background: #f8fafc; }
+@media (max-width: 639px) {
+  .institution-count-column { width: 100px; }
+  .institution-response-count { min-width: 36px; padding: 6px 10px; }
+  .institution-toggle { font-size: 12px; }
+}
 .logout-modal, .login-request-modal { max-height: calc(100dvh - 40px); overflow-y: auto; }
 button, input, select { font: inherit; }
 h1, h2, h3, h4, h5, h6 { font-family: "Plus Jakarta Sans", "DM Sans", ui-sans-serif, system-ui, sans-serif; }

@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Database, LoaderCircle, MapPin, Building2, Search } from "lucide-react";
-import { useInstitutionPage } from "../hooks/useInstitutionPage";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight, Database, LoaderCircle, MapPin, Building2, Search } from "lucide-react";
+import { useInstitutionGroups } from "../hooks/useInstitutionGroups";
+import { groupInstitutions } from "../utils/institutionGroups";
 import Loading from "../components/common/Loading";
 
 
 const FIELD_MAP = {
-  institution: "Name of Institution",
+  institution: "HEI",
   campus: "Name of Institution Campus",
   address: "Address of Campus"
 };
@@ -33,18 +34,22 @@ export default function SurveyResponses() {
   const [region, setRegion] = useState("");
   const [filterPending, setFilterPending] = useState(false);
   const tableRef = useRef(null);
-  const { data, loading, error, reload, hasCurrentData } = useInstitutionPage(page, pageSize, query, { institutionType, region });
+  const [expanded, setExpanded] = useState(null);
+  const { data, loading, error, reload, hasCurrentData } = useInstitutionGroups(query, institutionType, region);
   const rows = data?.data || [];
   const isFilterLoading = filterPending && !hasCurrentData && !error;
-  const visibleRows = isFilterLoading ? [] : rows;
+  const groups = useMemo(() => groupInstitutions(data?.data || []), [data]);
+  const matchingInstitutionCount = groups.length;
   const total = Number(data?.total) || 0;
   const institutionCount = Number(data?.institutionCount) || 0;
   const campusCount = Number(data?.campusCount) || 0;
   const regions = sortRegions(data?.regions || []);
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const pageCount = Math.max(1, Math.ceil(matchingInstitutionCount / pageSize));
   const currentPage = Math.min(page, pageCount);
-  const firstRow = total ? (currentPage - 1) * pageSize + 1 : 0;
-  const lastRow = Math.min(currentPage * pageSize, total);
+  const firstRow = matchingInstitutionCount ? (currentPage - 1) * pageSize + 1 : 0;
+  const lastRow = Math.min(currentPage * pageSize, matchingInstitutionCount);
+  const visibleGroups = isFilterLoading ? [] : groups.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  useEffect(() => { setExpanded(null); }, [query, institutionType, region, page, pageSize]);
   const changePage = nextPage => { setPage(nextPage); tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
   const changePageSize = nextPageSize => { setPage(1); setPageSize(nextPageSize); };
 
@@ -155,10 +160,37 @@ export default function SurveyResponses() {
         </div>
       </div>
 
-      <div ref={tableRef} className="card overflow-hidden scroll-mt-6" aria-busy={loading}>
+      <div ref={tableRef} className="institution-directory card overflow-hidden scroll-mt-6" aria-busy={loading}>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-5 sm:px-6">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Responses by Institution/Campus</h2>
+            <p className="mt-1 text-xs text-slate-500">Select an institution/campus to view its survey responses.</p>
+          </div>
+          <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">{matchingInstitutionCount.toLocaleString()} institutions</span>
+        </div>
         {(loading || isFilterLoading) && <div role="status" className="flex items-center gap-2 border-b border-blue-100 bg-blue-50 px-5 py-3 text-sm font-medium text-blue-800"><LoaderCircle size={16} className="animate-spin" />{isFilterLoading ? "Applying filters…" : "Loading responses…"}</div>}
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
+          <table className="institution-groups text-sm">
+            <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+              <tr><th scope="col" className="px-5 py-3 sm:px-6">Institution</th><th scope="col" className="institution-count-column px-5 py-3 text-right sm:px-6">Responses</th></tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {visibleGroups.map((group, index) => (
+                <Fragment key={group.key}>
+                  <tr className={`institution-group-row cursor-pointer ${expanded === group.key ? "is-expanded" : ""}`} onClick={() => setExpanded(expanded === group.key ? null : group.key)}>
+                    <td className="px-5 py-4 font-semibold text-slate-900 sm:px-6">
+                      <button type="button" aria-expanded={expanded === group.key} aria-controls={`institution-responses-${index}`} onClick={event => { event.stopPropagation(); setExpanded(expanded === group.key ? null : group.key); }} className="institution-toggle flex w-full items-center gap-3 text-left sm:gap-4">
+                        <span className="institution-symbol hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:flex"><Building2 size={19} /></span>
+                        <span className="flex-1 leading-relaxed">{group.name}</span>
+                        <ChevronDown size={17} className={`shrink-0 text-slate-400 transition-transform ${expanded === group.key ? "rotate-180 text-blue-600" : ""}`} />
+                      </button>
+                    </td>
+                    <td className="px-5 py-4 text-right sm:px-6"><span className="institution-response-count">{group.rows.length}<span className="hidden text-xs font-medium sm:inline">{group.rows.length === 1 ? "response" : "responses"}</span></span></td>
+                  </tr>
+                  <tr id={`institution-responses-${index}`} hidden={expanded !== group.key}>
+                    <td colSpan={2} className="bg-slate-50 p-3 sm:p-5">
+                      {expanded === group.key && <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <table className="institution-response-table w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
               <tr>
                 <th className="px-5 py-3">Institution</th>
@@ -169,7 +201,7 @@ export default function SurveyResponses() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {visibleRows.map((row, index) => (
+              {group.rows.map((row, index) => (
                 <tr key={row.rowNumber ?? index} className="hover:bg-slate-50">
                   <td className="px-5 py-4 font-semibold text-slate-900">
                     {display(row[FIELD_MAP.institution])}
@@ -182,12 +214,19 @@ export default function SurveyResponses() {
               ))}
             </tbody>
           </table>
+                      </div>}
+                    </td>
+                  </tr>
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
         </div>
 
-        {!visibleRows.length && !error && !isFilterLoading && (
+        {!visibleGroups.length && !loading && !error && !isFilterLoading && (
           <div className="p-10 text-center text-sm text-slate-500">No survey responses found.</div>
         )}
-        {total > 0 && <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between"><div className="text-slate-500">Showing <span className="font-semibold text-slate-700">{firstRow}–{lastRow}</span> of {total.toLocaleString()}</div><div className="flex flex-wrap items-center gap-3"><label className="flex items-center gap-2 text-xs text-slate-500">Rows per page<select value={pageSize} onChange={event => changePageSize(Number(event.target.value))} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-blue-600"><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select></label><div className="flex items-center gap-1"><button type="button" onClick={() => changePage(Math.max(1, page - 1))} disabled={page === 1} aria-label="Previous page" className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={16} /></button><span className="min-w-20 text-center text-xs font-medium text-slate-600">Page {page} of {pageCount}</span><button type="button" onClick={() => changePage(Math.min(pageCount, page + 1))} disabled={page === pageCount} aria-label="Next page" className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"><ChevronRight size={16} /></button></div></div></div>}
+        {total > 0 && <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between"><div className="text-slate-500">Showing <span className="font-semibold text-slate-700">{firstRow}–{lastRow}</span> of {matchingInstitutionCount.toLocaleString()} institutions</div><div className="flex flex-wrap items-center gap-3"><label className="flex items-center gap-2 text-xs text-slate-500">Institutions per page<select value={pageSize} onChange={event => changePageSize(Number(event.target.value))} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-blue-600"><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select></label><div className="flex items-center gap-1"><button type="button" onClick={() => changePage(Math.max(1, currentPage - 1))} disabled={loading || currentPage === 1} aria-label="Previous page" className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={16} /></button><span className="min-w-20 text-center text-xs font-medium text-slate-600">Page {currentPage} of {pageCount}</span><button type="button" onClick={() => changePage(Math.min(pageCount, currentPage + 1))} disabled={loading || currentPage === pageCount} aria-label="Next page" className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"><ChevronRight size={16} /></button></div></div></div>}
       </div>
     </div>
   );

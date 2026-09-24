@@ -108,12 +108,12 @@ test('Apps Script filters before pagination and retains totals', () => {
   vm.runInContext(readFileSync(new URL('../apps-script/Utils.gs', import.meta.url), 'utf8'), context);
   vm.runInContext(readFileSync(new URL('../apps-script/Dashboard.gs', import.meta.url), 'utf8'), context);
   context.getRawDataset_ = () => ({ headers: [], rows: [
-    { 'Name of Institution': 'Alpha', 'SUC/LUC': 'SUC', Region: 'I' },
-    { 'Name of Institution': 'Beta', 'SUC/LUC': 'LUC', Region: 'II' },
-    { 'Name of Institution': 'Gamma', 'SUC/LUC': 'SUC', Region: 'I' }
+    { 'HEI': 'Alpha', 'SUC/LUC': 'SUC', Region: 'I' },
+    { 'HEI': 'Beta', 'SUC/LUC': 'LUC', Region: 'II' },
+    { 'HEI': 'Gamma', 'SUC/LUC': 'SUC', Region: 'I' }
   ] });
   const result = context.buildInstitutionsPage_(2, 1, '', 'SUC', 'i');
   assert.equal(result.total, 2);
   assert.equal(result.institutionCount, 3);
-  assert.equal(result.data[0]['Name of Institution'], 'Alpha');
+  assert.equal(result.data[0]['HEI'], 'Alpha');
 });

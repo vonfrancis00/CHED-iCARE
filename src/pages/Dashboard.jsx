@@ -106,7 +106,7 @@ export default function Dashboard() {
       </section>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <StatCard label="Survey Responses" value={o.totalResponses} hint={`LUCs: ${o.lucResponses ?? 0} · SUCs: ${o.sucResponses ?? 0}`} icon={Building2} />
+        <StatCard label="Survey Responses" value={o.totalResponses} hint={<><span className="block">(Including multiple responses)</span><span className="mt-1 block">{`LUCs: ${o.lucResponses ?? 0} · SUCs: ${o.sucResponses ?? 0}`}</span></>} icon={Building2} />
         <StatCard label="Facility — Faculty" value={o.facilityFacultyYes} hint="Exact Yes responses" icon={Baby} tone="blue" />
         <StatCard label="Facility — Students" value={o.facilityStudentsYes} hint="Exact Yes responses" icon={Users} tone="teal" />
         <StatCard label="Program — Students" value={o.programStudentsYes} hint="Exact Yes responses" icon={FileCheck} tone="amber" />

@@ -19,7 +19,7 @@ const H = {
   communityFemale: "Number of female solo parents in the community",
   communityMale: "Number of male solo parents in the community",
 
-  institution: "Name of Institution",
+  institution: "HEI",
   campus: "Name of Institution Campus",
   address: "Address of Campus",
   region: "Region"
@@ -29,7 +29,7 @@ function getDashboardData(params) {
   const institutionType = String((params || {}).institutionType || "").trim().toUpperCase();
   const region = String((params || {}).region || "").trim().toLowerCase();
   const filterKey = Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify([institutionType, region])));
-  return getOrBuildCache_(cacheKey_("DASHBOARD_FAST_V4_" + getResponseCacheRevision_() + "_" + filterKey), () => buildDashboardData_(institutionType, region));
+  return getOrBuildCache_(cacheKey_("DASHBOARD_FAST_V5_" + getResponseCacheRevision_() + "_" + filterKey), () => buildDashboardData_(institutionType, region));
 }
 
 function buildDashboardData_(institutionType, region, sharedDataset, sharedOffices) {
@@ -194,7 +194,7 @@ function getInstitutions(params) {
   // CacheService cannot delete entries by prefix. Include this revision in every
   // page key so a refresh immediately makes every paginated/search cache stale.
   const revision = getResponseCacheRevision_();
-  return getOrBuildCache_(cacheKey_("INSTITUTIONS_PAGE_" + revision + "_" + page + "_" + pageSize + "_" + filterKey), () => buildInstitutionsPage_(page, pageSize, query, institutionType, region));
+  return getOrBuildCache_(cacheKey_("INSTITUTIONS_PAGE_V2_" + revision + "_" + page + "_" + pageSize + "_" + filterKey), () => buildInstitutionsPage_(page, pageSize, query, institutionType, region));
 }
 
 function buildInstitutionsPage_(page, pageSize, query, institutionType, region) {

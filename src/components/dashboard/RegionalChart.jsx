@@ -1,5 +1,5 @@
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
 import ChartCard from "./ChartCard";
 
 const COLORS = ["#1d4ed8", "#2563eb", "#1e3a8a", "#38bdf8", "#4f46e5", "#0f172a"];
@@ -44,12 +44,12 @@ export default function RegionalChart({ data = [], groupedByInstitution = false,
   ];
   const subtitle = groupedByInstitution
     ? "Institution names and their campus-response counts"
-    : "Campus counts grouped by Region";
+    : "Institution/Campus counts grouped by Region";
 
   return (
-    <ChartCard title="Campus Location Distribution" subtitle={subtitle} className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/80">
-      {splitByType && groupedByInstitution && (
-        <div className="mb-4 flex flex-wrap justify-center gap-3 text-sm">
+    <ChartCard title="Institution/Campus Location Distribution" subtitle={subtitle} className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/80"
+      headerContent={splitByType && (
+        <div className="mt-5 flex flex-wrap justify-center gap-3 text-sm">
           {segments.map(segment => (
             <span key={segment.key} className="inline-flex items-center gap-1" style={{ color: segment.color }}>
               <span className="h-3 w-3" style={{ backgroundColor: segment.color }} aria-hidden="true" />
@@ -58,6 +58,7 @@ export default function RegionalChart({ data = [], groupedByInstitution = false,
           ))}
         </div>
       )}
+    >
       <div className="chart-scroll" tabIndex={0} role="region" aria-label="Scrollable chart"><div style={{ height: groupedByInstitution ? 300 + labelHeight : 360, width: groupedByInstitution ? Math.max(200, safeData.length * 120 + 80) : "100%", minWidth: groupedByInstitution ? undefined : Math.max(440, safeData.length * 65 + 80), marginInline: "auto" }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={safeData} margin={{ top: 18, right: 12, left: 4, bottom: 28 }}>
@@ -88,7 +89,6 @@ export default function RegionalChart({ data = [], groupedByInstitution = false,
                 background: "rgba(255,255,255,0.95)",
               }}
             />
-            {splitByType && !groupedByInstitution && <Legend verticalAlign="top" iconType="square" wrapperStyle={{ paddingBottom: 16 }} />}
             {splitByType ? segments.map((segment, segmentIndex) => (
               <Bar key={segment.key} dataKey={segment.key} name={segment.name} stackId="campuses" barSize={42} fill={segment.color} stroke="#f8fafc" strokeWidth={1}>
                 {safeData.map((entry, index) => (
