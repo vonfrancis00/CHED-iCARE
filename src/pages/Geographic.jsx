@@ -44,7 +44,7 @@ export default function Geographic() {
     const suc = countForType("SUC");
     return { ...item, luc, suc, other: Math.max(0, Number(item.value || 0) - luc - suc) };
   }) : regions;
-  const availableRegions = sortRegions(data?.availableRegions ?? snapshot?.availableRegions ?? []);
+  const availableRegions = sortRegions(snapshot?.availableRegions ?? snapshot?.regions?.map(item => item.name) ?? []);
   const totalCampuses = regions.reduce((sum, region) => sum + Number(region.value || 0), 0);
   const topRegion = [...regions].sort((a, b) => Number(b.value || 0) - Number(a.value || 0))[0];
   const regionCount = regions.length;
@@ -52,7 +52,6 @@ export default function Geographic() {
   const locationLabel = groupedByInstitution ? "Institution" : "Region";
   const selectInstitutionType = (type) => {
     setInstitutionType(type);
-    setRegion("");
   };
 
   return (

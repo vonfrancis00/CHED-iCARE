@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BarChart3, BriefcaseBusiness, Download, Eye, FileText, Map, Users, X } from "lucide-react";
 import Loading from "../components/common/Loading";
 import { useDashboard } from "../hooks/useDashboard";
@@ -70,10 +70,17 @@ export default function Reports({ user }) {
   const { data, loading, error, reload } = useDashboard();
   const [activeId, setActiveId] = useState("executive");
   const [exporting, setExporting] = useState(false);
+  const [officeOpen, setOfficeOpen] = useState(false);
+  const officeDialog = useRef(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewName, setPreviewName] = useState("");
   const [selectedOffice, setSelectedOffice] = useState("");
   const [recordStatus, setRecordStatus] = useState("all");
+  const closeOfficeDialog = () => {
+    setOfficeOpen(false);
+    setSelectedOffice("");
+    setRecordStatus("all");
+  };
   const active = reports.find(report => report.id === activeId) || reports[0];
   const offices = useMemo(() => availableOffices(data || {}, user), [data, user]);
   const reportOffice = offices.some(office => office.name === selectedOffice)
@@ -89,6 +96,17 @@ export default function Reports({ user }) {
   const listDescription = `${reportOffice || "All OCC / Offices"} - ${statusLabels[recordStatus]}: ${number(visibleInstitutions.length)} of ${number(institutions.length)} available records.`;
   const emptyListMessage = institutions.length ? "No institutions match the selected status." : "No institution records are available for the selected office(s).";
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+  useEffect(() => {
+    if (!officeOpen) return;
+    const dialog = officeDialog.current;
+    const previousOverflow = document.body.style.overflow;
+    dialog.showModal();
+    document.body.style.overflow = "hidden";
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [officeOpen]);
   if (loading && !data) return <Loading label="Preparing reports..." />;
   if (!data) return <div className="card p-8"><h2 className="font-semibold text-slate-900">Unable to load reports</h2><p className="mt-2 text-sm text-slate-500">{error || "No report data is available."}</p><button onClick={() => reload()} className="mt-4 rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white">Retry</button></div>;
 
@@ -172,6 +190,7 @@ export default function Reports({ user }) {
     try {
       const result = await createPdf();
       if (!result) return;
+      closeOfficeDialog();
       setPreviewUrl(URL.createObjectURL(result.blob));
       setPreviewName(result.name);
     } finally { setExporting(false); }
@@ -186,10 +205,37 @@ export default function Reports({ user }) {
   };
 
   return <div className="space-y-6">
-    <header className="overflow-hidden rounded-[28px] border border-blue-200/20 bg-gradient-to-br from-[#06162d] via-[#0d2342] to-[#1d4f91] p-6 text-white shadow-[0_20px_60px_rgba(15,23,42,0.25)] sm:p-8"><p className="text-[11px] font-medium uppercase tracking-[0.18em] text-blue-100">Reporting center</p><h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-4xl uppercase">Reports</h1><p className="mt-3 max-w-2xl text-sm text-blue-100 sm:text-base">Review live dashboard data as management-ready written reports and download them as PDFs.</p></header>
+    <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-6">
+      <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700">Reporting center</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">Reports</h1><p className="mt-2 text-sm text-slate-500">Choose a report to preview and download as a PDF.</p></div>
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-[#08264d]"><FileText size={24} /></div>
+    </header>
     {error && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">Showing the most recently available data. {error}</div>}
-    <section className="grid gap-4 md:grid-cols-2">{reports.map(report => { const Icon = report.Icon, selected = active.id === report.id; return <button type="button" key={report.id} onClick={() => setActiveId(report.id)} className={`card p-6 text-left transition ${selected ? "ring-2 ring-blue-600" : "hover:border-blue-200 hover:shadow-md"}`}><div className="flex items-start justify-between gap-4"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700"><Icon size={21} /></div>{selected && <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">Selected</span>}</div><h2 className="mt-4 font-semibold text-slate-900">{report.title}</h2><p className="mt-1 text-sm text-slate-500">{report.text}</p></button>; })}</section>
-    {active.id === "occ" && <section className="card p-5 sm:p-6">
+    <section aria-labelledby="report-types-title">
+      <h2 id="report-types-title" className="mb-3 text-sm font-semibold text-slate-700">Report type</h2>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{reports.map(report => {
+        const Icon = report.Icon, selected = active.id === report.id;
+        return <button type="button" key={report.id} aria-pressed={selected} disabled={exporting} onClick={() => setActiveId(report.id)} className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:opacity-60 ${selected ? "border-blue-300 bg-blue-50/70" : "border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50"}`}>
+          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${selected ? "bg-[#08264d] text-white" : "bg-slate-100 text-slate-500"}`}><Icon size={19} /></span>
+          <span><span className="block text-sm font-semibold text-slate-900">{report.title}</span><span className="mt-1 block text-xs leading-5 text-slate-500">{report.text}</span></span>
+        </button>;
+      })}</div>
+    </section>
+    <section className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div><p className="text-xs font-medium text-slate-500">Selected report</p><h2 className="mt-1 text-lg font-semibold text-slate-900">{active.title}</h2>{active.id === "occ" && <p className="mt-1 text-xs text-slate-500">{reportOffice || "All OCC / Offices"} ? {statusLabels[recordStatus]}</p>}</div>
+      <div className="flex flex-wrap gap-2">
+        {active.id === "occ" && <button type="button" onClick={() => setOfficeOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Users size={17} />Office & Institutions Filters</button>}
+        {active.id !== "occ" && <button type="button" onClick={previewPdf} disabled={exporting} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"><Eye size={17} />{exporting ? "Preparing preview..." : "Preview PDF"}</button>}
+      </div>
+    </section>
+    {previewUrl && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-3 sm:p-6" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setPreviewUrl(""); }}><section role="dialog" aria-modal="true" aria-labelledby="pdf-preview-title" className="flex h-[94dvh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"><header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-6"><div><h2 id="pdf-preview-title" className="font-semibold text-slate-900">PDF preview</h2><p className="text-xs text-slate-500">Review the report before saving.</p></div><div className="flex items-center gap-2"><button type="button" onClick={downloadPdf} className="inline-flex items-center gap-2 rounded-xl bg-[#08264d] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0e427d]"><Download size={16} />Save PDF</button><button type="button" aria-label="Close PDF preview" onClick={() => setPreviewUrl("")} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X size={20} /></button></div></header><iframe title={`${active.title} PDF preview`} src={previewUrl} className="min-h-0 flex-1 bg-slate-100" /></section></div>}
+    {officeOpen && <dialog ref={officeDialog} aria-labelledby="office-report-title" onCancel={closeOfficeDialog} onClick={event => { if (event.target === event.currentTarget) closeOfficeDialog(); }} className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-6xl overflow-hidden rounded-2xl bg-white p-0 shadow-2xl backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm">
+      <div className="flex max-h-[90dvh] flex-col">
+        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 p-5 sm:px-6">
+          <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-teal-700">OCC / Office report</p><h2 id="office-report-title" className="mt-1 text-xl font-semibold text-slate-900">Office & Institutions Filters</h2></div>
+          <button type="button" autoFocus aria-label="Close office filters and institutions" onClick={closeOfficeDialog} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X size={20} /></button>
+        </header>
+        <div className="min-h-0 overflow-y-auto">
+    <section className="border-b border-slate-200 p-5 sm:p-6">
       <label htmlFor="report-office" className="block text-sm font-semibold text-slate-900">OCC / Office to report</label>
       <select id="report-office" value={reportOffice} onChange={event => setSelectedOffice(event.target.value)} disabled={exporting || !offices.length} className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:opacity-60 sm:max-w-xl">
         {user?.role === "super_admin" && offices.length > 0 && <option value="">All OCC / Offices</option>}
@@ -201,10 +247,8 @@ export default function Reports({ user }) {
         {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
       </select>
       <p className="mt-2 text-sm text-slate-500">The summary covers the selected office. The institution list and PDF table use the selected status.</p>
-    </section>}
-    <article className="card overflow-hidden"><div className="flex flex-col gap-4 border-b border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-teal-700">Written report</p><h2 className="mt-1 text-xl font-semibold text-slate-900">{active.title}</h2></div><button type="button" onClick={previewPdf} disabled={exporting} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#08264d] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0e427d] disabled:cursor-wait disabled:opacity-60"><Eye size={17} />{exporting ? "Preparing preview..." : "Preview PDF"}</button></div><div className="space-y-7 p-5 text-[15px] leading-7 text-slate-700 sm:p-7">{sections.map(([heading, paragraph]) => <section key={heading}><h3 className="mb-2 text-base font-semibold text-slate-900">{heading}</h3><p>{paragraph}</p></section>)}</div></article>
-    {previewUrl && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-3 sm:p-6" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setPreviewUrl(""); }}><section role="dialog" aria-modal="true" aria-labelledby="pdf-preview-title" className="flex h-[94dvh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"><header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-6"><div><h2 id="pdf-preview-title" className="font-semibold text-slate-900">PDF preview</h2><p className="text-xs text-slate-500">Review the report before saving.</p></div><div className="flex items-center gap-2"><button type="button" onClick={downloadPdf} className="inline-flex items-center gap-2 rounded-xl bg-[#08264d] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0e427d]"><Download size={16} />Save PDF</button><button type="button" aria-label="Close PDF preview" onClick={() => setPreviewUrl("")} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X size={20} /></button></div></header><iframe title={`${active.title} PDF preview`} src={previewUrl} className="min-h-0 flex-1 bg-slate-100" /></section></div>}
-    {active.id === "occ" && <section className="card overflow-hidden" aria-labelledby="report-institution-list">
+    </section>
+    <section className="overflow-hidden" aria-labelledby="report-institution-list">
       <div className="border-b border-slate-200 p-5 sm:p-6">
         <h2 id="report-institution-list" className="text-lg font-semibold text-slate-900">Institution list</h2>
         <p className="mt-1 text-sm text-slate-500" aria-live="polite">{listDescription}</p>
@@ -212,19 +256,26 @@ export default function Reports({ user }) {
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <caption className="sr-only">{listDescription}</caption>
-          <thead className="bg-slate-50 text-slate-600"><tr>{["Institution", "Region", "OCC / Office", "Survey status"].map(label => <th key={label} scope="col" className="px-5 py-3 font-semibold">{label}</th>)}</tr></thead>
+          <thead className="bg-slate-50 text-slate-600"><tr>{["Institution", "Region", "OCC / Office", "Survey status"].map(label => <th key={label} scope="col" className={`px-5 py-3 font-semibold ${label === "Survey status" ? "w-40 min-w-40 whitespace-nowrap" : ""}`}>{label}</th>)}</tr></thead>
           <tbody className="divide-y divide-slate-100">
             {visibleInstitutions.map((item, index) => <tr key={`${item.office}-${index}`} className="hover:bg-slate-50">
 
               <td className="min-w-56 px-5 py-3 font-medium text-slate-900">{item.name || "Unnamed institution"}</td>
               <td className="px-5 py-3 text-slate-600">{item.region || "Not specified"}</td>
               <td className="min-w-48 px-5 py-3 text-slate-600">{item.office}</td>
-              <td className="px-5 py-3"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${item.responded === true ? "bg-emerald-50 text-emerald-700" : item.responded === false ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}`}>{institutionStatus(item)}</span></td>
+              <td className="w-40 min-w-40 whitespace-nowrap px-5 py-3"><span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${item.responded === true ? "bg-emerald-50 text-emerald-700" : item.responded === false ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}`}>{institutionStatus(item)}</span></td>
             </tr>)}
             {!visibleInstitutions.length && <tr><td colSpan={4} className="p-8 text-center text-slate-500">{emptyListMessage}</td></tr>}
           </tbody>
         </table>
       </div>
-    </section>}
+    </section>
+        </div>
+        <footer className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:px-6">
+          <button type="button" onClick={closeOfficeDialog} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100">Cancel</button>
+          <button type="button" onClick={previewPdf} disabled={exporting} className="inline-flex items-center gap-2 rounded-xl bg-[#08264d] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0e427d] disabled:cursor-wait disabled:opacity-60"><Eye size={17} />{exporting ? "Preparing preview..." : "Preview PDF"}</button>
+        </footer>
+      </div>
+    </dialog>}
   </div>;
 }
