@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import { Readable } from 'node:stream';
 import handler from '../api/sheet.js';
 
-test('login retries service authorization once, but persistent rejection never creates a session', async () => {
+test('login rejects a bad service access code without a redundant Google request', async () => {
   const originalFetch = globalThis.fetch;
   let calls = 0;
   let recover = true;
@@ -26,12 +26,12 @@ test('login retries service authorization once, but persistent rejection never c
   }
   try {
     const recovered = await login();
-    assert.equal(calls, 2);
-    assert.equal(recovered.code, 200);
-    assert.ok(recovered.headers['Set-Cookie']);
+    assert.equal(calls, 1);
+    assert.equal(recovered.code, 503);
+    assert.equal(recovered.headers['Set-Cookie'], undefined);
     recover = false;
     const rejected = await login();
-    assert.equal(calls, 4);
+    assert.equal(calls, 2);
     assert.equal(rejected.code, 503);
     assert.equal(rejected.headers['Set-Cookie'], undefined);
   } finally { globalThis.fetch = originalFetch; }
@@ -89,7 +89,11 @@ test('small registers use one live batch read and respect password changes', () 
       };
     }
   };
+  const hints = new Map();
   const context = vm.createContext({
+    CacheService: { getScriptCache: () => ({ get: key => hints.get(key), put: (key, value) => hints.set(key, value) }) },
+    Utilities: { DigestAlgorithm: { SHA_256: 'sha256' }, computeDigest: (_algorithm, value) => value,
+      base64EncodeWebSafe: value => Buffer.from(value).toString('base64url') },
     CONFIG: { SPREADSHEET_ID: 'test', SHEETS: { USERS: 'Users' } },
     SpreadsheetApp: { openById: () => ({ getSheetByName: () => sheet }) }
   });
@@ -106,6 +110,19 @@ test('small registers use one live batch read and respect password changes', () 
   reads.length = 0;
   assert.equal(context.findLoginUser_('test@example.com', 'new-password').name, 'Test');
   assert.deepEqual(reads, [[1, 1, 1, 5], [2, 2, 250, 1], [3, 1, 1, 5]]);
+  reads.length = 0;
+  rows[2][4] = 'admin';
+  assert.equal(context.findLoginUser_('test@example.com', 'new-password').role, 'admin');
+  assert.deepEqual(reads, [[1, 1, 1, 5], [3, 1, 1, 5]], 'A cached location skips register discovery');
+  assert.ok([...hints.values()].every(value => !value.includes('new-password')));
+  rows[2][3] = 'changed-again';
+  assert.equal(context.findLoginUser_('test@example.com', 'new-password'), null);
+  assert.equal(context.findLoginUser_('test@example.com', 'changed-again').name, 'Test');
+  // Reordering columns invalidates the hint and rediscovers the live schema.
+  for (const row of rows) [row[3], row[4]] = [row[4], row[3]];
+  assert.equal(context.findLoginUser_('test@example.com', 'changed-again').role, 'admin');
+  rows.splice(2, 1);
+  assert.equal(context.findLoginUser_('test@example.com', 'changed-again'), null);
 });
 
 test('login issues a session only for successful upstream authentication', async () => {

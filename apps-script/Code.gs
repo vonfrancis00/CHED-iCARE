@@ -52,6 +52,33 @@ function findLoginUser_(email, password) {
   const sheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID).getSheetByName(CONFIG.SHEETS.USERS);
   if (!sheet) throw new Error("Users sheet not found.");
 
+  // Cache only the location of an account, never its password or permissions.
+  // One live row read handles repeat sign-ins; moved/deleted rows fall back to
+  // discovery below. Cache availability must never determine authentication.
+  let loginCache;
+  let loginKey;
+  try {
+    loginCache = CacheService.getScriptCache();
+    loginKey = "login-row-v1:" + Utilities.base64EncodeWebSafe(
+      Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, CONFIG.SPREADSHEET_ID + ":" + CONFIG.SHEETS.USERS + ":" + email)
+    );
+    const hint = JSON.parse(loginCache.get(loginKey) || "null");
+    if (hint) {
+      // Read the header too: column rearrangements must not reuse stale roles
+      // or treat another column as a password.
+      const headers = sheet.getRange(1, 1, 1, hint.width).getDisplayValues()[0];
+      if (JSON.stringify(headers) === hint.headers) {
+        const row = sheet.getRange(hint.row, 1, 1, hint.width).getDisplayValues()[0];
+        const c = hint.columns;
+        if (String(row[c.email] || "").trim().toLowerCase() === email) {
+          if (String(row[c.password] || "") !== password) return null;
+          return { email, password, name: String(row[c.name] || "").trim(),
+            office: String(row[c.office] || "").trim(), role: c.role >= 0 ? String(row[c.role] || "").trim() : "" };
+        }
+      }
+    }
+  } catch (_) { /* Discover the current account when a hint is unavailable. */ }
+
   const lastRow = sheet.getLastRow();
   const lastColumn = sheet.getLastColumn();
   if (lastRow < 2 || lastColumn < 1) return null;
@@ -60,12 +87,22 @@ function findLoginUser_(email, password) {
   // matched-row read. Credentials stay live; never cache passwords or logins.
   const smallRegister = lastRow <= 250 && lastColumn <= 30
     ? sheet.getRange(1, 1, lastRow, lastColumn).getDisplayValues() : null;
-  const headers = (smallRegister ? smallRegister[0] : sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0])
-    .map(value => String(value).trim().toLowerCase());
+  const rawHeaders = smallRegister ? smallRegister[0] : sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0];
+  const headers = rawHeaders.map(value => String(value).trim().toLowerCase());
   const columns = Object.fromEntries(["email", "password", "name", "office", "role"]
     .map(header => [header, headers.indexOf(header)]));
   if (["email", "password", "name", "office"].some(header => columns[header] < 0)) {
     throw new Error("Users sheet must have Email, Password, Name and Office headers.");
+  }
+
+  function rememberRow(row) {
+    try {
+      // Small registers already need only one batch read; hints benefit large ones.
+      if (loginCache && loginKey && !smallRegister) loginCache.put(loginKey, JSON.stringify({
+        row, width: lastColumn, columns,
+        headers: JSON.stringify(rawHeaders)
+      }), 300);
+    } catch (_) { /* A cache miss is safe. */ }
   }
 
   if (smallRegister) {
@@ -98,7 +135,10 @@ function findLoginUser_(email, password) {
     office: String(row[columns.office - firstColumn] || "").trim(),
     role: columns.role >= 0 ? String(row[columns.role - firstColumn] || "").trim() : ""
     };
-    if (user.email === email && user.password === password) return user;
+    if (user.email === email && user.password === password) {
+      rememberRow(match.getRow());
+      return user;
+    }
   }
   return null;
 }

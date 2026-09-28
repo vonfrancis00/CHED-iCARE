@@ -70,8 +70,12 @@ export default function Login({ onLogin }) {
     const timeout = window.setTimeout(() => controller.abort(), 60000);
     try {
       const response = await fetch('/api/sheet?action=login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim(), password }), credentials: 'same-origin', signal: controller.signal });
-      const result = await response.json();
-      if (!response.ok || !result.success || !result.user) throw new Error(result.message || 'Unable to sign in.');
+      const result = await response.json().catch(() => {
+        throw new Error(response.status === 504
+          ? 'Sign-in took too long. Please try again.'
+          : 'The sign-in service is unavailable. Please try again.');
+      });
+      if (!response.ok || !result?.success || !result.user) throw new Error(result?.message || 'Unable to sign in.');
       onLogin(result.user);
     } catch (cause) { setError(cause.name === 'AbortError' ? 'Sign-in took too long. Please try again.' : cause.message || 'Unable to sign in. Please retry.'); }
     finally { window.clearTimeout(timeout); window.clearTimeout(slowTimer); setLoading(false); setSlowLogin(false); }

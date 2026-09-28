@@ -1,6 +1,16 @@
 // Enable the advanced Gmail API service (identifier: Gmail) before setup.
 // Editor-only setup helper: not exposed by doGet/doPost. Safe to remove after setup.
+function authorizeApprovalEmail() {
+  // Use this project's declared or automatically detected scopes. requireScopes
+  // rejects narrower scope names when the project declares broader Gmail scopes.
+  ScriptApp.requireAllScopes(ScriptApp.AuthMode.FULL);
+  const sender = PropertiesService.getScriptProperties().getProperty("APPROVAL_EMAIL_SENDER");
+  if (sender) assertApprovalSender_(sender);
+  console.log("Gmail permissions granted for this editor account. Update the web app deployment using this same account with Execute as: Me. No email was sent.");
+}
+
 function setupApprovalEmail() {
+  authorizeApprovalEmail();
   const SENDER_EMAIL = "commissionerapag@ched.gov.ph"; // Run once to list addresses, then paste your chosen address here.
   const DASHBOARD_URL = "https://ched-icare.vercel.app/"; // Paste the website's HTTPS login URL here.
   const aliases = Gmail.Users.Settings.SendAs.list("me").sendAs || [];

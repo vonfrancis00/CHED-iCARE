@@ -25,6 +25,26 @@ function fixture({ fail = false, configured = true } = {}) {
 }
 const account = { requestRow: 2, email: 'new@ched.gov.ph', name: 'José', office: 'Office', password: 'Päss+word123', role: 'admin' };
 
+test('editor authorization uses project scopes without sending credentials', () => {
+  const f = fixture();
+  let requested;
+  f.context.ScriptApp = { AuthMode: { FULL: 'FULL' }, requireAllScopes(mode) {
+    assert.equal(mode, 'FULL');
+    requested = true;
+  } };
+  f.context.authorizeApprovalEmail();
+  assert.equal(requested, true);
+  assert.equal(f.sent.length, 0);
+  assert.equal(f.state().created, 0);
+});
+
+test('setup stops before sending when Gmail consent is incomplete', () => {
+  const f = fixture();
+  f.context.ScriptApp = { AuthMode: { FULL: 'FULL' }, requireAllScopes() { throw new Error('Authorization required'); } };
+  assert.throws(() => f.context.setupApprovalEmail(), /Authorization required/);
+  assert.equal(f.sent.length, 0);
+});
+
 test('approval sends exact UTF-8 credentials once and preserves the account response', () => {
   const f = fixture();
   const result = f.context.approveAccountRequest_(account);

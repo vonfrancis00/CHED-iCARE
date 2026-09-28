@@ -16,10 +16,8 @@ async function readLoginResponse(sendPost, signal) {
       if (!payload || typeof payload.success !== 'boolean' || (payload.success && !payload.user)) {
         throw new Error('Invalid login response');
       }
-      if (attempt === 0 && !payload.success && payload.message === 'Unauthorized request.') {
-        await delay(500, undefined, { signal });
-        continue;
-      }
+      // A rejected access code is a configuration error; resending the same
+      // credentials only adds another full Google round trip.
       return payload;
     } catch (error) {
       const temporary = !response || response.ok || [404, 429, 500, 502, 503, 504].includes(response.status);

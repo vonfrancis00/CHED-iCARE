@@ -42,7 +42,8 @@ version is needed solely for this setup.
 3. Sign in as the account that executes the web app. Select
    `setupApprovalEmail` in the editor's function dropdown and click **Run**.
    Authorize Gmail access. The execution log lists the account's primary
-   address and verified send-as aliases. This first run sends no email.
+   address and verified send-as aliases. With the sender and URL already filled
+   in, this run sends a setup test to the sender.
 4. In that function, fill in `SENDER_EMAIL` with a listed address and
    `DASHBOARD_URL` with the website's HTTPS login URL. Run it again.
    It sends a test email to the chosen sender and saves Script Properties
@@ -78,6 +79,23 @@ References: [Advanced Gmail service](https://developers.google.com/apps-script/a
 [web app execution identity](https://developers.google.com/apps-script/guides/web).
 
 ### Troubleshooting recipient delivery
+
+For the "Gmail access is missing" message, copy the latest `ApprovalEmail.gs`
+into the live script project. Sign in as the Google account that deployed the
+web app, select `authorizeApprovalEmail`, and click **Run**. Grant the project's
+requested permissions and run again if prompted. The helper uses `requireAllScopes`
+to support both automatically detected and explicitly declared scopes without
+requesting scope names outside the project's required set. This helper sends no email and
+does not change accounts or saved configuration. If explicit `oauthScopes` are
+present in `appsscript.json`, add the two Gmail scopes listed above while keeping
+the existing scopes. Ensure Gmail API is enabled in **Services**.
+
+Then choose **Deploy > Manage deployments > Edit > New version > Deploy** and
+verify **Execute as: Me** is the same authorized account. Local file edits and
+editor authorization under a different account do not repair the live deployment.
+If Google blocks consent through an organization policy, the Workspace
+administrator must allow it. Already created accounts remain valid; this repair
+does not automatically resend their credentials.
 
 The recipient comes from the approval form's CHED email field, not from the
 configured sender. The setup test intentionally sends only to the sender.
