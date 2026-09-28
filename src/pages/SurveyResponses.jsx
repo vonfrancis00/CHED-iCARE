@@ -41,7 +41,7 @@ export default function SurveyResponses() {
   const groups = useMemo(() => groupInstitutions(data?.data || []), [data]);
   const matchingInstitutionCount = groups.length;
   const total = Number(data?.total) || 0;
-  const institutionCount = Number(data?.institutionCount) || 0;
+  const institutionCount = matchingInstitutionCount;
   const campusCount = Number(data?.campusCount) || 0;
   const regions = sortRegions(data?.regions || []);
   const pageCount = Math.max(1, Math.ceil(matchingInstitutionCount / pageSize));

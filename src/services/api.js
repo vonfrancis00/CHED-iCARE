@@ -23,7 +23,7 @@ async function request(action, params = {}) {
   if (canCache && pendingRequests.has(cacheKey)) return pendingRequests.get(cacheKey);
   const cached = responseCache.get(cacheKey);
   const ttl = action === "getInstitutions" ? RECORD_CACHE_MS : CLIENT_CACHE_MS;
-  if (canCache && cached && Date.now() - cached.createdAt < ttl) {
+  if (canCache && !params._force && cached && Date.now() - cached.createdAt < ttl) {
     return cached.promise;
   }
 

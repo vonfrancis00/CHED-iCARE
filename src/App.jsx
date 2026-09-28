@@ -9,9 +9,8 @@ const loadInstitutions = () => import("./pages/Institutions");
 const loadSurveyResponses = () => import("./pages/SurveyResponses");
 
 function prefetchRecords() {
-  // Match both pages' initial pagination. The API shares cached and in-flight
-  // requests, including when a user opens a page before this finishes.
-  void getInstitutions({ page: 1, pageSize: 20, query: "", institutionType: "", region: "" }).catch(() => {});
+  // Warm the first 50 rows used by the institutions directory.
+  void getInstitutions({ page: 1, pageSize: 50, query: "", institutionType: "", region: "" }).catch(() => {});
 }
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));

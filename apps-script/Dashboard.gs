@@ -44,7 +44,7 @@ function buildDashboardData_(institutionType, region, sharedDataset, sharedOffic
     const matchesRegion = !region || String(headerValue_(row, H.region) || "").trim().toLowerCase() === region;
     return matchesType && matchesRegion;
   });
-  const institutionTypes = countInstitutionTypes_(rows);
+  const institutionTypes = countDistinctInstitutionTypes_(rows);
 
   const facilityFaculty = countQuestion_(rows, H.facilityFaculty);
   const facilityStudents = countQuestion_(rows, H.facilityStudents);
@@ -149,13 +149,17 @@ function buildDashboardData_(institutionType, region, sharedDataset, sharedOffic
   return result;
 }
 
-function countInstitutionTypes_(rows) {
-  return rows.reduce((counts, row) => {
-    const type = String(headerValue_(row, H.institutionType)).trim().toUpperCase();
-    if (type === "LUC") counts.luc++;
-    if (type === "SUC") counts.suc++;
-    return counts;
-  }, { luc: 0, suc: 0 });
+function countDistinctInstitutionTypes_(rows) {
+  const institutionsByType = { LUC: new Set(), SUC: new Set() };
+  rows.forEach((row, index) => {
+    const type = String(headerValue_(row, H.institutionType) || "").trim().toUpperCase();
+    if (!institutionsByType[type]) return;
+    const name = String(headerValue_(row, H.institution) || "").trim().replace(/\\s+/g, " ");
+    // Rows without an HEI name cannot safely be deduplicated.
+    const key = name ? name.toLowerCase() : `unnamed:${index}`;
+    institutionsByType[type].add(key);
+  });
+  return { luc: institutionsByType.LUC.size, suc: institutionsByType.SUC.size };
 }
 
 function compareRegionNames_(left, right) {
@@ -186,7 +190,9 @@ function addDisplayFields_(row) {
 
 function getInstitutions(params) {
   const page = Math.max(1, Math.floor(Number(params.page) || 1));
-  const pageSize = Math.min(100, Math.max(1, Math.floor(Number(params.pageSize) || 20)));
+  // The grouped directory needs all matching rows to calculate institution
+  // counts. Permit one bounded full-result read for its initial load.
+  const pageSize = Math.min(5000, Math.max(1, Math.floor(Number(params.pageSize) || 20)));
   const query = String(params.query || "").trim().toLowerCase();
   const institutionType = String(params.institutionType || "").trim().toUpperCase();
   const region = String(params.region || "").trim().toLowerCase();
@@ -204,7 +210,7 @@ function buildInstitutionsPage_(page, pageSize, query, institutionType, region) 
   const rows = dataset.rows;
   const institutionCount = new Set(rows.map(row => String(headerValue_(row, H.institution) || "").trim()).filter(Boolean)).size;
   const campusCount = new Set(rows.map(row => String(headerValue_(row, H.campus) || "").trim()).filter(Boolean)).size;
-  const institutionTypes = countInstitutionTypes_(rows);
+  const institutionTypes = countDistinctInstitutionTypes_(rows);
   const matches = rows.filter(row => {
     const matchesQuery = !query || Object.values(row).some(value => String(value == null ? "" : value).toLowerCase().includes(query));
     const matchesType = !institutionType || String(headerValue_(row, H.institutionType) || "").trim().toUpperCase() === institutionType;
