@@ -37,11 +37,8 @@ function narrativeFor(id, data, user, selectedOffice) {
       .filter(office => !selectedOffice || office.name === selectedOffice);
     if (!offices.length) return [["Office coverage", "No OCC / Office assignments are available for this report yet."]];
     const assigned = offices.reduce((sum, office) => sum + Number(office.value || 0), 0);
-    const accomplished = offices.reduce((sum, office) => sum + Number(office.responded || 0), 0);
-    const pending = Math.max(0, assigned - accomplished);
     return [
       ["Office coverage", `The OCC / Office register records ${number(assigned)} institutional ${plural(assigned, "assignment")} across ${number(offices.length)} ${plural(offices.length, "office")}.`],
-      ["Survey progress", `Of the recorded assignments, ${number(accomplished)} ${plural(accomplished, "has", "have")} accomplished the survey and ${number(pending)} ${plural(pending, "is", "are")} pending. Overall survey completion stands at ${percent(accomplished, assigned)}.`],
       ...offices.map(office => [office.name, `${office.name} has ${number(office.value)} assigned ${plural(office.value, "institution")}, with ${number(office.responded)} accomplished and ${number(Math.max(0, Number(office.value || 0) - Number(office.responded || 0)))} pending. Survey completion stands at ${percent(office.responded, Number(office.value || 0))}.`])
     ];
   }

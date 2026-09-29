@@ -194,7 +194,6 @@ export default function SurveyResponses() {
           <table className="institution-response-table w-full text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
               <tr>
-                <th className="px-5 py-3">Institution</th>
                 <th className="px-5 py-3">Campus</th>
                 <th className="px-5 py-3">Address</th>
                 <th className="px-5 py-3">Facility</th>
@@ -204,9 +203,6 @@ export default function SurveyResponses() {
             <tbody className="divide-y divide-slate-100">
               {group.rows.map((row, index) => (
                 <tr key={row.rowNumber ?? index} className="hover:bg-slate-50">
-                  <td className="px-5 py-4 font-semibold text-slate-900">
-                    {display(row[FIELD_MAP.institution])}
-                  </td>
                   <td className="px-5 py-4">{display(row[FIELD_MAP.campus])}</td>
                   <td className="max-w-sm px-5 py-4">{display(row[FIELD_MAP.address])}</td>
                   <td className="px-5 py-4">{display(row.facilityStudents || row.facilityFaculty)}</td>
