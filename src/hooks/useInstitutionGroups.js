@@ -39,13 +39,19 @@ function loadGroups(key, params, revision, publish, force) {
   const job = { listeners: new Set([publish]) };
   pending.set(key, job);
   job.promise = (async () => {
-    // Use the same page size throughout to avoid gaps between response pages.
-    const requestParams = { ...params, pageSize: 50, _force: force };
+    // The service supports a full directory read, avoiding a separate Google
+    // Apps Script round trip for every 50 responses on the initial load.
+    const requestParams = { ...params, pageSize: 5000, _force: force };
     const first = await getInstitutions({ ...requestParams, page: 1 });
     if (!Array.isArray(first.data)) throw new Error("The data service returned invalid records. Please retry.");
     const total = Number(first.total) || first.data.length;
     let data = { ...first, total };
-    const pages = Math.ceil(total / 50);
+    // Older deployments may cap page size. Continue at their actual size so
+    // the faster request cannot skip responses or publish a partial directory.
+    const pageSize = Number(first.pageSize) > 0 ? Number(first.pageSize) : first.data.length;
+    if (total > 0 && pageSize === 0) throw new Error("The data service returned incomplete records. Please retry.");
+    requestParams.pageSize = pageSize || requestParams.pageSize;
+    const pages = total ? Math.ceil(total / requestParams.pageSize) : 0;
     const publishData = complete => {
       // Grouping and counts require every page. A partial first batch can
       // contain only responses with blank names and is not a directory yet.

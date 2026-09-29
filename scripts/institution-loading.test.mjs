@@ -51,3 +51,39 @@ test('initial load ignores incomplete and expired stored snapshots', () => {
   const { context } = setup(null, { complete: true, savedAt: Date.now(), data: { data: [{ Institution: 'Example University' }] } });
   assert.equal(context.readEntry('test').data.data[0].Institution, 'Example University');
 });
+
+test('cold directory load gets all responses in one request and shares the in-flight read', async () => {
+  const rows = Array.from({ length: 114 }, (_, index) => ({ rowNumber: index + 2, Institution: `University ${index}` }));
+  const calls = [];
+  const { context, writes } = setup(async params => {
+    calls.push(params);
+    return { total: rows.length, pageSize: params.pageSize, data: rows };
+  });
+  const published = [];
+  const job = context.loadGroups('test', { query: '', institutionType: 'SUC', region: 'region 1' }, 0, entry => published.push(entry), false);
+  const shared = context.loadGroups('test', {}, 0, () => {}, false);
+  assert.equal(job, shared);
+  await job.promise;
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].pageSize, 5000);
+  assert.equal(calls[0].institutionType, 'SUC');
+  assert.equal(calls[0].region, 'region 1');
+  assert.deepEqual(published[0].data.data, rows);
+  assert.equal(writes.length, 1);
+});
+
+test('older services with a smaller page limit preserve all responses in order', async () => {
+  const rows = Array.from({ length: 114 }, (_, index) => ({ rowNumber: index + 2, Institution: `University ${index}` }));
+  const calls = [];
+  const { context } = setup(async params => {
+    calls.push(params);
+    const pageSize = Math.min(50, params.pageSize);
+    return { total: rows.length, pageSize, data: rows.slice((params.page - 1) * pageSize, params.page * pageSize) };
+  });
+  const published = [];
+  await context.loadGroups('test', {}, 0, entry => published.push(entry), true).promise;
+  assert.deepEqual(calls.map(call => call.pageSize), [5000, 50, 50]);
+  assert.ok(calls.every(call => call._force));
+  assert.equal(published.length, 1);
+  assert.deepEqual(Array.from(published[0].data.data), rows);
+});
