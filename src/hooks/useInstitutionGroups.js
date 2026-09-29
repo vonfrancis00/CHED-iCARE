@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getInstitutions, getSheetDataRevision } from "../services/api";
 
-const STORAGE_PREFIX = "childcare-institution-groups:v2:";
+const STORAGE_PREFIX = "childcare-institution-groups:v3:";
 const SOURCE = import.meta.env.VITE_SHEET_API_URL || "demo";
 const CACHE_MS = 5 * 60 * 1000;
 const entries = new Map();
@@ -11,7 +11,7 @@ function readEntry(key) {
   if (entries.has(key)) return entries.get(key);
   try {
     const entry = JSON.parse(window.localStorage.getItem(STORAGE_PREFIX + key));
-    if (entry && Array.isArray(entry.data?.data)) {
+    if (entry?.complete && Array.isArray(entry.data?.data) && Date.now() - entry.savedAt < CACHE_MS) {
       // A revision only has meaning within the current browser execution.
       entry.revision = -1;
       entries.set(key, entry);
@@ -47,8 +47,9 @@ function loadGroups(key, params, revision, publish, force) {
     let data = { ...first, total };
     const pages = Math.ceil(total / 50);
     const publishData = complete => {
-      // Keep a previously complete snapshot visible until its replacement is ready.
-      if (!complete && readEntry(key)?.complete) return;
+      // Grouping and counts require every page. A partial first batch can
+      // contain only responses with blank names and is not a directory yet.
+      if (!complete) return;
       const entry = saveEntry(key, data, revision, complete);
       job.listeners.forEach(listener => listener(entry));
     };
