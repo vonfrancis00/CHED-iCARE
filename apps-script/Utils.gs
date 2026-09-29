@@ -108,7 +108,7 @@ function sumNumeric_(rows, header) {
 }
 
 function cacheKey_(name) {
-  return "CHILDCARE_DASHBOARD_EXACT_V7_" + name;
+  return "CHILDCARE_DASHBOARD_EXACT_V9_" + name;
 }
 
 function getOrBuildCache_(key, builder, seconds) {

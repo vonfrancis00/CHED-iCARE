@@ -105,11 +105,12 @@ export default function Dashboard() {
         {!snapshot.filterViews && <p role="status" className="mt-3 text-xs text-amber-700">Fast filters are unavailable. Update the dashboard service, then refresh data.</p>}
       </section>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <StatCard label="Survey Responses" value={o.totalResponses} hint={<><span className="mt-1 block">{`LUCs: ${o.lucResponses ?? 0} · SUCs: ${o.sucResponses ?? 0}`}</span></>} icon={Building2} />
-        <StatCard label="Facility — Faculty" value={o.facilityFacultyYes} hint="Exact Yes responses" icon={Baby} tone="blue" />
-        <StatCard label="Facility — Students" value={o.facilityStudentsYes} hint="Exact Yes responses" icon={Users} tone="teal" />
-        <StatCard label="Program — Students" value={o.programStudentsYes} hint="Exact Yes responses" icon={FileCheck} tone="amber" />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+        <StatCard label="Total Institution Responded" value={Number(o.lucResponses ?? 0) + Number(o.sucResponses ?? 0)} hint={`LUCs: ${o.lucResponses ?? 0} · SUCs: ${o.sucResponses ?? 0}`} icon={Building2} />
+        <StatCard label="Survey Responses" value={o.totalResponses} hint="Total Submitted Responses" icon={FileCheck} tone="blue" />
+        <StatCard label="Facility — Faculty" value={o.facilityFacultyYes} hint="Exact Yes Responses" icon={Baby} tone="blue" />
+        <StatCard label="Facility — Students" value={o.facilityStudentsYes} hint="Exact Yes Responses" icon={Users} tone="teal" />
+        <StatCard label="Program — Students" value={o.programStudentsYes} hint="Exact Yes Responses" icon={FileCheck} tone="amber" />
         <StatCard label="Enrolled Solo Parents" value={o.enrolledSoloParents} hint="Sum of numeric responses" icon={Users} tone="violet" />
       </div>
 

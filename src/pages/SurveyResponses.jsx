@@ -6,8 +6,8 @@ import Loading from "../components/common/Loading";
 
 
 const FIELD_MAP = {
-  institution: "HEI",
-  campus: "Name of Institution Campus",
+  institution: "Institution",
+  campus: "Campus",
   address: "Address of Campus"
 };
 
@@ -38,10 +38,11 @@ export default function SurveyResponses() {
   const { data, loading, error, reload, hasCurrentData } = useInstitutionGroups(query, institutionType, region);
   const rows = data?.data || [];
   const isFilterLoading = filterPending && !hasCurrentData && !error;
-  const groups = useMemo(() => groupInstitutions(data?.data || []), [data]);
+  const groups = useMemo(() => groupInstitutions(data?.data || [], FIELD_MAP.institution), [data]);
   const matchingInstitutionCount = groups.length;
   const total = Number(data?.total) || 0;
-  const institutionCount = matchingInstitutionCount;
+  // Match the Institutions page summary using the API's LUC and SUC totals.
+  const institutionCount = (Number(data?.lucCount) || 0) + (Number(data?.sucCount) || 0);
   const campusCount = Number(data?.campusCount) || 0;
   const regions = sortRegions(data?.regions || []);
   const pageCount = Math.max(1, Math.ceil(matchingInstitutionCount / pageSize));
@@ -96,7 +97,7 @@ export default function SurveyResponses() {
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Institutions</p>
+              <p className="text-sm text-slate-500">Total Institution Responded</p>
               <p className="mt-3 text-3xl font-semibold text-slate-900">{institutionCount}</p>
             </div>
             <div className="rounded-2xl bg-blue-100 p-3 text-blue-700">
@@ -120,7 +121,7 @@ export default function SurveyResponses() {
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Active rows</p>
+              <p className="text-sm text-slate-500">Total Responses</p>
               <p className="mt-3 text-3xl font-semibold text-slate-900">{total}</p>
             </div>
             <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">

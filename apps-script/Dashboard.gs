@@ -19,8 +19,8 @@ const H = {
   communityFemale: "Number of female solo parents in the community",
   communityMale: "Number of male solo parents in the community",
 
-  institution: "HEI",
-  campus: "Name of Institution Campus",
+  institution: "Institution",
+  campus: "Campus",
   address: "Address of Campus",
   region: "Region"
 };
@@ -154,8 +154,8 @@ function countDistinctInstitutionTypes_(rows) {
   rows.forEach((row, index) => {
     const type = String(headerValue_(row, H.institutionType) || "").trim().toUpperCase();
     if (!institutionsByType[type]) return;
-    const name = String(headerValue_(row, H.institution) || "").trim().replace(/\\s+/g, " ");
-    // Rows without an HEI name cannot safely be deduplicated.
+    const name = String(headerValue_(row, H.institution) || "").trim().replace(/\s+/g, " ");
+    // Rows without an institution name cannot safely be deduplicated.
     const key = name ? name.toLowerCase() : `unnamed:${index}`;
     institutionsByType[type].add(key);
   });

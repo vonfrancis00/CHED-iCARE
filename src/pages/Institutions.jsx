@@ -2,7 +2,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Building2, ChevronDown, ChevronLeft, ChevronRight, Eye, Search, X, Database, LoaderCircle } from "lucide-react";
 import { useInstitutionGroups } from "../hooks/useInstitutionGroups";
-import { groupInstitutions } from "../utils/institutionGroups";
+import { groupCampuses, groupInstitutions } from "../utils/institutionGroups";
 import Loading from "../components/common/Loading";
 
 function matchesFilters(row, institutionType, region) {
@@ -42,7 +42,7 @@ export default function Institutions() {
   // The API filters records as well, but keep this guard at the UI boundary so
   // a stale deployment or cached response can never show a LUC as a SUC.
   const rows = (data?.data || []).filter(row => matchesFilters(row, institutionType, region)
-    && String(row.HEI || "").toLowerCase().includes(q.trim().toLowerCase()));
+    && String(row.Institution || "").toLowerCase().includes(q.trim().toLowerCase()));
   const headers = data?.headers || [];
   // Summary cards reflect the full filtered result reported by the API, even
   // while the directory rows are still arriving in the background.
@@ -50,7 +50,7 @@ export default function Institutions() {
   const lucCount = Number(data?.lucCount) || 0;
   const sucCount = Number(data?.sucCount) || 0;
   const regions = sortRegions(data?.regions || []);
-  const groups = useMemo(() => groupInstitutions(rows, "HEI"), [data, institutionType, region, q]);
+  const groups = useMemo(() => groupInstitutions(rows, "Institution"), [data, institutionType, region, q]);
   const institutionCount = groups.length;
   const pageCount = Math.max(1, Math.ceil(institutionCount / pageSize));
   const currentPage = Math.min(page, pageCount);
@@ -89,13 +89,6 @@ export default function Institutions() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-blue-100">Records</div>
-            <div className="mt-2 flex items-center gap-3">
-              <span className="text-2xl font-semibold">{total}</span>
-              <span className="text-sm text-blue-100">entries</span>
-            </div>
-          </div>
         </div>
       </header>
 
@@ -109,15 +102,15 @@ export default function Institutions() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Total entries</p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">{total}</p>
+              <p className="text-sm text-slate-500">Total Institution Responded</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-900">{lucCount + sucCount}</p>
             </div>
-            <div className="rounded-2xl bg-blue-100 p-3 text-blue-700">
-              <Database size={22} />
+            <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
+              <Search size={22} />
             </div>
           </div>
         </div>
@@ -125,7 +118,7 @@ export default function Institutions() {
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">LUC institutions</p>
+              <p className="text-sm text-slate-500">LUC Institutions</p>
               <p className="mt-3 text-3xl font-semibold text-slate-900">{lucCount}</p>
             </div>
             <div className="rounded-2xl bg-teal-100 p-3 text-teal-700">
@@ -137,23 +130,11 @@ export default function Institutions() {
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">SUC institutions</p>
+              <p className="text-sm text-slate-500">SUC Institutions</p>
               <p className="mt-3 text-3xl font-semibold text-slate-900">{sucCount}</p>
             </div>
             <div className="rounded-2xl bg-amber-100 p-3 text-amber-700">
               <Building2 size={22} />
-            </div>
-          </div>
-        </div>
-
-        <div className="card p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-500">Visible institutions</p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">{visibleGroups.length}</p>
-            </div>
-            <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
-              <Search size={22} />
             </div>
           </div>
         </div>
@@ -163,7 +144,7 @@ export default function Institutions() {
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_220px]">
           <div className="relative">
           <Search className="absolute left-3 top-3.5 text-slate-400" size={18}/>
-          <input value={q} onChange={e => { setFilterPending(true); setPage(1); setQ(e.target.value); }} placeholder="Search HEI..." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 outline-none focus:border-blue-500" aria-label="Search institutions" aria-busy={isSearching}/>
+          <input value={q} onChange={e => { setFilterPending(true); setPage(1); setQ(e.target.value); }} placeholder="Search Institution..." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 outline-none focus:border-blue-500" aria-label="Search institutions" aria-busy={isSearching}/>
           {isSearching && <LoaderCircle className="absolute right-3 top-3.5 animate-spin text-blue-600" size={18} aria-label="Searching"/>}
         </div>
           <div
@@ -185,14 +166,14 @@ export default function Institutions() {
           </div>
           <select value={region} onChange={event => { setFilterPending(true); setPage(1); setRegion(event.target.value); }} aria-label="Filter by region" className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 outline-none focus:border-blue-500"><option value="">All regions</option>{regions.map(item => <option key={item} value={item}>{item}</option>)}</select>
         </div>
-        <p className="mt-2 text-xs text-slate-500">{total.toLocaleString()} matching response{total === 1 ? "" : "s"} · {institutionCount.toLocaleString()} institutions/campuses · showing {firstRow.toLocaleString()}–{lastRow.toLocaleString()}</p>
+        <p className="mt-2 text-xs text-slate-500">{total.toLocaleString()} matching response{total === 1 ? "" : "s"} · {institutionCount.toLocaleString()} institutions · showing {firstRow.toLocaleString()}–{lastRow.toLocaleString()}</p>
       </div>
 
       <div ref={tableRef} className="institution-directory card overflow-hidden scroll-mt-6">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-5 sm:px-6">
           <div>
             <h2 className="text-base font-bold text-slate-900">Institution/Campus Directory</h2>
-            <p className="mt-1 text-xs text-slate-500">Select an institution/campus to view its responses.</p>
+            <p className="mt-1 text-xs text-slate-500">Select an institution to view its campuses, then select a campus to view its responses.</p>
           </div>
           <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">{institutionCount.toLocaleString()} institutions</span>
         </div>
@@ -217,34 +198,7 @@ export default function Institutions() {
                   </tr>
                   <tr id={`institution-responses-${index}`} hidden={expanded !== group.key}>
                     <td colSpan={2} className="bg-slate-50 p-3 sm:p-5">
-                      {expanded === group.key && <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-          <table className="institution-response-table w-full text-sm">
-            <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="sticky left-0 z-10 bg-slate-50 px-5 py-3">Institution</th>
-                <th className="px-5 py-3">Campus</th>
-                <th className="px-5 py-3">Address</th>
-                <th className="px-5 py-3">Facility — Faculty</th>
-                <th className="px-5 py-3">Facility — Students</th>
-                <th className="px-5 py-3">Program — Students</th>
-                <th className="px-5 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {group.rows.map(row => (
-                <tr key={row.rowNumber} className="hover:bg-slate-50">
-                  <td className="sticky left-0 bg-white px-5 py-4 font-semibold text-slate-900">{row.HEI || "—"}</td>
-                  <td className="px-5 py-4">{row["Name of Institution Campus"] || "—"}</td>
-                  <td className="max-w-sm px-5 py-4">{row["Address of Campus"] || "—"}</td>
-                  <td className="px-5 py-4">{row.facilityFaculty || "—"}</td>
-                  <td className="px-5 py-4">{row.facilityStudents || "—"}</td>
-                  <td className="px-5 py-4">{row.programStudents || "—"}</td>
-                  <td className="px-5 py-4 text-right"><button aria-label={`View response from ${group.name}`} onClick={() => setSelected(row)} className="rounded-lg border border-slate-200 bg-white p-2 hover:bg-slate-50"><Eye size={17}/></button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-                      </div>}
+                      {expanded === group.key && <CampusDirectory rows={group.rows} onSelect={setSelected} />}
                     </td>
                   </tr>
                 </Fragment>
@@ -254,7 +208,7 @@ export default function Institutions() {
         </div>
         {!visibleGroups.length && !loading && !isFilterLoading && !error && <div className="p-10 text-center text-sm text-slate-500">No matching responses.</div>}
         {total > 0 && <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-slate-500">Showing <span className="font-semibold text-slate-700">{firstRow}–{lastRow}</span> of {institutionCount.toLocaleString()} institutions/campuses</div>
+          <div className="text-slate-500">Showing <span className="font-semibold text-slate-700">{firstRow}–{lastRow}</span> of {institutionCount.toLocaleString()} institutions</div>
           <div className="flex flex-wrap items-center gap-3"><label className="flex items-center gap-2 text-xs text-slate-500">Institutions per page<select value={pageSize} onChange={event => changePageSize(Number(event.target.value))} disabled={isPageLoading} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-50"><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select></label><div className="flex items-center gap-1"><button type="button" onClick={() => changePage(Math.max(1, currentPage - 1))} disabled={isPageLoading || currentPage === 1} aria-label="Previous page" className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={16} /></button><span className="min-w-20 text-center text-xs font-medium text-slate-600" aria-live="polite">{isPageLoading ? `Loading ${page}…` : `Page ${currentPage} of ${pageCount}`}</span><button type="button" onClick={() => changePage(Math.min(pageCount, currentPage + 1))} disabled={isPageLoading || currentPage === pageCount} aria-label="Next page" aria-busy={isPageLoading} className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40">{isPageLoading ? <LoaderCircle size={16} className="animate-spin" /> : <ChevronRight size={16} />}</button></div></div>
         </div>}
       </div>
@@ -264,8 +218,46 @@ export default function Institutions() {
   );
 }
 
+function CampusDirectory({ rows, onSelect }) {
+  const campuses = groupCampuses(rows);
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-semibold text-slate-500">{campuses.length} {campuses.length === 1 ? "campus" : "campuses"}</p>
+      {campuses.map(campus => (
+        <details key={campus.key} className="group/campus overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 text-sm font-semibold text-slate-900 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 [&::-webkit-details-marker]:hidden">
+            <Building2 size={18} className="shrink-0 text-blue-600" />
+            <span className="min-w-0 flex-1 break-words">{campus.name}</span>
+            <span className="shrink-0 text-xs font-medium text-slate-500">{campus.rows.length} {campus.rows.length === 1 ? "response" : "responses"}</span>
+            <ChevronDown size={17} className="shrink-0 text-slate-400 transition-transform group-open/campus:rotate-180" />
+          </summary>
+          <div className="overflow-x-auto border-t border-slate-200">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>{["Response", "Address", "Facility — Faculty", "Facility — Students", "Program — Students", "Details"].map(label => <th key={label} scope="col" className="px-4 py-3">{label}</th>)}</tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {campus.rows.map((row, index) => (
+                  <tr key={row.rowNumber ?? index} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-medium">Response {index + 1}</td>
+                    <td className="px-4 py-3">{row["Address of Campus"] || "—"}</td>
+                    <td className="px-4 py-3">{row.facilityFaculty || "—"}</td>
+                    <td className="px-4 py-3">{row.facilityStudents || "—"}</td>
+                    <td className="px-4 py-3">{row.programStudents || "—"}</td>
+                    <td className="px-4 py-3"><button type="button" onClick={() => onSelect(row)} aria-label={`View response ${index + 1} from ${campus.name}`} className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200 px-3 py-2 text-blue-700 hover:bg-blue-50"><Eye size={17} />View response</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      ))}
+    </div>
+  );
+}
+
 function DetailsModal({ row, headers, onClose }) {
-  const institutionName = row.HEI || "Survey Response";
+  const institutionName = row.Institution || "Survey Response";
 
   return (
     <div

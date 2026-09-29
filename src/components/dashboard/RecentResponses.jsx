@@ -15,8 +15,8 @@ export default function RecentResponses({ data = [] }) {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {data.map(row => <tr key={row.rowNumber} className="hover:bg-slate-50">
-              <td className="px-5 py-3 font-medium text-slate-800">{row.HEI || "—"}</td>
-              <td className="px-5 py-3 text-slate-500">{row["Name of Institution Campus"] || "—"}</td>
+              <td className="px-5 py-3 font-medium text-slate-800">{row.Institution || "—"}</td>
+              <td className="px-5 py-3 text-slate-500">{row["Campus"] || "—"}</td>
               <td className="max-w-xs px-5 py-3 text-slate-500">{row["Address of Campus"] || "—"}</td>
               <td className="px-5 py-3">{row.facilityFaculty || "—"}</td>
               <td className="px-5 py-3">{row.programStudents || "—"}</td>

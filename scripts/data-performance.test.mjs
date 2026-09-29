@@ -103,17 +103,34 @@ test('Apps Script caches round-trip small, Unicode and chunked data; missing chu
   assert.equal(context.readCache_(cache, 'key'), null);
 });
 
+test('SUC card counts twelve responses from the same institution once across campuses', () => {
+  const context = vm.createContext({});
+  vm.runInContext(readFileSync(new URL('../apps-script/Utils.gs', import.meta.url), 'utf8'), context);
+  vm.runInContext(readFileSync(new URL('../apps-script/Dashboard.gs', import.meta.url), 'utf8'), context);
+  const rows = Array.from({ length: 12 }, (_, index) => ({
+    Institution: index % 2 ? ' University  of Rizal System ' : 'UNIVERSITY OF RIZAL SYSTEM',
+    'SUC/LUC': 'SUC', Campus: `Campus ${index + 1}`, rowNumber: index + 2
+  }));
+  context.getRawDataset_ = () => ({ headers: [], rows });
+  const result = context.buildInstitutionsPage_(1, 50, '', '', '');
+  assert.equal(result.total, 12);
+  assert.equal(result.sucCount, 1);
+  assert.equal(result.lucCount, 0);
+  rows.push({ Institution: 'Another University', 'SUC/LUC': 'SUC' });
+  assert.equal(context.buildInstitutionsPage_(1, 50, '', '', '').sucCount, 2);
+});
+
 test('Apps Script filters before pagination and retains totals', () => {
   const context = vm.createContext({});
   vm.runInContext(readFileSync(new URL('../apps-script/Utils.gs', import.meta.url), 'utf8'), context);
   vm.runInContext(readFileSync(new URL('../apps-script/Dashboard.gs', import.meta.url), 'utf8'), context);
   context.getRawDataset_ = () => ({ headers: [], rows: [
-    { 'HEI': 'Alpha', 'SUC/LUC': 'SUC', Region: 'I' },
-    { 'HEI': 'Beta', 'SUC/LUC': 'LUC', Region: 'II' },
-    { 'HEI': 'Gamma', 'SUC/LUC': 'SUC', Region: 'I' }
+    { 'Institution': 'Alpha', 'SUC/LUC': 'SUC', Region: 'I' },
+    { 'Institution': 'Beta', 'SUC/LUC': 'LUC', Region: 'II' },
+    { 'Institution': 'Gamma', 'SUC/LUC': 'SUC', Region: 'I' }
   ] });
   const result = context.buildInstitutionsPage_(2, 1, '', 'SUC', 'i');
   assert.equal(result.total, 2);
   assert.equal(result.institutionCount, 3);
-  assert.equal(result.data[0]['HEI'], 'Alpha');
+  assert.equal(result.data[0]['Institution'], 'Alpha');
 });

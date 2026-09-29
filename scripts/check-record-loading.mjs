@@ -63,8 +63,8 @@ assert.equal(vm.runInContext("peekInstitutionPage({page:2,pageSize:20})", contex
 
 const backend = vm.createContext({
   getRawDataset_: () => ({ headers: [], rows: [
-    { rowNumber: 2, "HEI": "Alpha", "Name of Institution Campus": "A", "SUC/LUC": "SUC" },
-    { rowNumber: 3, "HEI": "Beta", "Name of Institution Campus": "B", "SUC/LUC": "LUC" }
+    { rowNumber: 2, "Institution": "Alpha", "Campus": "A", "SUC/LUC": "SUC" },
+    { rowNumber: 3, "Institution": "Beta", "Campus": "B", "SUC/LUC": "LUC" }
   ] }),
   headerValue_: (row, key) => row[key] ?? ""
 });
