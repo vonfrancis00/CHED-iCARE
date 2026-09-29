@@ -25,7 +25,7 @@ export default function Footer() {
         </div>
       </div>
       <p className="px-6 pb-4 text-right text-xs italic text-[#b9cbe2] sm:px-10 lg:px-12">
-        Powered by: Office of Commissioner Desiderio R. Apag III
+        Created by: Office of Commissioner Desiderio R. Apag III
       </p>
     </footer>
   );

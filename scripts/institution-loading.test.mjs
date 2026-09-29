@@ -6,6 +6,7 @@ import vm from 'node:vm';
 function setup(getInstitutions, stored = null) {
   const writes = [];
   const context = vm.createContext({
+    setTimeout: callback => setImmediate(callback),
     getInstitutions,
     peekInstitutionPage: () => null,
     getSheetDataRevision: () => 0,
@@ -104,7 +105,7 @@ test('older services with a smaller page limit preserve all responses in order',
   assert.deepEqual(Array.from(published[2].data.data), rows);
 });
 
-test('background page concurrency is bounded and out-of-order responses retain row order', async () => {
+test('background pages save progress in order with only one active read', async () => {
   const releases = new Map();
   let active = 0, peak = 0;
   const { context } = setup(async ({ page }) => {
@@ -118,11 +119,13 @@ test('background page concurrency is bounded and out-of-order responses retain r
   const published = [];
   const job = context.loadGroups('parallel', { pageSize: 1 }, 0, entry => published.push(entry), false);
   await new Promise(resolve => setImmediate(resolve));
-  assert.deepEqual([...releases.keys()], [2, 3, 4]);
-  releases.get(4)(); releases.get(3)(); releases.get(2)();
-  await new Promise(resolve => setImmediate(resolve));
-  assert.equal(peak, 3);
-  releases.get(7)(); releases.get(6)(); releases.get(5)();
+  for (let page = 2; page <= 7; page++) {
+    assert.equal(published.at(-1).data.data.length, page - 1);
+    assert.equal(releases.size, page - 1);
+    releases.get(page)();
+    await new Promise(resolve => setImmediate(resolve));
+  }
+  assert.equal(peak, 1);
   await job.promise;
   assert.deepEqual(Array.from(published.at(-1).data.data, row => row.rowNumber), [1, 2, 3, 4, 5, 6, 7]);
   assert.equal(published.at(-1).complete, true);
@@ -144,6 +147,58 @@ test('revisiting either record view reuses completed data beyond five minutes', 
   assert.equal(calls, 2, 'Explicit refresh still requests records');
   await context.loadGroups('shared-view', { pageSize: 50 }, 1, () => {}, false).promise;
   assert.equal(calls, 3, 'A data revision invalidates the completed snapshot');
+});
+
+test('a transient page failure retries only that page and preserves every response', async () => {
+  const calls = [];
+  const { context } = setup(async ({ page }) => {
+    calls.push(page);
+    if (page === 2 && calls.filter(value => value === 2).length === 1) {
+      throw Object.assign(new Error('Timed out'), { status: 408 });
+    }
+    return { total: 3, pageSize: 1, data: [{ rowNumber: page }] };
+  });
+  const published = [];
+  await context.loadGroups('retry', { pageSize: 1 }, 0, entry => published.push(entry), false).promise;
+  assert.deepEqual(calls, [1, 2, 2, 3]);
+  assert.deepEqual(Array.from(published.at(-1).data.data, row => row.rowNumber), [1, 2, 3]);
+  assert.equal(published.at(-1).complete, true);
+});
+
+test('persistent failures stop after one retry and retain successful pages', async () => {
+  let failures = 0;
+  const { context } = setup(async ({ page }) => {
+    if (page === 3) {
+      failures++;
+      throw Object.assign(new Error('Timed out'), { status: 408 });
+    }
+    return { total: 3, pageSize: 1, data: [{ rowNumber: page }] };
+  });
+  await assert.rejects(context.loadGroups('failure', { pageSize: 1 }, 0, () => {}, false).promise, /Timed out/);
+  assert.equal(failures, 2);
+  assert.equal(context.readEntry('failure').data.data.length, 2);
+  assert.equal(context.readEntry('failure').complete, false);
+});
+
+test('authorization failures are not retried', async () => {
+  let calls = 0;
+  const { context } = setup(async () => {
+    calls++;
+    throw Object.assign(new Error('Please sign in'), { status: 401 });
+  });
+  await assert.rejects(context.loadGroups('auth', {}, 0, () => {}, false).promise, /Please sign in/);
+  assert.equal(calls, 1);
+});
+
+test('short pages cannot mark an incomplete directory as complete', async () => {
+  for (const failedPage of [1, 2]) {
+    const { context, writes } = setup(async ({ page }) => ({
+      total: 4, pageSize: 2,
+      data: Array.from({ length: page === failedPage ? 1 : 2 }, (_, index) => ({ rowNumber: page * 2 + index }))
+    }));
+    await assert.rejects(context.loadGroups('short', { pageSize: 2 }, 0, () => {}, false).promise, /incomplete records/);
+    assert.ok(writes.every(entry => !entry.complete));
+  }
 });
 
 test('prefetched first 50 responses are immediately available to both views', () => {

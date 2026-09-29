@@ -3,7 +3,17 @@ import { useDashboard } from "../hooks/useDashboard";
 import Loading from "../components/common/Loading";
 import SoloParentChart from "../components/dashboard/SoloParentChart";
 import StatCard from "../components/dashboard/StatCard";
-import { Users, UserRound, UserRoundCheck, HeartHandshake } from "lucide-react";
+import { Users, HeartHandshake, createLucideIcon } from "lucide-react";
+
+const Venus = createLucideIcon("Venus", [
+  ["circle", { cx: 12, cy: 8, r: 5, key: "circle" }],
+  ["path", { d: "M12 13v8M9 18h6", key: "cross" }]
+]);
+
+const Mars = createLucideIcon("Mars", [
+  ["circle", { cx: 10, cy: 14, r: 6, key: "circle" }],
+  ["path", { d: "m14.5 9.5 6.5-6.5M15 3h6v6", key: "arrow" }]
+]);
 
 export default function SoloParents() {
   const { data, loading, error } = useDashboard();
@@ -41,8 +51,8 @@ export default function SoloParents() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Total Enrolled Students" value={campus.total} icon={Users} />
-        <StatCard label="Female" value={campus.female} icon={UserRound} tone="violet" />
-        <StatCard label="Male" value={campus.male} icon={UserRoundCheck} tone="blue" />
+        <StatCard label="Female" value={campus.female} icon={Venus} tone="violet" />
+        <StatCard label="Male" value={campus.male} icon={Mars} tone="blue" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
@@ -50,7 +60,7 @@ export default function SoloParents() {
 
         <div className="rounded-[30px] border border-slate-200 bg-[#edf2f5] p-7 shadow-[0_10px_30px_rgba(15,23,42,0.04)] sm:p-8">
           <div className="space-y-2">
-            <h2 className="text-[clamp(2.1rem,2.5vw,3rem)] font-semibold leading-tight tracking-[-0.055em] text-slate-800">Community snapshot</h2>
+            <h2 className="text-[clamp(2.1rem,2.5vw,3rem)] font-semibold leading-tight tracking-[-0.055em] text-slate-800">Community Snapshot</h2>
             <p className="text-[1.05rem] leading-relaxed text-slate-500">Breakdown of reported community support counts.</p>
           </div>
 

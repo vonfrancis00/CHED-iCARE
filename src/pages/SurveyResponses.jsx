@@ -35,7 +35,7 @@ export default function SurveyResponses() {
   const [filterPending, setFilterPending] = useState(false);
   const tableRef = useRef(null);
   const [expanded, setExpanded] = useState(null);
-  const { data, loading, error, reload, hasCurrentData } = useInstitutionGroups(query, institutionType, region);
+  const { data, loading, backgroundLoading, error, reload, hasCurrentData } = useInstitutionGroups(query, institutionType, region);
   const rows = data?.data || [];
   const isFilterLoading = filterPending && !hasCurrentData && !error;
   const groups = useMemo(() => groupInstitutions(data?.data || [], FIELD_MAP.institution), [data]);
@@ -161,7 +161,7 @@ export default function SurveyResponses() {
         </div>
       </div>
 
-      <div ref={tableRef} className="institution-directory card overflow-hidden scroll-mt-6" aria-busy={loading}>
+      <div ref={tableRef} className="institution-directory card overflow-hidden scroll-mt-6" aria-busy={loading || backgroundLoading}>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-5 sm:px-6">
           <div>
             <h2 className="text-base font-bold text-slate-900">Responses by Institution/Campus</h2>
@@ -169,7 +169,7 @@ export default function SurveyResponses() {
           </div>
           <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">{matchingInstitutionCount.toLocaleString()} institutions</span>
         </div>
-        {(loading || isFilterLoading) && <div role="status" className="flex items-center gap-2 border-b border-blue-100 bg-blue-50 px-5 py-3 text-sm font-medium text-blue-800"><LoaderCircle size={16} className="animate-spin" />{isFilterLoading ? "Applying filters…" : "Loading responses…"}</div>}
+        {(loading || backgroundLoading || isFilterLoading) && <div role="status" className="flex items-center gap-2 border-b border-blue-100 bg-blue-50 px-5 py-3 text-sm font-medium text-blue-800"><LoaderCircle size={16} className="animate-spin" />{isFilterLoading ? "Applying filters…" : `Updating responses… ${rows.length} of ${total} currently shown`}</div>}
         <div className="overflow-x-auto">
           <table className="institution-groups text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">

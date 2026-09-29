@@ -6,6 +6,18 @@ const SOURCE = import.meta.env.VITE_SHEET_API_URL || "demo";
 const entries = new Map();
 const pending = new Map();
 
+async function readPage(params) {
+  try {
+    return await getInstitutions(params);
+  } catch (error) {
+    // Retry only a transient read failure, once. Authentication and invalid
+    // payload errors need user attention rather than another request.
+    if (![408, 429, 502, 503, 504].includes(error.status) && error.name !== "TypeError") throw error;
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return getInstitutions(params);
+  }
+}
+
 function readEntry(key, params) {
   if (entries.has(key)) return entries.get(key);
   try {
@@ -61,7 +73,7 @@ function loadGroups(key, params, revision, publish, force) {
   job.promise = (async () => {
     // Publish the first batch immediately, then keep filling the cache.
     const requestParams = { pageSize: 50, ...params, _force: force };
-    const first = await getInstitutions({ ...requestParams, page: 1 });
+    const first = await readPage({ ...requestParams, page: 1 });
     if (!Array.isArray(first.data)) throw new Error("The data service returned invalid records. Please retry.");
     const total = Number(first.total) || first.data.length;
     let data = { ...first, total };
@@ -69,6 +81,9 @@ function loadGroups(key, params, revision, publish, force) {
     // subsequent requests cannot skip responses.
     const pageSize = Number(first.pageSize) > 0 ? Number(first.pageSize) : first.data.length;
     if (total > 0 && pageSize === 0) throw new Error("The data service returned incomplete records. Please retry.");
+    if (first.data.length !== Math.min(pageSize, total)) {
+      throw new Error("The data service returned incomplete records. Please retry.");
+    }
     requestParams.pageSize = pageSize || requestParams.pageSize;
     const pages = total ? Math.ceil(total / requestParams.pageSize) : 0;
     const publishData = complete => {
@@ -78,17 +93,16 @@ function loadGroups(key, params, revision, publish, force) {
       job.listeners.forEach(listener => listener(entry));
     };
     publishData(pages <= 1);
-    // Bound concurrency and preserve page order while overlapping network waits.
-    for (let page = 2; page <= pages; page += 3) {
-      const batch = await Promise.all(Array.from({ length: Math.min(3, pages - page + 1) }, (_, offset) =>
-        getInstitutions({ ...requestParams, page: page + offset })
-      ));
-      for (let offset = 0; offset < batch.length; offset++) {
-        const next = batch[offset];
-        if (!Array.isArray(next.data)) throw new Error("The data service returned invalid records. Please retry.");
-        data = { ...data, data: data.data.concat(next.data) };
-        publishData(page + offset === pages);
+    // Save each successful page before requesting the next. This avoids
+    // concurrent Apps Script reads and losing a whole batch to one timeout.
+    for (let page = 2; page <= pages; page++) {
+      const next = await readPage({ ...requestParams, page });
+      if (!Array.isArray(next.data)) throw new Error("The data service returned invalid records. Please retry.");
+      if (next.data.length !== Math.min(requestParams.pageSize, total - data.data.length)) {
+        throw new Error("The data service returned incomplete records. Please retry.");
       }
+      data = { ...data, data: data.data.concat(next.data) };
+      publishData(page === pages);
     }
   })().finally(() => pending.delete(key));
   return job;

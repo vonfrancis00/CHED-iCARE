@@ -71,7 +71,7 @@ export default function Childcare() {
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Planned/On-going Facilities</p>
+              <p className="text-sm text-slate-500">Planned / On-going Facilities</p>
               <p className="mt-3 text-3xl font-semibold text-slate-900">{facilityTotals.planned}</p>
             </div>
             <div className="rounded-2xl bg-indigo-100 p-3 text-indigo-700">
