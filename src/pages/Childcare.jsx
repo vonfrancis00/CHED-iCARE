@@ -52,14 +52,6 @@ export default function Childcare() {
               Monitoring childcare facility readiness and the availability of documented childcare development programs.
             </p>
           </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-blue-100">Response mix</div>
-            <div className="mt-2 flex items-center gap-3">
-              <span className="text-2xl font-semibold">{facilityCoverage}%</span>
-              <span className="text-sm text-blue-100">Facility Yes-rate</span>
-            </div>
-          </div>
         </div>
       </header>
 

@@ -68,14 +68,6 @@ export default function Geographic() {
               Overview of campus distribution and regional coverage across participating institutions.
             </p>
           </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-blue-100">Coverage</div>
-            <div className="mt-2 flex items-center gap-3">
-              <span className="text-2xl font-semibold">{totalCampuses}</span>
-              <span className="text-sm text-blue-100">campuses</span>
-            </div>
-          </div>
         </div>
       </header>
 

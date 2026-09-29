@@ -28,6 +28,68 @@ test('stalled result delivery retries GET without resending credentials or execu
   } finally { globalThis.fetch = original; }
 });
 
+test('slow result bodies can finish on retry without repeating the sheet execution', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const original = globalThis.fetch;
+  let executions = 0;
+  let downloads = 0;
+  globalThis.fetch = async (url, options) => {
+    if (new URL(url).hostname === 'script.google.com') {
+      executions++;
+      return new Response(null, { status: 302, headers: { location: 'https://script.googleusercontent.com/macros/echo?result=slow' } });
+    }
+    downloads++;
+    return {
+      status: 200, headers: new Headers(),
+      arrayBuffer: () => new Promise((resolve, reject) => {
+        const timer = setTimeout(() => resolve(new TextEncoder().encode('{"success":true,"data":[]}')), 12000);
+        options.signal.addEventListener('abort', () => {
+          clearTimeout(timer);
+          reject(new DOMException('Aborted', 'AbortError'));
+        }, { once: true });
+      })
+    };
+  };
+  try {
+    const pending = fetchAppsScript('https://script.google.com/macros/s/test/exec', { signal: new AbortController().signal });
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.equal(downloads, 1);
+    t.mock.timers.tick(10000);
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.equal(downloads, 2);
+    t.mock.timers.tick(12000);
+    assert.deepEqual(await (await pending).json(), { success: true, data: [] });
+    assert.equal(executions, 1);
+    assert.equal(downloads, 2);
+  } finally { globalThis.fetch = original; }
+});
+
+test('the shared deadline still aborts a slow result download', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const original = globalThis.fetch;
+  const controller = new AbortController();
+  let downloads = 0;
+  globalThis.fetch = async (url, options) => {
+    if (new URL(url).hostname === 'script.google.com') {
+      return new Response(null, { status: 302, headers: { location: 'https://script.googleusercontent.com/macros/echo?result=deadline' } });
+    }
+    downloads++;
+    return new Promise((resolve, reject) => {
+      options.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true });
+    });
+  };
+  try {
+    const pending = fetchAppsScript('https://script.google.com/macros/s/test/exec', { signal: controller.signal });
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    t.mock.timers.tick(10000);
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    assert.equal(downloads, 2);
+    controller.abort();
+    await assert.rejects(pending, { name: 'AbortError' });
+    assert.equal(downloads, 2);
+  } finally { globalThis.fetch = original; }
+});
+
 test('unexpected redirect hosts are rejected without forwarding credentials', async () => {
   const original = globalThis.fetch;
   let calls = 0;

@@ -1,5 +1,6 @@
-﻿import { useState } from "react";
-import { ArrowDownUp, ArrowRight, Building2, CheckCircle2, CircleDashed, ClipboardList, Clock3, RefreshCw, Search } from "lucide-react";
+﻿import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { ArrowDownUp, ArrowRight, Building2, CheckCircle2, CircleDashed, ClipboardList, Clock3, RefreshCw, Search, X } from "lucide-react";
 import { useDashboard } from "../hooks/useDashboard";
 import Loading from "../components/common/Loading";
 import OCCSheetView from "../components/dashboard/OCCSheetView";
@@ -67,14 +68,68 @@ export default function OCC({ user }) {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { label: "Assigned institutions", value: total, detail: "Across all OCC / Offices", icon: ClipboardList, tone: "bg-blue-100 text-blue-700" },
-          { label: "OCC / Offices", value: offices.length, detail: "In the OCC / Office register", icon: Building2, tone: "bg-indigo-100 text-indigo-700" },
-          { label: "Accomplished surveys", value: accomplished, detail: "Marked as Accomplished", icon: CheckCircle2, tone: "bg-sky-100 text-sky-700" },
-          { label: "Awaiting checks", value: pending, detail: "Remaining Assignments", icon: CircleDashed, tone: "bg-slate-100 text-slate-700" },
+          { label: "Chairperson & Commissioners Offices", value: offices.length, detail: "In the OCC / Office register", icon: Building2, tone: "bg-indigo-100 text-indigo-700" },
+          { label: "Accomplished Institutions", value: accomplished, detail: "Completed Institution Submissions", icon: CheckCircle2, tone: "bg-sky-100 text-sky-700" },
+          { label: "Pending Institutions", value: pending, detail: "Remaining Institutions", icon: CircleDashed, tone: "bg-slate-100 text-slate-700" },
           { label: "Survey progress", value: rate, detail: "Completion of assigned surveys", icon: CheckCircle2, tone: "bg-indigo-100 text-indigo-700", adminOnly: true }
-        ].filter(({ label, adminOnly }) => isSuperAdmin ? !adminOnly : label !== "OCC / Offices").map(({ label, value, detail, icon: Icon, tone }) => <div key={label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-slate-500">{label}</span><span className={`rounded-xl p-2 ${tone}`}><Icon size={17} /></span></div><div className="mt-2 text-3xl font-semibold tracking-tight tabular-nums text-slate-950">{label === "Survey progress" ? `${value}%` : number(value)}</div><p className="mt-1 text-xs text-slate-500">{detail}</p></div>)}
+        ].filter(({ label, adminOnly }) => isSuperAdmin ? !adminOnly : label !== "OCC / Offices").map(({ label, value, detail, icon: Icon, tone }) => 
+        <div key={label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-slate-500">
+              {label}
+            </span>
+            <span className={`rounded-xl p-2 ${tone}`}>
+              <Icon size={17} />
+            </span>
+          </div>
+          <div className="mt-2 text-3xl font-semibold tracking-tight tabular-nums text-slate-950">
+            {label === "Survey progress" ? `${value}%` : number(value)}
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            {detail}
+          </p>
+          </div>)}
       </div>
       {isSuperAdmin && <section className="space-y-4">
-        <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center"><div><h2 className="text-lg font-semibold tracking-tight text-slate-900">Office overview <span className="ml-2 rounded-md border border-slate-200 bg-white px-2 py-0.5 align-middle text-xs text-slate-500">{offices.length}</span></h2><p className="mt-1 text-sm text-slate-500">Select an office to explore its institution register.</p></div><div className="flex flex-col gap-2 sm:flex-row"><div className="relative"><Search size={16} className="pointer-events-none absolute left-3 top-3 text-slate-400" /><input type="search" aria-label="Search offices" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search offices…" className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 sm:w-56" /></div><div className="relative"><ArrowDownUp size={15} className="pointer-events-none absolute left-3 top-3.5 text-slate-400" /><select aria-label="Sort offices" value={sort} onChange={event => setSort(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-6 text-sm text-slate-600 focus:outline-blue-600"><option value="progress">Highest survey progress</option><option value="assigned">Most assigned</option><option value="pending">Most pending</option><option value="name">Office name</option></select></div></div></div>
+        <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-slate-900">
+              Office overview 
+              <span className="ml-2 rounded-md border border-slate-200 bg-white px-2 py-0.5 align-middle text-xs text-slate-500">
+                {offices.length}
+              </span>
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Select an office to explore its institution register.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="relative">
+              <Search size={16} className="pointer-events-none absolute left-3 top-3 text-slate-400" />
+              <input type="search" aria-label="Search offices" 
+              value={query} onChange={event => setQuery(event.target.value)} 
+              placeholder="Search offices…" 
+              className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 sm:w-56" />
+            </div>
+            <div className="relative">
+              <ArrowDownUp size={15} className="pointer-events-none absolute left-3 top-3.5 text-slate-400" />
+              <select aria-label="Sort offices" value={sort} onChange={event => setSort(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-6 text-sm text-slate-600 focus:outline-blue-600">
+                <option value="progress">
+                  Highest survey progress
+                </option>
+                <option value="assigned">
+                  Most assigned
+                </option>
+                <option value="pending">
+                  Most pending
+                </option>
+                <option value="name">
+                  Office name
+                </option>
+                </select>
+              </div>
+            </div>
+          </div>
         <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {visible.map(office => {
             const value = Number(office.value) || 0;
@@ -82,11 +137,50 @@ export default function OCC({ user }) {
             const progress = percent(responded, value);
             const completedAt = completedDate(office);
             const active = selectedOfficeName === office.name;
-            return <button key={office.name} type="button" aria-expanded={active} aria-controls="occ-institution-register" onClick={() => setSelectedOfficeName(active ? "" : office.name)} className={`group overflow-hidden rounded-2xl border bg-white text-left transition duration-200 hover:border-blue-400 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${active ? "border-blue-600 ring-1 ring-blue-600" : "border-slate-200"}`}><div className="p-5"><div className="flex items-start gap-3"><span className={`rounded-xl p-2.5 ${active ? "bg-blue-700 text-white" : "bg-slate-100 text-slate-500"}`}><Building2 size={20} /></span><div className="min-w-0 flex-1"><h3 className="text-sm font-semibold leading-6 text-slate-900">{office.name}</h3><p className="mt-0.5 text-xs text-slate-500">{number(value)} assigned institutions</p></div><ArrowRight size={17} className={`mt-2 shrink-0 ${active ? "text-blue-700" : "text-slate-300 group-hover:text-blue-700"}`} /></div><div className="mb-2 mt-6 flex items-center justify-between text-xs"><span className="text-slate-500">Survey progress</span><span className="font-semibold tabular-nums text-slate-800">{progress}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-indigo-600" style={{ width: `${progress}%` }} /></div></div><div className={`flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3 text-xs ${active ? "border-blue-100 bg-blue-50" : "border-slate-100 bg-slate-50/70"}`}><span className="inline-flex items-center gap-1.5 font-medium text-blue-700"><CheckCircle2 size={14} />{number(responded)} accomplished</span>{completedAt ? <time dateTime={office.completedAt} className="inline-flex items-center gap-1.5 font-medium text-emerald-700"><Clock3 size={14} />Completed {completedAt.toLocaleString()}</time> : <span className="text-slate-500">{number(Math.max(0, value - responded))} pending</span>}</div></button>;
+            return <button key={office.name} type="button" aria-haspopup="dialog" aria-controls={active ? "occ-office-dialog" : undefined} 
+            onClick={() => setSelectedOfficeName(active ? "" : office.name)} 
+            className={`group overflow-hidden rounded-2xl border bg-white text-left transition duration-200 hover:border-blue-400 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${active ? "border-blue-600 ring-1 ring-blue-600" : "border-slate-200"}`}>
+              <div className="p-5">
+                <div className="flex items-start gap-3">
+                  <span className={`rounded-xl p-2.5 ${active ? "bg-blue-700 text-white" : "bg-slate-100 text-slate-500"}`}>
+                    <Building2 size={20} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold leading-6 text-slate-900">
+                        {office.name}
+                      </h3>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {number(value)} assigned institutions
+                      </p>
+                    </div>
+                    <ArrowRight size={17} className={`mt-2 shrink-0 ${active ? "text-blue-700" : "text-slate-300 group-hover:text-blue-700"}`} />
+                    </div>
+                    <div className="mb-2 mt-6 flex items-center justify-between text-xs">
+                      <span className="text-slate-500">
+                        Survey progress
+                      </span>
+                      <span className="font-semibold tabular-nums text-slate-800">
+                        {progress}%
+                      </span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-indigo-600" style={{ width: `${progress}%` }}/>
+                      </div>
+                    </div>
+                    <div className={`flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3 text-xs ${active ? "border-blue-100 bg-blue-50" : "border-slate-100 bg-slate-50/70"}`}>
+                    <span className="inline-flex items-center gap-1.5 font-medium text-blue-700">
+                      <CheckCircle2 size={14} />
+                      {number(responded)} accomplished
+                    </span>
+                    {completedAt ? <time dateTime={office.completedAt} className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
+                      <Clock3 size={14} />Completed {completedAt.toLocaleString()}</time> : <span className="text-slate-500">{number(Math.max(0, value - responded))} pending</span>}
+                    </div>
+                    </button>;
           })}
         </div>
         {!visible.length && <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">{query ? "No offices match your search." : "No office assignments are available yet."}</div>}
       </section>}
+      {isSuperAdmin && selected && <OfficeRegisterModal key={selected.name} office={selected} onClose={() => setSelectedOfficeName("")} />}
       {!isSuperAdmin && selected && <section className="overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm">
         <div className="p-5 sm:p-6">
           <div className="min-w-0">
@@ -97,7 +191,62 @@ export default function OCC({ user }) {
         </div>
         {completedDate(selected) && <div className="flex items-center gap-1.5 border-t border-emerald-100 bg-emerald-50 px-5 py-3 text-xs font-medium text-emerald-700 sm:px-6"><Clock3 size={14} /><time dateTime={selected.completedAt}>Completed {completedDate(selected).toLocaleString()}</time></div>}
       </section>}
-      <div id="occ-institution-register">{selected ? <OCCSheetView key={selected.name} offices={[selected]} selectedOfficeName={selected.name} isOpen /> : <div className="flex items-center gap-4 rounded-xl border border-dashed border-slate-300 p-6 text-slate-500"><Building2 size={24} className="shrink-0 text-slate-400" /><div><p className="text-sm font-medium text-slate-700">{isSuperAdmin ? "Explore an office" : "No office assignment found"}</p><p className="mt-1 text-xs">{isSuperAdmin ? "Choose an office above to view institutions and their survey status." : "Ask a super admin to assign your account to an OCC / Office."}</p></div></div>}</div>
+      {!isSuperAdmin && 
+      <div id="occ-institution-register">
+        {selected ? <OCCSheetView key={selected.name} offices={[selected]} selectedOfficeName={selected.name} isOpen /> : 
+        <div className="flex items-center gap-4 rounded-xl border border-dashed border-slate-300 p-6 text-slate-500">
+          <Building2 size={24} className="shrink-0 text-slate-400" />
+          <div>
+            <p className="text-sm font-medium text-slate-700">
+              {isSuperAdmin ? "Explore an office" : "No office assignment found"}
+              </p>
+              <p className="mt-1 text-xs">
+                {isSuperAdmin ? "Choose an office above to view institutions and their survey status." : "Ask a super admin to assign your account to an OCC / Office."}
+              </p>
+          </div>
+        </div>
+        }
+      </div>
+      }
     </div>
+  );
+}
+
+function OfficeRegisterModal({ office, onClose }) {
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    const trigger = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    dialog.showModal();
+    document.body.style.overflow = "hidden";
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+      if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus();
+    };
+  }, []);
+
+  return createPortal(
+    <dialog
+      ref={dialogRef}
+      id="occ-office-dialog"
+      aria-labelledby="occ-office-dialog-title"
+      onCancel={event => { event.preventDefault(); onClose(); }}
+      onClick={event => { if (event.target === event.currentTarget) onClose(); }}
+      className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-7xl overflow-hidden rounded-2xl bg-white p-0 shadow-2xl backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm"
+    >
+      <div className="flex max-h-[90dvh] flex-col">
+        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-6">
+          <h2 id="occ-office-dialog-title" className="text-base font-semibold text-slate-900">Office Institution Register</h2>
+          <button type="button" autoFocus onClick={onClose} aria-label="Close office register" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 focus-visible:outline-blue-600"><X size={20} /></button>
+        </header>
+        <div className="min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-5">
+          <OCCSheetView offices={[office]} selectedOfficeName={office.name} isOpen />
+        </div>
+      </div>
+    </dialog>,
+    document.body
   );
 }

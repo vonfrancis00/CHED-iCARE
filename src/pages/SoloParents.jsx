@@ -36,13 +36,6 @@ export default function SoloParents() {
               Overview of solo parent enrollment, gender distribution, and community support across participating institutions.
             </p>
           </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-blue-100">Enrolled total</div>
-            <div className="mt-2 flex items-center gap-3">
-              <span className="text-2xl font-semibold">{Number(campus.total || 0).toLocaleString()}</span>
-            </div>
-          </div>
         </div>
       </header>
 

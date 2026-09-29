@@ -28,7 +28,7 @@ function sortRegions(regions) {
 
 export default function SurveyResponses() {
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(50);
   const [query, setQuery] = useState("");
   const [institutionType, setInstitutionType] = useState("");
   const [region, setRegion] = useState("");

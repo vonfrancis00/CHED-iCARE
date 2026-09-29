@@ -24,7 +24,7 @@ function sortRegions(regions) {
 
 export default function Institutions() {
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(50);
   const tableRef = useRef(null);
   const [q, setQ] = useState("");
   const [institutionType, setInstitutionType] = useState("");
@@ -32,7 +32,7 @@ export default function Institutions() {
   const [filterPending, setFilterPending] = useState(false);
   const [selected, setSelected] = useState(null);
   const [expanded, setExpanded] = useState(null);
-  const { data: currentData, loading, error, reload, hasCurrentData, backgroundLoading } = useInstitutionGroups(q, institutionType, region, 50);
+  const { data: currentData, loading, error, reload, hasCurrentData, backgroundLoading } = useInstitutionGroups(q, institutionType, region);
   const [lastData, setLastData] = useState(null);
   // Keep the page and region options mounted while a new filter request runs.
   const data = currentData || lastData;
@@ -44,13 +44,17 @@ export default function Institutions() {
   const rows = (data?.data || []).filter(row => matchesFilters(row, institutionType, region)
     && String(row.Institution || "").toLowerCase().includes(q.trim().toLowerCase()));
   const headers = data?.headers || [];
-  // Summary cards reflect the full filtered result reported by the API, even
-  // while the directory rows are still arriving in the background.
   const total = Number(data?.total) || 0;
-  const lucCount = Number(data?.lucCount) || 0;
-  const sucCount = Number(data?.sucCount) || 0;
   const regions = sortRegions(data?.regions || []);
   const groups = useMemo(() => groupInstitutions(rows, "Institution"), [data, institutionType, region, q]);
+  // Count named institutions once, regardless of their number of responses.
+  const namedGroups = groups.filter(group => group.key.startsWith("name:"));
+  const respondedCount = namedGroups.length;
+  const countType = type => namedGroups.filter(group => group.rows.some(row =>
+    String(row["SUC/LUC"] || "").trim().toUpperCase() === type
+  )).length;
+  const lucCount = countType("LUC");
+  const sucCount = countType("SUC");
   const institutionCount = groups.length;
   const pageCount = Math.max(1, Math.ceil(institutionCount / pageSize));
   const currentPage = Math.min(page, pageCount);
@@ -107,7 +111,7 @@ export default function Institutions() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-500">Total Institutions Responded</p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">{lucCount + sucCount}</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-900">{respondedCount}</p>
             </div>
             <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
               <Search size={22} />

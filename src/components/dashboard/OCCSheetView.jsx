@@ -1,8 +1,6 @@
 ﻿import { useState } from "react";
 import { Building2, CheckCircle2, CircleDashed, Download, Printer, Search, X } from "lucide-react";
 import { useRef } from "react";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 
 export default function OCCSheetView({ offices = [], selectedOfficeName = "", isOpen = false }) {
   const [query, setQuery] = useState("");
@@ -22,6 +20,7 @@ export default function OCCSheetView({ offices = [], selectedOfficeName = "", is
     const pdfWindow = openInNewTab ? window.open("", "_blank") : null;
     setCreatingPdf(true);
     try {
+      const [{ jsPDF }, { default: autoTable }] = await Promise.all([import("jspdf"), import("jspdf-autotable")]);
       const header = headerRef.current;
       if (!header?.complete) await new Promise((resolve, reject) => { header.onload = resolve; header.onerror = reject; });
       const canvas = document.createElement("canvas");
