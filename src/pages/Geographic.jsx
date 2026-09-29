@@ -101,7 +101,7 @@ export default function Geographic() {
         {!snapshot?.filterViews && <p role="status" className="mt-3 text-xs text-amber-700">Filters are unavailable. Update the dashboard service, then refresh data.</p>}
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-3">
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -138,17 +138,6 @@ export default function Geographic() {
           </div>
         </div>
 
-        <div className="card p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-500">Strongest Share</p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">{topRegion ? `${Math.round((Number(topRegion.value || 0) / Math.max(totalCampuses, 1)) * 100)}%` : "0%"}</p>
-            </div>
-            <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
-              <MapPinned size={22} />
-            </div>
-          </div>
-        </div>
       </section>
 
       <RegionalChart data={chartRegions} groupedByInstitution={groupedByInstitution} splitByType={Boolean(snapshot?.filterViews)} />

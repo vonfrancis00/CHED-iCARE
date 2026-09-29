@@ -32,7 +32,7 @@ export default function Institutions() {
   const [filterPending, setFilterPending] = useState(false);
   const [selected, setSelected] = useState(null);
   const [expanded, setExpanded] = useState(null);
-  const { data: currentData, loading, error, reload, hasCurrentData } = useInstitutionGroups(q, institutionType, region);
+  const { data: currentData, loading, error, reload, hasCurrentData, backgroundLoading } = useInstitutionGroups(q, institutionType, region, 50);
   const [lastData, setLastData] = useState(null);
   // Keep the page and region options mounted while a new filter request runs.
   const data = currentData || lastData;
@@ -106,7 +106,7 @@ export default function Institutions() {
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Total Institution Responded</p>
+              <p className="text-sm text-slate-500">Total Institutions Responded</p>
               <p className="mt-3 text-3xl font-semibold text-slate-900">{lucCount + sucCount}</p>
             </div>
             <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
@@ -118,7 +118,7 @@ export default function Institutions() {
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">LUC Institutions</p>
+              <p className="text-sm text-slate-500">Local Universities and Colleges</p>
               <p className="mt-3 text-3xl font-semibold text-slate-900">{lucCount}</p>
             </div>
             <div className="rounded-2xl bg-teal-100 p-3 text-teal-700">
@@ -130,7 +130,7 @@ export default function Institutions() {
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">SUC Institutions</p>
+              <p className="text-sm text-slate-500">State Universities and Colleges</p>
               <p className="mt-3 text-3xl font-semibold text-slate-900">{sucCount}</p>
             </div>
             <div className="rounded-2xl bg-amber-100 p-3 text-amber-700">
@@ -177,7 +177,7 @@ export default function Institutions() {
           </div>
           <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">{institutionCount.toLocaleString()} institutions</span>
         </div>
-        {(isPageLoading || isFilterLoading) && <div className="flex items-center gap-2 border-b border-blue-100 bg-blue-50 px-5 py-2.5 text-xs font-medium text-blue-800" role="status"><LoaderCircle size={15} className="animate-spin"/>{isFilterLoading ? "Applying filters…" : `Loading page ${page}…`}</div>}
+        {(backgroundLoading || isPageLoading || isFilterLoading) && <div className="flex items-center gap-2 border-b border-blue-100 bg-blue-50 px-5 py-2.5 text-xs font-medium text-blue-800" role="status"><LoaderCircle size={15} className="animate-spin"/>{isFilterLoading ? "Applying filters…" : "Loading remaining responses in the background..."}</div>}
         <div className="overflow-x-auto">
           <table className="institution-groups text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">

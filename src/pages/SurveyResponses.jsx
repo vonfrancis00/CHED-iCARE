@@ -97,7 +97,7 @@ export default function SurveyResponses() {
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Total Institution Responded</p>
+              <p className="text-sm text-slate-500">Total Institutions Responded</p>
               <p className="mt-3 text-3xl font-semibold text-slate-900">{institutionCount}</p>
             </div>
             <div className="rounded-2xl bg-blue-100 p-3 text-blue-700">

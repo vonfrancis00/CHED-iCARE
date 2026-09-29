@@ -20,7 +20,7 @@ function setup(getInstitutions, stored = null) {
   return { context, writes };
 }
 
-test('first load waits for all pages before publishing or caching institution groups', async () => {
+test('first 50 records are published and cached before the background request finishes', async () => {
   let release;
   const firstRows = Array.from({ length: 50 }, (_, rowNumber) => ({ rowNumber, Institution: '' }));
   const { context, writes } = setup(async ({ page }) => {
@@ -28,27 +28,28 @@ test('first load waits for all pages before publishing or caching institution gr
     return new Promise(resolve => { release = () => resolve({ data: [{ Institution: 'Example University' }] }); });
   });
   const published = [];
-  const job = context.loadGroups('test', {}, 0, entry => published.push(entry), false);
+  const job = context.loadGroups('test', { pageSize: 50 }, 0, entry => published.push(entry), false);
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(published.length, 0);
-  assert.equal(writes.length, 0);
+  assert.equal(published.length, 1);
+  assert.equal(published[0].data.data.length, 50);
+  assert.equal(published[0].complete, false);
+  assert.equal(writes.length, 1);
   release();
   await job.promise;
-  assert.equal(published.length, 1);
-  assert.equal(published[0].data.data.length, 51);
-  assert.equal(published[0].complete, true);
-  assert.equal(writes.length, 1);
+  assert.equal(published.length, 2);
+  assert.equal(published[1].data.data.length, 51);
+  assert.equal(published[1].complete, true);
+  assert.equal(writes.length, 2);
 });
 
-test('initial load ignores incomplete and expired stored snapshots', () => {
+test('initial load restores partial snapshots and ignores expired snapshots', () => {
   for (const entry of [
-    { complete: false, savedAt: Date.now(), data: { data: [{}] } },
     { complete: true, savedAt: Date.now() - 600000, data: { data: [{}] } }
   ]) {
     const { context } = setup(null, entry);
     assert.equal(context.readEntry('test'), null);
   }
-  const { context } = setup(null, { complete: true, savedAt: Date.now(), data: { data: [{ Institution: 'Example University' }] } });
+  const { context } = setup(null, { complete: false, savedAt: Date.now(), data: { data: [{ Institution: 'Example University' }] } });
   assert.equal(context.readEntry('test').data.data[0].Institution, 'Example University');
 });
 
@@ -84,6 +85,6 @@ test('older services with a smaller page limit preserve all responses in order',
   await context.loadGroups('test', {}, 0, entry => published.push(entry), true).promise;
   assert.deepEqual(calls.map(call => call.pageSize), [5000, 50, 50]);
   assert.ok(calls.every(call => call._force));
-  assert.equal(published.length, 1);
-  assert.deepEqual(Array.from(published[0].data.data), rows);
+  assert.equal(published.length, 3);
+  assert.deepEqual(Array.from(published[2].data.data), rows);
 });

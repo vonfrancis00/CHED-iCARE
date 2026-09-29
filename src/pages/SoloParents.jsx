@@ -47,9 +47,9 @@ export default function SoloParents() {
       </header>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Enrolled Total" value={campus.total} icon={Users} />
-        <StatCard label="Enrolled Female" value={campus.female} icon={UserRound} tone="violet" />
-        <StatCard label="Enrolled Male" value={campus.male} icon={UserRoundCheck} tone="blue" />
+        <StatCard label="Total Enrolled Students" value={campus.total} icon={Users} />
+        <StatCard label="Female" value={campus.female} icon={UserRound} tone="violet" />
+        <StatCard label="Male" value={campus.male} icon={UserRoundCheck} tone="blue" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">

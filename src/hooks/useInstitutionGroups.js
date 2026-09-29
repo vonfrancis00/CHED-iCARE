@@ -11,7 +11,7 @@ function readEntry(key) {
   if (entries.has(key)) return entries.get(key);
   try {
     const entry = JSON.parse(window.localStorage.getItem(STORAGE_PREFIX + key));
-    if (entry?.complete && Array.isArray(entry.data?.data) && Date.now() - entry.savedAt < CACHE_MS) {
+    if (entry && Array.isArray(entry.data?.data) && Date.now() - entry.savedAt < CACHE_MS) {
       // A revision only has meaning within the current browser execution.
       entry.revision = -1;
       entries.set(key, entry);
@@ -39,23 +39,19 @@ function loadGroups(key, params, revision, publish, force) {
   const job = { listeners: new Set([publish]) };
   pending.set(key, job);
   job.promise = (async () => {
-    // The service supports a full directory read, avoiding a separate Google
-    // Apps Script round trip for every 50 responses on the initial load.
-    const requestParams = { ...params, pageSize: 5000, _force: force };
+    // Publish the first batch immediately, then keep filling the cache.
+    const requestParams = { pageSize: 5000, ...params, _force: force };
     const first = await getInstitutions({ ...requestParams, page: 1 });
     if (!Array.isArray(first.data)) throw new Error("The data service returned invalid records. Please retry.");
     const total = Number(first.total) || first.data.length;
     let data = { ...first, total };
     // Older deployments may cap page size. Continue at their actual size so
-    // the faster request cannot skip responses or publish a partial directory.
+    // subsequent requests cannot skip responses.
     const pageSize = Number(first.pageSize) > 0 ? Number(first.pageSize) : first.data.length;
     if (total > 0 && pageSize === 0) throw new Error("The data service returned incomplete records. Please retry.");
     requestParams.pageSize = pageSize || requestParams.pageSize;
     const pages = total ? Math.ceil(total / requestParams.pageSize) : 0;
     const publishData = complete => {
-      // Grouping and counts require every page. A partial first batch can
-      // contain only responses with blank names and is not a directory yet.
-      if (!complete) return;
       const entry = saveEntry(key, data, revision, complete);
       job.listeners.forEach(listener => listener(entry));
     };
@@ -70,9 +66,9 @@ function loadGroups(key, params, revision, publish, force) {
   return job;
 }
 
-export function useInstitutionGroups(query, institutionType, region) {
-  const params = { query: query.trim().toLowerCase(), institutionType, region };
-  const key = JSON.stringify([SOURCE, params.query, institutionType, region]);
+export function useInstitutionGroups(query, institutionType, region, pageSize = 5000) {
+  const params = { query: query.trim().toLowerCase(), institutionType, region, pageSize };
+  const key = JSON.stringify([SOURCE, params.query, institutionType, region, pageSize]);
   const revision = getSheetDataRevision();
   const [attempt, setAttempt] = useState(0);
   const forceRefresh = useRef(false);
@@ -85,10 +81,13 @@ export function useInstitutionGroups(query, institutionType, region) {
     const available = readEntry(key);
     const force = forceRefresh.current;
     forceRefresh.current = false;
-    setState({ key, data: available?.data, loading: !available, error: "" });
-    if (!force && available?.complete && available.revision === revision && Date.now() - available.savedAt < CACHE_MS) return;
+    setState({ key, data: available?.data, loading: true, error: "" });
+    if (!force && available?.complete && available.revision === revision && Date.now() - available.savedAt < CACHE_MS) {
+      setState({ key, data: available.data, loading: false, error: "" });
+      return;
+    }
     const publish = entry => {
-      if (active) setState({ key, data: entry.data, loading: false, error: "" });
+      if (active) setState({ key, data: entry.data, loading: !entry.complete, error: "" });
     };
     const timer = setTimeout(() => {
       job = loadGroups(key, params, revision, publish, force);
@@ -104,6 +103,7 @@ export function useInstitutionGroups(query, institutionType, region) {
   return {
     data,
     loading: !data && (state.key !== key || state.loading),
+    backgroundLoading: Boolean(data) && (state.key !== key || state.loading),
     error: state.key === key ? state.error : "",
     hasCurrentData: Boolean(data),
     reload: () => { forceRefresh.current = true; setAttempt(value => value + 1); }

@@ -35,7 +35,7 @@ export default function ProgramStatusChart({ data = [] }) {
             <Legend wrapperStyle={{ paddingTop: 12 }} />
             <Bar dataKey="yes" name="Yes" fill="url(#programYes)" radius={[8, 8, 0, 0]} />
             <Bar dataKey="no" name="No" fill="url(#programNo)" radius={[8, 8, 0, 0]} />
-            <Bar dataKey="planned" name="Plans / Work" fill="url(#programPlanned)" radius={[8, 8, 0, 0]} />
+            <Bar dataKey="planned" name="Plans / On-going" fill="url(#programPlanned)" radius={[8, 8, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div></div>

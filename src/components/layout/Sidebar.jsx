@@ -13,7 +13,7 @@ const navGroups = [
     label: "Monitoring",
     items: [
       ["Institutions", "/institutions", Building2, "Colleges and Universities"],
-      ["Childcare", "/childcare", Baby, "Facilities"],
+      ["Childcare", "/childcare", Baby, "Facilities & Programs"],
       ["Solo Parents", "/solo-parents", Users, "Beneficiaries"],
       ["Geographic", "/geographic", Map, "Regional View"],
       ["OCC / Office", "/occ", BriefcaseBusiness, "Office Comparison"]
