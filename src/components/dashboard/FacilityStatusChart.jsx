@@ -20,8 +20,8 @@ export default function FacilityStatusChart({ data = [] }) {
                 <stop offset="100%" stopColor="#64748b" />
               </linearGradient>
               <linearGradient id="facilityPlanned" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="#93c5fd" />
-                <stop offset="100%" stopColor="#2563eb" />
+                <stop offset="0%" stopColor="#86efac" />
+                <stop offset="100%" stopColor="#16a34a" />
               </linearGradient>
             </defs>
             <CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" vertical={false} />

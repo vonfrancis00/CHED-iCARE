@@ -11,8 +11,8 @@ export default function SoloParentChart({ data = [] }) {
           <BarChart data={safeData} margin={{ top: 12, right: 12, left: 4, bottom: 20 }}>
             <defs>
               <linearGradient id="soloFemale" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="#a78bfa" />
-                <stop offset="100%" stopColor="#5b4fcf" />
+                <stop offset="0%" stopColor="#fca5a5" />
+                <stop offset="100%" stopColor="#dc2626" />
               </linearGradient>
               <linearGradient id="soloMale" x1="0" x2="0" y1="0" y2="1">
                 <stop offset="0%" stopColor="#60a5fa" />

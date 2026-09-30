@@ -10,7 +10,10 @@ export default function OCCSheetView({ offices = [], selectedOfficeName = "", is
   const headerRef = useRef(null);
   if (!isOpen) return null;
   const office = offices[0];
-  const institutions = (office?.institutions || []).map((item, index) => ({ ...(typeof item === "string" ? { name: item, responded: null } : item), row: index + 1 }));
+  const institutions = (office?.institutions || [])
+    .map(item => typeof item === "string" ? { name: item, responded: null } : { ...item })
+    .sort((left, right) => (left.name || "").trim().localeCompare((right.name || "").trim(), "en", { sensitivity: "base" }))
+    .map((item, index) => ({ ...item, row: index + 1 }));
   const checked = institutions.filter(item => item.responded === true).length;
   const pending = institutions.filter(item => item.responded === false).length;
   const unknown = institutions.length - checked - pending;

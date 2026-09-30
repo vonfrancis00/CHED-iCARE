@@ -38,8 +38,8 @@ export default function RegionalChart({ data = [], groupedByInstitution = false,
     ? Math.max(48, ...safeData.map(item => wrapInstitutionName(item.name).length * 16 + 16))
     : 30;
   const segments = [
-    { key: "luc", name: "LUC", color: "#1e3a8a" },
-    { key: "suc", name: "SUC", color: "#38bdf8" },
+    { key: "luc", name: "LUC", color: "#16a34a", lightColor: "#86efac" },
+    { key: "suc", name: "SUC", color: "#1d4ed8", lightColor: "#60a5fa", reverseGradient: true },
     ...(safeData.some(item => item.other > 0) ? [{ key: "other", name: "Unspecified / Other", color: "#94a3b8" }] : []),
   ];
   const subtitle = groupedByInstitution
@@ -52,7 +52,7 @@ export default function RegionalChart({ data = [], groupedByInstitution = false,
         <div className="mt-5 flex flex-wrap justify-center gap-3 text-sm">
           {segments.map(segment => (
             <span key={segment.key} className="inline-flex items-center gap-1" style={{ color: segment.color }}>
-              <span className="h-3 w-3" style={{ backgroundColor: segment.color }} aria-hidden="true" />
+              <span className="h-3 w-3" style={{ background: segment.lightColor ? `linear-gradient(${segment.reverseGradient ? "to top" : "to bottom"}, ${segment.lightColor}, ${segment.color})` : segment.color }} aria-hidden="true" />
               {segment.name}
             </span>
           ))}
@@ -63,6 +63,12 @@ export default function RegionalChart({ data = [], groupedByInstitution = false,
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={safeData} margin={{ top: 18, right: 12, left: 4, bottom: 28 }}>
             <defs>
+              {segments.filter(segment => segment.lightColor).map(segment => (
+                <linearGradient key={segment.key} id={`regional-${segment.key}`} x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor={segment.reverseGradient ? segment.color : segment.lightColor} />
+                  <stop offset="100%" stopColor={segment.reverseGradient ? segment.lightColor : segment.color} />
+                </linearGradient>
+              ))}
               <linearGradient id="regionalBarFill" x1="0" x2="0" y1="0" y2="1">
                 <stop offset="0%" stopColor="#60a5fa" />
                 <stop offset="100%" stopColor="#1d4ed8" />
@@ -90,7 +96,7 @@ export default function RegionalChart({ data = [], groupedByInstitution = false,
               }}
             />
             {splitByType ? segments.map((segment, segmentIndex) => (
-              <Bar key={segment.key} dataKey={segment.key} name={segment.name} stackId="campuses" barSize={42} fill={segment.color} stroke="#f8fafc" strokeWidth={1}>
+              <Bar key={segment.key} dataKey={segment.key} name={segment.name} stackId="campuses" barSize={42} fill={segment.lightColor ? `url(#regional-${segment.key})` : segment.color} stroke="#f8fafc" strokeWidth={1}>
                 {safeData.map((entry, index) => (
                   <Cell key={`${entry.name || index}-${segment.key}`} radius={segments.slice(segmentIndex + 1).some(next => entry[next.key] > 0) ? [0, 0, 0, 0] : [10, 10, 0, 0]} />
                 ))}
