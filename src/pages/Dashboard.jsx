@@ -87,9 +87,9 @@ export default function Dashboard() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         <StatCard label="Total Institutions Responded" value={Number(o.lucResponses ?? 0) + Number(o.sucResponses ?? 0)} hint={`LUCs: ${o.lucResponses ?? 0} · SUCs: ${o.sucResponses ?? 0}`} icon={Building2} />
         <StatCard label="Survey Responses" value={o.totalResponses} hint="Total Submitted Responses" icon={FileCheck} tone="blue" />
-        <StatCard label="Facility — Faculty" value={o.facilityFacultyYes} hint='No. of "Yes" Responses' icon={Baby} tone="blue" />
-        <StatCard label="Facility — Students" value={o.facilityStudentsYes} hint='No. of "Yes" Responses' icon={Users} tone="teal" />
-        <StatCard label="Program — Students" value={o.programStudentsYes} hint='No. of "Yes" Responses' icon={FileCheck} tone="amber" />
+        <StatCard label="Faculty Facilities" value={o.facilityFacultyYes} hint='No. of "Yes" Responses' icon={Baby} tone="blue" />
+        <StatCard label="Student Facilities" value={o.facilityStudentsYes} hint='No. of "Yes" Responses' icon={Users} tone="teal" />
+        <StatCard label="Student Programs" value={o.programStudentsYes} hint='No. of "Yes" Responses' icon={FileCheck} tone="amber" />
         <StatCard label="Enrolled Solo Parents" value={o.enrolledSoloParents} hint="Total Numeric Responses" icon={Users} tone="violet" />
       </div>
 

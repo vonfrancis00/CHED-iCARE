@@ -96,7 +96,7 @@ export default function RegionalChart({ data = [], groupedByInstitution = false,
               }}
             />
             {splitByType ? segments.map((segment, segmentIndex) => (
-              <Bar key={segment.key} dataKey={segment.key} name={segment.name} stackId="campuses" barSize={42} fill={segment.lightColor ? `url(#regional-${segment.key})` : segment.color} stroke="#f8fafc" strokeWidth={1}>
+              <Bar key={segment.key} dataKey={segment.key} name={segment.name} stackId="campuses" barSize={42} fill={segment.lightColor ? `url(#regional-${segment.key})` : segment.color} stroke="none" strokeWidth={0}>
                 {safeData.map((entry, index) => (
                   <Cell key={`${entry.name || index}-${segment.key}`} radius={segments.slice(segmentIndex + 1).some(next => entry[next.key] > 0) ? [0, 0, 0, 0] : [10, 10, 0, 0]} />
                 ))}

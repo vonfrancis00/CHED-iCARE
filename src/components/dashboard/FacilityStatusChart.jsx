@@ -33,9 +33,9 @@ export default function FacilityStatusChart({ data = [] }) {
               contentStyle={{ borderRadius: 16, border: "1px solid #e2e8f0", boxShadow: "0 14px 40px rgba(15, 23, 42, 0.08)", background: "rgba(255,255,255,0.95)" }}
             />
             <Legend wrapperStyle={{ paddingTop: 12 }} />
-            <Bar dataKey="yes" name="Yes" fill="url(#facilityYes)" radius={[8, 8, 0, 0]} />
-            <Bar dataKey="no" name="No" fill="url(#facilityNo)" radius={[8, 8, 0, 0]} />
-            <Bar dataKey="planned" name="Plans / On-going" fill="url(#facilityPlanned)" radius={[8, 8, 0, 0]} />
+            <Bar dataKey="Yes" name="Yes" fill="url(#facilityYes)" radius={[8, 8, 0, 0]} />
+            <Bar dataKey="No" name="No" fill="url(#facilityNo)" radius={[8, 8, 0, 0]} />
+            <Bar dataKey="Planned" name="Plans / On-going" fill="url(#facilityPlanned)" radius={[8, 8, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div></div>
