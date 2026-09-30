@@ -265,13 +265,13 @@ function DetailsModal({ row, headers, onClose }) {
     const key = Object.keys(row).find(key => key.trim().toLowerCase() === name.toLowerCase());
     return key == null ? "" : String(row[key] ?? "").trim();
   };
-  const institutionName = fieldValue("Name of Institution") || fieldValue("Institution") || "Survey Response";
+  const institutionName = fieldValue("Name of Institution") || fieldValue("Institution") || "SURVEY RESPONSES";
   const institutionType = fieldValue("SUC/LUC");
   const institutionTypeLabel = {
     SUC: "State Universities and Colleges",
     LUC: "Local Universities and Colleges",
   }[institutionType.toUpperCase()] || institutionType;
-  const campus = fieldValue("Name of Institution Campus") || fieldValue("Campus") || "—";
+  const campus = fieldValue("Campus") || "—";
   const address = fieldValue("Address of Campus") || "—";
   const region = fieldValue("Region") || "—";
   const timestamp = fieldValue("Timestamp") || "—";
@@ -323,7 +323,7 @@ function DetailsModal({ row, headers, onClose }) {
             </section>
             <section aria-label="Survey responses" className="space-y-3">
               <div className="flex items-center justify-between gap-3 px-1">
-                <h3 className="text-sm font-semibold text-slate-800">Survey responses</h3>
+                <h3 className="text-sm font-semibold text-slate-800 uppercase">Survey responses</h3>
                 <span className="text-xs text-slate-500">{responseHeaders.length} fields</span>
               </div>
               <div className="grid grid-cols-1 gap-3">
