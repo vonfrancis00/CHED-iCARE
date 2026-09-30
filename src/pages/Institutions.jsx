@@ -176,7 +176,7 @@ export default function Institutions() {
       <div ref={tableRef} className="institution-directory card overflow-hidden scroll-mt-6">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-5 sm:px-6">
           <div>
-            <h2 className="text-base font-bold text-slate-900">Institution/Campus Directory</h2>
+            <h2 className="text-base font-bold text-slate-900">Institutions Directory</h2>
             <p className="mt-1 text-xs text-slate-500">Select an institution to view its campuses, then select a campus to view its responses.</p>
           </div>
           <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">{institutionCount.toLocaleString()} institutions</span>
@@ -271,7 +271,7 @@ function DetailsModal({ row, headers, onClose }) {
     SUC: "State Universities and Colleges",
     LUC: "Local Universities and Colleges",
   }[institutionType.toUpperCase()] || institutionType;
-  const campus = fieldValue("Campus") || "—";
+  const campus = fieldValue("Name of Institution Campus") || fieldValue("Campus") || "—";
   const address = fieldValue("Address of Campus") || "—";
   const region = fieldValue("Region") || "—";
   const timestamp = fieldValue("Timestamp") || "—";
