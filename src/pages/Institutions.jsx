@@ -261,7 +261,22 @@ function CampusDirectory({ rows, onSelect }) {
 }
 
 function DetailsModal({ row, headers, onClose }) {
-  const institutionName = row.Institution || "Survey Response";
+  const fieldValue = name => {
+    const key = Object.keys(row).find(key => key.trim().toLowerCase() === name.toLowerCase());
+    return key == null ? "" : String(row[key] ?? "").trim();
+  };
+  const institutionName = fieldValue("Name of Institution") || fieldValue("Institution") || "Survey Response";
+  const institutionType = fieldValue("SUC/LUC");
+  const institutionTypeLabel = {
+    SUC: "State Universities and Colleges",
+    LUC: "Local Universities and Colleges",
+  }[institutionType.toUpperCase()] || institutionType;
+  const campus = fieldValue("Name of Institution Campus") || fieldValue("Campus") || "—";
+  const address = fieldValue("Address of Campus") || "—";
+  const region = fieldValue("Region") || "—";
+  const timestamp = fieldValue("Timestamp") || "—";
+  const summaryFields = ["suc/luc", "institution", "campus", "name of institution", "name of institution campus", "address of campus", "region", "timestamp"];
+  const responseHeaders = headers.filter(header => !summaryFields.includes(header.trim().toLowerCase()));
 
   return (
     <div
@@ -269,52 +284,70 @@ function DetailsModal({ row, headers, onClose }) {
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92dvh] w-full flex-col max-w-6xl overflow-hidden rounded-[26px] border border-blue-200/20 bg-white shadow-[0_28px_80px_rgba(2,6,23,0.45)]"
+        className="flex max-h-[92dvh] w-full max-w-5xl flex-col overflow-hidden rounded-[26px] border border-blue-200/20 bg-white shadow-[0_28px_80px_rgba(2,6,23,0.45)]"
         onClick={event => event.stopPropagation()}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 bg-gradient-to-r from-[#0b1f3a] via-[#0e294d] to-[#123c6d] px-5 py-4 text-white sm:px-6">
+        <div className="relative flex shrink-0 flex-col gap-4 border-b border-slate-200 bg-gradient-to-r from-[#0b1f3a] via-[#0e294d] to-[#123c6d] px-5 py-5 text-white sm:px-7 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <div className="hidden h-11 w-11 shrink-0 items-center sm:flex justify-center rounded-xl border border-white/15 bg-white/10 text-blue-100 shadow-inner shadow-white/10">
               <Building2 size={20} />
             </div>
-            <div>
+            <div className="min-w-0 pr-12 lg:pr-0">
+              {institutionTypeLabel && <p className="mb-1 text-sm font-medium text-blue-100">{institutionTypeLabel}</p>}
               <h2 className="text-xl font-bold tracking-tight sm:text-2xl">{institutionName}</h2>
-              <p className="mt-1 text-xs text-blue-100">Google Sheet row {row.rowNumber}</p>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white transition hover:bg-white/10"
-            aria-label="Close institution details"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex shrink-0 items-center gap-4">
+            <div className="pr-12 text-xs text-blue-100 lg:pr-0 lg:text-right">
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-blue-200">Submitted</p>
+              <p className="tabular-nums">{timestamp}</p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute right-5 top-5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:right-7 lg:static"
+              aria-label="Close institution details"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
-        <div className="min-h-0 overflow-y-auto bg-slate-100/90 p-4 sm:p-5">
-          <div className="rounded-[22px] border border-slate-200 bg-white/85 p-3 shadow-inner shadow-slate-200/60 sm:p-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              {headers.map(header => {
-                const value = row[header];
-                const displayValue = value === "" || value == null ? "—" : String(value);
+        <div className="min-h-0 overflow-y-auto bg-slate-100/90 p-4 sm:p-6">
+          <div className="mx-auto max-w-4xl space-y-5">
+            <section className="rounded-2xl border border-blue-100 border-l-4 border-l-blue-600 bg-white p-5 shadow-sm sm:p-6">
+              <p className="whitespace-pre-wrap break-words text-lg font-semibold text-slate-900">{campus}</p>
+              <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600">{address}</p>
+              <p className="mt-3 inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800">{region}</p>
+            </section>
+            <section aria-label="Survey responses" className="space-y-3">
+              <div className="flex items-center justify-between gap-3 px-1">
+                <h3 className="text-sm font-semibold text-slate-800">Survey responses</h3>
+                <span className="text-xs text-slate-500">{responseHeaders.length} fields</span>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {responseHeaders.map((header, index) => {
+                  const value = row[header];
+                  const displayValue = value === "" || value == null ? "—" : String(value);
 
-                return (
-                  <div
-                    key={header}
-                    className="rounded-2xl border border-slate-200 bg-slate-50/90 p-4 shadow-sm transition hover:border-blue-200 hover:bg-slate-50"
-                  >
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      {header}
+                  return (
+                    <div
+                      key={header}
+                      className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span aria-hidden="true" className="flex h-6 min-w-6 items-center justify-center rounded-md bg-slate-100 px-1 text-[10px] font-semibold tabular-nums text-slate-500">{String(index + 1).padStart(2, "0")}</span>
+                        <p className="pt-0.5 text-sm font-semibold leading-5 text-slate-600">{header}</p>
+                      </div>
+                      <div className="ml-9 mt-3 whitespace-pre-wrap break-words border-l-2 border-blue-100 pl-3 text-[15px] font-medium leading-7 text-slate-900">
+                        {displayValue}
+                      </div>
                     </div>
-                    <div className="mt-3 whitespace-pre-wrap break-words text-[15px] font-medium leading-7 text-slate-800">
-                      {displayValue}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            </section>
           </div>
         </div>
       </div>

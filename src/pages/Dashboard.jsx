@@ -68,8 +68,8 @@ export default function Dashboard() {
             <p className="text-sm font-semibold text-slate-800">Filter dashboard</p>
             <p className="mt-0.5 text-xs text-slate-500">Choose an institution type, then narrow results by region.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-lg bg-slate-100 p-1" role="group" aria-label="Institution type">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="inline-flex self-start rounded-lg bg-slate-100 p-1" role="group" aria-label="Institution type">
               {[['', 'All'], ['LUC', 'LUC'], ['SUC', 'SUC']].map(([value, label]) => <button key={label} type="button" aria-pressed={institutionType === value} disabled={!snapshot.filterViews} onClick={() => selectType(value)} className={`rounded-md px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${institutionType === value ? "bg-blue-700 text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}>{label}</button>)}
             </div>
             <label className="sr-only" htmlFor="dashboard-region">Region</label>
@@ -82,7 +82,7 @@ export default function Dashboard() {
         {!snapshot.filterViews && <p role="status" className="mt-3 text-xs text-amber-700">Fast filters are unavailable. Update the dashboard service, then refresh data.</p>}
       </section>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard label="Total Institutions Responded" value={Number(o.lucResponses ?? 0) + Number(o.sucResponses ?? 0)} hint={`LUCs: ${o.lucResponses ?? 0} · SUCs: ${o.sucResponses ?? 0}`} icon={Building2} />
         <StatCard label="Survey Responses" value={o.totalResponses} hint="Total Submitted Responses" icon={FileCheck} tone="blue" />
         <StatCard label="Personnel Facilities" value={o.facilityFacultyYes} hint='No. of "Yes" Responses' icon={UsersRound} tone="blue" />
