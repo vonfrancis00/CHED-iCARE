@@ -4,7 +4,7 @@ import { useDashboard } from "../hooks/useDashboard";
 import Loading from "../components/common/Loading";
 import StatCard from "../components/dashboard/StatCard";
 import OverviewCharts from "../components/dashboard/OverviewCharts";
-import { Building2, Baby, Users, FileCheck, ShieldCheck } from "lucide-react";
+import { Building2, UsersRound, Users, FileCheck, ShieldCheck } from "lucide-react";
 
 function sortDashboardRegions(regions) {
   return [...regions].sort((left, right) => {
@@ -28,8 +28,6 @@ export default function Dashboard() {
   if (!data) return <div className="card p-8"><h2 className="font-semibold">Unable to load dashboard</h2><p className="mt-2 text-sm text-slate-500">{error}</p><button onClick={reload} className="mt-4 rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white">Retry</button></div>;
 
   const o = data.overview;
-  const occOffices = (data.occOffices?.length ? data.occOffices : data.occDistribution || [])
-    .filter((office) => String(office.name || "").toLowerCase().includes("office"));
   const regions = sortDashboardRegions(snapshot.availableRegions || snapshot.regions?.map(item => item.name) || []);
   const selectType = type => {
     setInstitutionType(type);
@@ -87,13 +85,13 @@ export default function Dashboard() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         <StatCard label="Total Institutions Responded" value={Number(o.lucResponses ?? 0) + Number(o.sucResponses ?? 0)} hint={`LUCs: ${o.lucResponses ?? 0} · SUCs: ${o.sucResponses ?? 0}`} icon={Building2} />
         <StatCard label="Survey Responses" value={o.totalResponses} hint="Total Submitted Responses" icon={FileCheck} tone="blue" />
-        <StatCard label="Faculty Facilities" value={o.facilityFacultyYes} hint='No. of "Yes" Responses' icon={Baby} tone="blue" />
+        <StatCard label="Personnel Facilities" value={o.facilityFacultyYes} hint='No. of "Yes" Responses' icon={UsersRound} tone="blue" />
         <StatCard label="Student Facilities" value={o.facilityStudentsYes} hint='No. of "Yes" Responses' icon={Users} tone="teal" />
         <StatCard label="Student Programs" value={o.programStudentsYes} hint='No. of "Yes" Responses' icon={FileCheck} tone="amber" />
         <StatCard label="Enrolled Solo Parents" value={o.enrolledSoloParents} hint="Total Numeric Responses" icon={Users} tone="violet" />
       </div>
 
-      <OverviewCharts data={data} offices={occOffices} />
+      <OverviewCharts data={data} />
 
     </div>
   );
