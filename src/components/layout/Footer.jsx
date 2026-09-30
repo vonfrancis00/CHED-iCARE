@@ -24,9 +24,13 @@ export default function Footer() {
           </p>
         </div>
       </div>
-      <p className="px-6 pb-4 text-right text-xs italic text-[#b9cbe2] sm:px-10 lg:px-12">
-        Created by: Office of Commissioner Desiderio R. Apag III
-      </p>
+      <div className="flex justify-end px-6 pb-4 sm:px-10 lg:-mt-16 lg:px-12">
+        <img
+          src="/ocdra-logo.png"
+          alt="Office of Commissioner Desiderio R. Apag III"
+          className="h-12 max-w-full object-contain"
+        />
+      </div>
     </footer>
   );
 }

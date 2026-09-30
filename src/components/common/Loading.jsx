@@ -1,15 +1,10 @@
-import { Building2, Database, LoaderCircle } from "lucide-react";
+import { Building2, LoaderCircle } from "lucide-react";
 
 const LOADING_DETAILS = {
   institutions: {
     eyebrow: "Institution registry",
     Icon: Building2,
     detail: "Preparing the latest campus records"
-  },
-  responses: {
-    eyebrow: "Survey data",
-    Icon: Database,
-    detail: "Organizing submitted response records"
   }
 };
 

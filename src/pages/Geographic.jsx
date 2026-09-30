@@ -1,9 +1,11 @@
 
 import { useState } from "react";
+import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { MapPinned, Building2, TrendingUp, Compass } from "lucide-react";
 import { useDashboard } from "../hooks/useDashboard";
 import Loading from "../components/common/Loading";
 import RegionalChart from "../components/dashboard/RegionalChart";
+import RegionalParticipation from "../components/dashboard/RegionalParticipation";
 
 function sortRegions(regions) {
   return [...regions].sort((left, right) => {
@@ -135,37 +137,65 @@ export default function Geographic() {
       <RegionalChart data={chartRegions} groupedByInstitution={groupedByInstitution} splitByType={Boolean(snapshot?.filterViews)} />
 
       {regions.length > 0 ? (
-        <section className="card p-5 sm:p-6">
-          <div className="mb-5 flex items-center justify-between gap-3">
+        <section aria-label="Geographic response volume" className="min-h-[560px] rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm sm:min-h-[700px] sm:p-8">
+          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">{locationLabel} Breakdown</h2>
-              <p className="mt-1 text-sm text-slate-500">Distribution of campus counts across each {locationLabel.toLowerCase()}.</p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Geographic overview</p>
+              <h2 className="mt-2 flex items-center gap-2 text-xl font-bold text-slate-950"><MapPinned size={23} className="shrink-0 text-blue-600" />Response Volume by {locationLabel}</h2>
+              <p className="mt-2 text-sm text-slate-400">{institutionType || "All institution types"} / {region || "All regions"}. Compare submission volume and share across each {locationLabel.toLowerCase()}.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <div className="max-w-[200px] rounded-2xl bg-slate-50 px-4 py-3 text-right">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Peak</p>
+                <p className="mt-1 text-sm font-bold text-slate-950">{topRegion.name} / {Number(topRegion.value || 0).toLocaleString()}</p>
+              </div>
+              <div className="rounded-2xl bg-blue-50 px-4 py-3 text-right">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-500">Avg / {locationLabel}</p>
+                <p className="mt-1 text-sm font-bold text-blue-700">{(totalCampuses / regionCount).toFixed(1)}</p>
+              </div>
             </div>
           </div>
-
-          <div className="space-y-3">
-            {regions.map((region, index) => {
-              const value = Number(region.value || 0);
-              const share = totalCampuses > 0 ? (value / totalCampuses) * 100 : 0;
-              return (
-                <div key={region.name || index} className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex h-2.5 w-2.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-500" />
-                      <span className="font-medium text-slate-700">{region.name}</span>
-                    </div>
-                    <span className="text-sm font-semibold text-slate-900">{value}</span>
-                  </div>
-                  <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-blue-700 via-blue-500 to-indigo-500"
-                      style={{ width: `${Math.max(share, 6)}%` }}
-                    />
-                  </div>
-                  <div className="mt-2 text-right text-xs text-slate-500">{share.toFixed(1)}% of campuses</div>
-                </div>
-              );
-            })}
+          <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-500">
+            <span><strong className="text-slate-900">{totalCampuses.toLocaleString()}</strong> total responses</span>
+            <span><strong className="text-slate-900">{regionCount}</strong> {groupedByInstitution ? "institutions" : "regions"} represented</span>
+            <span className="inline-flex items-center gap-2"><span className="h-0.5 w-5 bg-blue-600" />Responses</span>
+            <span className="inline-flex items-center gap-2"><span className="w-5 border-t border-dashed border-slate-400" />Average: {(totalCampuses / regionCount).toFixed(1)}</span>
+          </div>
+          <div className="mt-8 overflow-x-auto" tabIndex={0} role="region" aria-label="Response volume chart">
+            <div className="h-[380px] sm:h-[430px]" style={{ minWidth: Math.max(560, regions.length * (groupedByInstitution ? 150 : 75)) }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart accessibilityLayer data={sortRegions(chartRegions.map(item => item.name)).map(name => { const item = chartRegions.find(entry => entry.name === name); return { ...item, value: Number(item.value || 0) }; })} margin={{ top: 10, right: 12, bottom: 25, left: 0 }}>
+                  <defs>
+                    <linearGradient id="geographicVolumeFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#2563eb" stopOpacity={0.22} />
+                      <stop offset="100%" stopColor="#2563eb" stopOpacity={0.01} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} stroke="#dbe5f5" strokeDasharray="5 5" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} height={groupedByInstitution ? 80 : 40} tick={{ fill: "#6482ac", fontSize: 11 }} tickMargin={10} tickFormatter={name => groupedByInstitution && name.length > 22 ? `${name.slice(0, 21)}...` : name} />
+                  <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: "#6482ac", fontSize: 12 }} width={48} domain={[0, "auto"]} />
+                  <ReferenceLine y={totalCampuses / regionCount} stroke="#94a3b8" strokeDasharray="4 4" />
+                  <Tooltip content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const item = payload[0].payload;
+                    const share = totalCampuses ? item.value / totalCampuses * 100 : 0;
+                    return <div className="max-w-xs rounded-2xl border border-slate-200 bg-white p-4 text-sm shadow-xl">
+                      <p className="font-semibold text-slate-900">{item.name}</p>
+                      <dl className="mt-3 space-y-2">
+                        <div className="flex justify-between gap-6"><dt className="text-slate-500">Responses</dt><dd className="font-bold text-blue-700">{item.value.toLocaleString()}</dd></div>
+                        <div className="flex justify-between gap-6"><dt className="text-slate-500">Share of selection</dt><dd className="font-semibold">{share.toFixed(1)}%</dd></div>
+                        {snapshot?.filterViews && [["LUC", item.luc], ["SUC", item.suc], ["Other / Unspecified", item.other]].map(([label, value]) => <div key={label} className="flex justify-between gap-6"><dt className="text-slate-500">{label}</dt><dd>{Number(value || 0).toLocaleString()}</dd></div>)}
+                      </dl>
+                    </div>;
+                  }} />
+                  <Area type="monotone" dataKey="value" name="Responses" stroke="#2563eb" strokeWidth={3.5} fill="url(#geographicVolumeFill)" dot={{ r: 3, fill: "#fff", strokeWidth: 2 }} activeDot={{ r: 5 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="mt-5 border-t border-slate-100 pt-5 text-sm leading-6 text-slate-600">
+            <p><strong className="text-slate-900">{topRegion.name}</strong> has the most responses: <strong className="text-blue-700">{Number(topRegion.value || 0).toLocaleString()}</strong>, representing <strong className="text-blue-700">{(totalCampuses ? Number(topRegion.value || 0) / totalCampuses * 100 : 0).toFixed(1)}%</strong> of the current selection.</p>
+            <p className="mt-2 text-xs text-slate-400">Hover over a point for counts and percentage share. Counts reflect survey submissions, which may include multiple responses from the same campus. The curve compares locations, not changes over time.</p>
           </div>
         </section>
       ) : (
@@ -177,6 +207,7 @@ export default function Geographic() {
           <p className="mt-2 text-sm text-slate-500">Add campus addresses to the source sheet to populate the geographic distribution.</p>
         </section>
       )}
+      <RegionalParticipation institutionType={institutionType} region={region} onSelectRegion={setRegion} />
     </div>
   );
 }

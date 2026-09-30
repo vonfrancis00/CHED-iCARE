@@ -231,10 +231,6 @@ function buildInstitutionsPage_(page, pageSize, query, institutionType, region) 
   };
 }
 
-function getSurveyResponses(params) {
-  return getInstitutions(params || {});
-}
-
 function buildInstitutions_() {
   const dataset = getRawDataset_();
   return { success: true, source: "google-sheet", updatedAt: new Date().toISOString(), cachedAt: dataset.cachedAt, headers: dataset.headers, data: dataset.rows.slice().reverse().map(addDisplayFields_) };

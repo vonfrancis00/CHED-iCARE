@@ -13,8 +13,8 @@ async function run(url) {
   await handler({ method: 'GET', url }, res);
   return res;
 }
-assert.equal((await run('/api/sheet?action=getSurveyResponses&code=test')).body.data.length, 1);
-assert.equal((await run('/api/sheet?action=getSurveyResponses')).code, 401);
+assert.equal((await run('/api/sheet?action=getInstitutions&code=test')).body.data.length, 1);
+assert.equal((await run('/api/sheet?action=getInstitutions')).code, 401);
 assert.equal((await run('/api/sheet?action=other&code=test')).code, 400);
 assert.equal(calls, 1);
 let recoveryCalls = 0;
@@ -24,11 +24,11 @@ globalThis.fetch = async url => {
   recoveryCalls++;
   return recoveryCalls === 1 ? { ok: false, status: 404 } : { ok: true, status: 200, json: async () => ({ success: true, data: [] }) };
 };
-assert.equal((await run('/api/sheet?action=getSurveyResponses&code=test')).code, 200);
+assert.equal((await run('/api/sheet?action=getInstitutions&code=test')).code, 200);
 assert.equal(recoveryCalls, 2);
 assert.notEqual(requestedUrls[0], requestedUrls[1], 'Recovery needs a fresh Google redirect');
 globalThis.fetch = async () => ({ ok: false, status: 404 });
-assert.equal((await run('/api/sheet?action=getSurveyResponses&code=test')).code, 502);
+assert.equal((await run('/api/sheet?action=getInstitutions&code=test')).code, 502);
 globalThis.fetch = async () => { throw Object.assign(new Error(), { name: 'AbortError' }); };
-assert.equal((await run('/api/sheet?action=getSurveyResponses&code=test')).code, 504);
+assert.equal((await run('/api/sheet?action=getInstitutions&code=test')).code, 504);
 console.log('Proxy checks passed: success, authorization, action validation, upstream failure and timeout.');

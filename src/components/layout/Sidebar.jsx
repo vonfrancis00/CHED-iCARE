@@ -1,7 +1,7 @@
 import { accountFetch } from "../../services/accountApi";
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
-import { Baby, BarChart3, BriefcaseBusiness, Building2, ChevronRight, ClipboardList, Clock3, FileText, LogOut, Map, RefreshCw, Settings, UserRound, Users, X } from "lucide-react";
+import { Baby, BarChart3, BriefcaseBusiness, Building2, ChevronRight, Clock3, FileText, LogOut, Map, RefreshCw, Settings, UserRound, Users, X } from "lucide-react";
 import { useDashboard } from "../../hooks/useDashboard";
 
 const navGroups = [
@@ -22,7 +22,6 @@ const navGroups = [
   {
     label: "Records",
     items: [
-      ["Survey Responses", "/responses", ClipboardList, "Submissions"],
       ["Reports", "/reports", FileText, "Exports"]
     ]
   }

@@ -50,9 +50,9 @@ const service = readFileSync("src/services/api.js", "utf8")
   .replaceAll("import.meta.env", "({VITE_SHEET_API_URL:'https://script.google.com/macros/s/test/exec',PROD:false})")
   .replaceAll("export ", "");
 vm.runInContext(service, context);
-await vm.runInContext("Promise.all([getInstitutions({page:1,pageSize:20}),getSurveyResponses({page:1,pageSize:20})])", context);
+await vm.runInContext("Promise.all([getInstitutions({page:1,pageSize:20}),getInstitutions({page:1,pageSize:20})])", context);
 assert.equal(calls, 1);
-await vm.runInContext("getSurveyResponses({page:1,pageSize:20})", context);
+await vm.runInContext("getInstitutions({page:1,pageSize:20})", context);
 assert.equal(calls, 1);
 assert.ok(vm.runInContext("peekInstitutionPage({page:1,pageSize:20})", context));
 await vm.runInContext("clearDashboardCache()", context);

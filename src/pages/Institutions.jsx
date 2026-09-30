@@ -168,7 +168,7 @@ export default function Institutions() {
               </button>
             ))}
           </div>
-          <select value={region} onChange={event => { setFilterPending(true); setPage(1); setRegion(event.target.value); }} aria-label="Filter by region" className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 outline-none focus:border-blue-500"><option value="">All regions</option>{regions.map(item => <option key={item} value={item}>{item}</option>)}</select>
+          <select value={region} onChange={event => { setFilterPending(true); setPage(1); setRegion(event.target.value); }} aria-label="Filter by region" className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 outline-none focus:border-blue-500"><option value="">All Regions</option>{regions.map(item => <option key={item} value={item}>{item}</option>)}</select>
         </div>
         <p className="mt-2 text-xs text-slate-500">{total.toLocaleString()} matching response{total === 1 ? "" : "s"} · {institutionCount.toLocaleString()} institutions · showing {firstRow.toLocaleString()}–{lastRow.toLocaleString()}</p>
       </div>
@@ -235,24 +235,12 @@ function CampusDirectory({ rows, onSelect }) {
             <span className="shrink-0 text-xs font-medium text-slate-500">{campus.rows.length} {campus.rows.length === 1 ? "response" : "responses"}</span>
             <ChevronDown size={17} className="shrink-0 text-slate-400 transition-transform group-open/campus:rotate-180" />
           </summary>
-          <div className="overflow-x-auto border-t border-slate-200">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                <tr>{["Response", "Address", "Facility — Faculty", "Facility — Students", "Program — Students", "Details"].map(label => <th key={label} scope="col" className="px-4 py-3">{label}</th>)}</tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {campus.rows.map((row, index) => (
-                  <tr key={row.rowNumber ?? index} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium">Response {index + 1}</td>
-                    <td className="px-4 py-3">{row["Address of Campus"] || "—"}</td>
-                    <td className="px-4 py-3">{row.facilityFaculty || "—"}</td>
-                    <td className="px-4 py-3">{row.facilityStudents || "—"}</td>
-                    <td className="px-4 py-3">{row.programStudents || "—"}</td>
-                    <td className="px-4 py-3"><button type="button" onClick={() => onSelect(row)} aria-label={`View response ${index + 1} from ${campus.name}`} className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200 px-3 py-2 text-blue-700 hover:bg-blue-50"><Eye size={17} />View response</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="divide-y divide-slate-100 border-t border-slate-200">
+            {campus.rows.map((row, index) => (
+              <div key={row.rowNumber ?? index} className="px-4 py-3 hover:bg-slate-50">
+                <button type="button" onClick={() => onSelect(row)} aria-label={`View response ${index + 1} from ${campus.name}`} className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50"><Eye size={17} />View response{campus.rows.length > 1 ? ` ${index + 1}` : ""}</button>
+              </div>
+            ))}
           </div>
         </details>
       ))}

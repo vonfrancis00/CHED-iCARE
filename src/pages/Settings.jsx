@@ -5,7 +5,27 @@ import {
   AlertCircle, Building2, CheckCircle2, ChevronDown, Eye, EyeOff, KeyRound,
   Mail, Pencil, RefreshCw, Search, ShieldCheck, Trash2, UserPlus, UsersRound, X
 } from "lucide-react";
-import { useDashboard } from "../hooks/useDashboard";
+
+// Keep data only for this signed-in user object, never in browser storage.
+const settingsSessions = new WeakMap();
+function getSettingsSession(user) {
+  if (!settingsSessions.has(user)) settingsSessions.set(user, { pending: new Map() });
+  return settingsSessions.get(user);
+}
+
+function readSettings(session, action) {
+  if (!session.pending.has(action)) {
+    const pending = accountFetch(`/api/sheet?action=${action}`)
+      .then(async response => {
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || "Unable to load settings.");
+        return result;
+      })
+      .finally(() => session.pending.delete(action));
+    session.pending.set(action, pending);
+  }
+  return session.pending.get(action);
+}
 
 const emptyUser = { name: "", email: "", office: "", password: "", role: "admin" };
 
@@ -25,10 +45,12 @@ function DetailCard({ icon: Icon, label, value, detail }) {
 }
 
 export default function Settings({ user }) {
-  const { data, loading: officesLoading, error: officesError, reload } = useDashboard();
-  const offices = [...new Set((data?.occOffices || data?.occDistribution || [])
-    .map(office => String(office.name || "").trim()).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b));
+  const session = getSettingsSession(user);
+  const [offices, setOffices] = useState(() => session.offices || []);
+  const [officesLoading, setOfficesLoading] = useState(!session.offices);
+  const [officesError, setOfficesError] = useState("");
+  const [officesRefresh, setOfficesRefresh] = useState(0);
+  const reload = () => setOfficesRefresh(value => value + 1);
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -40,13 +62,13 @@ export default function Settings({ user }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [users, setUsers] = useState([]);
-  const [usersLoading, setUsersLoading] = useState(true);
+  const [users, setUsers] = useState(() => session.users || []);
+  const [usersLoading, setUsersLoading] = useState(!session.users);
   const [usersError, setUsersError] = useState("");
   const [usersRefresh, setUsersRefresh] = useState(0);
   const [usersQuery, setUsersQuery] = useState("");
-  const [requests, setRequests] = useState([]);
-  const [requestsLoading, setRequestsLoading] = useState(true);
+  const [requests, setRequests] = useState(() => session.requests || []);
+  const [requestsLoading, setRequestsLoading] = useState(!session.requests);
   const [requestsError, setRequestsError] = useState("");
   const [approvalRequest, setApprovalRequest] = useState(null);
   const newlyCreatedUsers = useRef(new Map());
@@ -77,6 +99,32 @@ export default function Settings({ user }) {
   const superAdminCount = directoryUsers.filter(account => account.role === "super_admin").length;
 
   useEffect(() => {
+    if (!usersLoading && !usersError) session.users = users;
+  }, [session, users, usersLoading, usersError]);
+
+  useEffect(() => {
+    if (!requestsLoading && !requestsError) session.requests = requests;
+  }, [session, requests, requestsLoading, requestsError]);
+
+  useEffect(() => {
+    let active = true;
+    setOfficesLoading(!session.offices);
+    setOfficesError("");
+    readSettings(session, "listRequestOffices").then(result => {
+      if (!active) return;
+      if (!Array.isArray(result.offices)) throw new Error("Unable to load offices.");
+      session.offices = [...new Set(result.offices.map(office => String(office).trim()).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b));
+      setOffices(session.offices);
+    }).catch(cause => {
+      if (active) setOfficesError(cause.message || "Unable to load offices.");
+    }).finally(() => {
+      if (active) setOfficesLoading(false);
+    });
+    return () => { active = false; };
+  }, [session, officesRefresh]);
+
+  useEffect(() => {
     if (!success) return;
     const timeout = window.setTimeout(() => setSuccess(""), 3000);
     return () => window.clearTimeout(timeout);
@@ -89,9 +137,9 @@ export default function Settings({ user }) {
       setUsersLoading(true);
       setUsersError("");
       try {
-        const response = await accountFetch("/api/sheet?action=listUsers", { credentials: "same-origin", cache: "no-store", signal: controller.signal });
-        const result = await response.json();
-        if (!response.ok || !result.success || !Array.isArray(result.users)) throw new Error(result.message || "Unable to load users.");
+        const result = await readSettings(session, "listUsers");
+        if (controller.signal.aborted) return;
+        if (!Array.isArray(result.users)) throw new Error(result.message || "Unable to load users.");
         if (versionAtStart !== mutationVersion.current) return;
         const listedEmails = new Set(result.users.map(account => account.email.toLowerCase()));
         for (const email of listedEmails) newlyCreatedUsers.current.delete(email);
@@ -106,7 +154,7 @@ export default function Settings({ user }) {
     }
     loadUsers();
     return () => controller.abort();
-  }, [usersRefresh]);
+  }, [session, usersRefresh]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -116,14 +164,13 @@ export default function Settings({ user }) {
       if (!initial && (document.visibilityState === "hidden" || !navigator.onLine)) return;
       checking = true;
       const versionAtStart = mutationVersion.current;
-      if (initial) setRequestsLoading(true);
+      if (initial) setRequestsLoading(!session.requests);
       try {
-        const response = await accountFetch("/api/sheet?action=listAccountRequests", { credentials: "same-origin", cache: "no-store", signal: controller.signal });
-        const result = await response.json();
+        const result = await readSettings(session, "listAccountRequests");
         // A read started before an approval must not restore deleted requests
         // or overwrite the adjusted sheet row numbers.
         if (controller.signal.aborted || showFormRef.current || savingRef.current || versionAtStart !== mutationVersion.current) return;
-        if (!response.ok || !result.success || !Array.isArray(result.requests)) throw new Error(result.message || "Unable to load requests.");
+        if (!Array.isArray(result.requests)) throw new Error(result.message || "Unable to load requests.");
         setRequests(result.requests);
         setRequestsError("");
       } catch (cause) { if (!controller.signal.aborted) setRequestsError(cause.message || "Unable to load requests."); }
@@ -145,7 +192,7 @@ export default function Settings({ user }) {
       window.removeEventListener("online", refreshRequests);
       document.removeEventListener("visibilitychange", refreshRequests);
     };
-  }, [usersRefresh]);
+  }, [session, usersRefresh]);
 
   useEffect(() => {
     if (!showForm) return;

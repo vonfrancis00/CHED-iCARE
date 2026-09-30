@@ -104,7 +104,7 @@ export default async function handler(req, res, env = process.env) {
     return res.status(200).json({ success: true });
   }
   if (action === 'session' && req.method === 'GET') return res.status(200).json({ success: true, user: session(req, secret) });
-  if (!['prepareRecords', 'login', 'submitAccountRequest', 'createUser', 'updateUser', 'deleteUser', 'approveAccountRequest', 'listUsers', 'listAccountRequests', 'listRequestOffices', 'getDashboardData', 'getInstitutions', 'getSurveyResponses', 'clearDashboardCache'].includes(action)) {
+  if (!['prepareRecords', 'login', 'submitAccountRequest', 'createUser', 'updateUser', 'deleteUser', 'approveAccountRequest', 'listUsers', 'listAccountRequests', 'listRequestOffices', 'getDashboardData', 'getInstitutions', 'clearDashboardCache'].includes(action)) {
     return res.status(400).json({ success: false, message: 'Unknown action.' });
   }
   if (['login', 'submitAccountRequest', 'createUser', 'updateUser', 'deleteUser', 'approveAccountRequest'].includes(action) ? req.method !== 'POST' : req.method !== 'GET') return res.status(405).json({ success: false, message: 'Method not allowed.' });
@@ -235,7 +235,7 @@ export default async function handler(req, res, env = process.env) {
       }
       return res.status(payload.success ? 200 : action === 'login' ? 401 : 400).json(payload);
     }
-    const cacheable = prepareRecords || ['listRequestOffices', 'getDashboardData', 'getInstitutions', 'getSurveyResponses'].includes(action);
+    const cacheable = prepareRecords || ['listRequestOffices', 'getDashboardData', 'getInstitutions'].includes(action);
     if (action === 'clearDashboardCache') invalidateData();
     const payload = await readGoogleData(upstream, controller.signal, cacheable);
     if (prepareRecords) return res.status(payload.success ? 200 : 502).json({ success: Boolean(payload.success) });

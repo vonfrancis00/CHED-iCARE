@@ -9,8 +9,6 @@ function doGet(e) {
         return jsonResponse(getDashboardData(params));
       case "getInstitutions":
         return jsonResponse(getInstitutions(params));
-      case "getSurveyResponses":
-        return jsonResponse(getSurveyResponses(params));
       case "listUsers":
         return jsonResponse(listUsers_(params));
       case "listAccountRequests":
@@ -407,7 +405,6 @@ function validateRequest_(action, params) {
   const allowedActions = {
     getDashboardData: true,
     getInstitutions: true,
-    getSurveyResponses: true,
     listUsers: true,
     clearDashboardCache: true,
     login: true,

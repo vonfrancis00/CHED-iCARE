@@ -6,7 +6,6 @@ import Login from "./pages/Login";
 import { getInstitutions } from "./services/api";
 
 const loadInstitutions = () => import("./pages/Institutions");
-const loadSurveyResponses = () => import("./pages/SurveyResponses");
 
 function prefetchRecords() {
   // Warm the first 50 rows used by the institutions directory.
@@ -19,7 +18,6 @@ const Childcare = lazy(() => import("./pages/Childcare"));
 const SoloParents = lazy(() => import("./pages/SoloParents"));
 const Geographic = lazy(() => import("./pages/Geographic"));
 const OCC = lazy(() => import("./pages/OCC"));
-const SurveyResponses = lazy(loadSurveyResponses);
 const Reports = lazy(() => import("./pages/Reports"));
 const Settings = lazy(() => import("./pages/Settings"));
 
@@ -29,7 +27,7 @@ export default function App() {
   useEffect(() => {
     // Download page code during session checking/login without fetching records.
     // A failed preload must not block sign-in or the later route import.
-    void Promise.allSettled([loadInstitutions(), loadSurveyResponses()]);
+    void loadInstitutions().catch(() => {});
     fetch('/api/sheet?action=session', { credentials: 'same-origin', cache: 'no-store' })
       .then(response => response.json()).then(result => {
         if (result.user) prefetchRecords();
@@ -56,7 +54,6 @@ export default function App() {
             <Route path="/solo-parents" element={<SoloParents />} />
             <Route path="/geographic" element={<Geographic />} />
             <Route path="/occ" element={<OCC user={user} />} />
-            <Route path="/responses" element={<SurveyResponses />} />
             <Route path="/reports" element={<Reports user={user} />} />
             <Route path="/settings" element={user.role === "super_admin" ? <Settings user={user} /> : <Navigate to="/" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />

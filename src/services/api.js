@@ -131,7 +131,7 @@ async function fetchJsonOnce_(url, action) {
   if (!json || typeof json !== "object") throw new Error("The data service returned an invalid response.");
   if (json.success === false) throw new Error(json.message || "Backend request failed");
   if (
-    (action === "getInstitutions" || action === "getSurveyResponses") &&
+    (action === "getInstitutions") &&
     json.data &&
     !Array.isArray(json.data) &&
     Array.isArray(json.data.data)
@@ -158,21 +158,18 @@ async function fetchJsonOnce_(url, action) {
 async function demoResponse_(action, source = "demo") {
   await new Promise((resolve) => setTimeout(resolve, 150));
   if (action === "getDashboardData") return { ...demoDashboard, source };
-  if (action === "getInstitutions" || action === "getSurveyResponses") {
+  if (action === "getInstitutions") {
     return { success: true, headers: [], data: demoInstitutions, source };
   }
   return { success: true, source };
 }
 
 export const getDashboardData = (params = {}) => request("getDashboardData", params);
-// Both pages use the full survey dataset. Use its working endpoint and share
-// cached and in-flight requests so navigating between them does not reload it.
 export const getInstitutions = (params = {}) => request("getInstitutions", params);
-export const getSurveyResponses = (params = {}) => request("getInstitutions", params);
 export const clearDashboardCache = () => request("clearDashboardCache");
 export const getSheetDataRevision = () => sheetDataRevision;
 
-// Both record pages use exactly the same keys, expiry and in-flight requests.
+// Read institution pages using the same cache keys and expiry as requests.
 export function peekInstitutionPage(params) {
   if (!API_URL) return null;
   try {

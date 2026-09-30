@@ -9,7 +9,6 @@ const titles = {
   "/solo-parents": ["Solo Parents", "Enrolled and community solo parent statistics"],
   "/geographic": ["Geographic Analysis", "Distribution of survey responses by region"],
   "/occ": ["OCC / Office", "Compare responses across assigned offices"],
-  "/responses": ["Survey Responses", "Review the submitted survey records"],
   "/reports": ["Reports", "Management-ready reporting and exports"],
   "/settings": ["Settings", "Dashboard configuration"]
 };
