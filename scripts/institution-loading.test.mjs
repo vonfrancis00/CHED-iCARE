@@ -23,6 +23,22 @@ function setup(getInstitutions, stored = null) {
   return { context, writes };
 }
 
+test('search filters saved records even when Google is unavailable and keeps all region options', () => {
+  const { context } = setup(() => { throw new Error('Google timed out'); });
+  const directory = { total: 3, regions: ['Region 4A', 'Region 1'], data: [
+    { Institution: 'Rizal University', 'SUC/LUC': 'SUC', Region: 'Region 4A' },
+    { Institution: 'Rizal College', 'SUC/LUC': 'LUC', Region: 'Region 4A' },
+    { Institution: 'Other University', 'SUC/LUC': 'SUC', Region: 'Region 1' }
+  ] };
+  const result = context.filterDirectory(directory, ' RIZAL ', 'suc', 'region 4a');
+  assert.deepEqual(Array.from(result.data), [directory.data[0]]);
+  assert.equal(result.total, 1);
+  assert.equal(result.regions, directory.regions);
+  assert.equal(context.filterDirectory(directory, '', '', ''), directory);
+  assert.equal(context.filterDirectory(directory, 'missing', '', '').total, 0);
+  assert.equal(directory.data.length, 3);
+});
+
 test('first 50 records are published and cached before the background request finishes', async () => {
   let release;
   const firstRows = Array.from({ length: 50 }, (_, rowNumber) => ({ rowNumber, Institution: '' }));

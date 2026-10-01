@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getInstitutions, getSheetDataRevision, peekInstitutionPage } from "../services/api";
 
 const STORAGE_PREFIX = "childcare-institution-groups:v3:";
@@ -108,8 +108,24 @@ function loadGroups(key, params, revision, publish, force) {
   return job;
 }
 
+function filterDirectory(data, query, institutionType, region) {
+  if (!data) return data;
+  const name = query.trim().toLowerCase();
+  const type = institutionType.trim().toUpperCase();
+  const area = region.trim().toLowerCase();
+  if (!name && !type && !area) return data;
+  const rows = data.data.filter(row =>
+    (!name || String(row.Institution || "").toLowerCase().includes(name)) &&
+    (!type || String(row["SUC/LUC"] || "").trim().toUpperCase() === type) &&
+    (!area || String(row.Region || "").trim().toLowerCase() === area)
+  );
+  return { ...data, data: rows, total: rows.length };
+}
+
 export function useInstitutionGroups(query, institutionType, region, pageSize = 50) {
-  const params = { query: query.trim().toLowerCase(), institutionType: institutionType.trim().toUpperCase(), region: region.trim().toLowerCase(), pageSize };
+  // All views and search terms share one directory load. Typing must not start
+  // competing Google reads or discard records already available locally.
+  const params = { query: "", institutionType: "", region: "", pageSize };
   const key = JSON.stringify([SOURCE, params.query, params.institutionType, params.region, pageSize]);
   const revision = getSheetDataRevision();
   const [attempt, setAttempt] = useState(0);
@@ -141,7 +157,8 @@ export function useInstitutionGroups(query, institutionType, region, pageSize = 
     return () => { active = false; clearTimeout(timer); job?.listeners.delete(publish); };
   }, [key, revision, attempt]);
 
-  const data = cached?.data || (state.key === key ? state.data : null);
+  const directory = cached?.data || (state.key === key ? state.data : null);
+  const data = useMemo(() => filterDirectory(directory, query, institutionType, region), [directory, query, institutionType, region]);
   return {
     data,
     loading: !data && (state.key !== key || state.loading),

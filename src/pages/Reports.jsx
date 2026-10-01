@@ -326,37 +326,16 @@ export default function Reports({ user }) {
       </select>
       </div>
       </div>
-      <p className="mt-3 text-sm text-slate-500">The summary covers the selected office. The institution list and PDF table use the selected status.</p>
+      <p className="mt-3 text-sm text-slate-500">The PDF covers the selected office and record status.</p>
     </section>}
-      <dl className="grid gap-4 border-b border-slate-100 bg-slate-50/70 p-5 sm:grid-cols-3 sm:p-6">{metrics.map(([label, value]) => <div key={label}><dt className="text-xs font-medium text-slate-500">{label}</dt><dd className="mt-2 text-2xl font-bold tracking-tight text-[#08264d]">{value}</dd></div>)}</dl>
+      {active.id !== "occ" && <><dl className="grid gap-4 border-b border-slate-100 bg-slate-50/70 p-5 sm:grid-cols-3 sm:p-6">{metrics.map(([label, value]) => <div key={label}><dt className="text-xs font-medium text-slate-500">{label}</dt><dd className="mt-2 text-2xl font-bold tracking-tight text-[#08264d]">{value}</dd></div>)}</dl>
       <div className="space-y-6 p-5 sm:p-6" aria-live="polite" aria-atomic="true">
         <div className="flex items-center justify-between gap-3"><h3 className="text-xs font-semibold uppercase tracking-widest text-slate-500">Report findings</h3><span className="text-xs text-slate-400">{sections.length} sections</span></div>
         {sections.map(([heading, paragraph], index) => <article key={`${active.id}-${heading}-${index}`} className="flex gap-3 sm:gap-4"><span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-xs font-semibold text-blue-700">{String(index + 1).padStart(2, "0")}</span><div className="min-w-0"><h3 className="font-semibold text-slate-900">{heading}</h3><p className="mt-2 text-sm leading-7 text-slate-600">{paragraph}</p></div></article>)}
       </div>
-      {active.id === "occ" && <section className="overflow-hidden" aria-labelledby="report-institution-list">
-      <div className="border-b border-slate-200 p-5 sm:p-6">
-        <h2 id="report-institution-list" className="text-lg font-semibold text-slate-900">Institution list</h2>
-        <p className="mt-1 text-sm text-slate-500" aria-live="polite">{listDescription}</p>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <caption className="sr-only">{listDescription}</caption>
-          <thead className="bg-slate-50 text-slate-600"><tr>{["Institution", "Region", "OCC / Office", "Survey status"].map(label => <th key={label} scope="col" className={`px-5 py-3 font-semibold ${label === "Survey status" ? "w-40 min-w-40 whitespace-nowrap" : ""}`}>{label}</th>)}</tr></thead>
-          <tbody className="divide-y divide-slate-100">
-            {visibleInstitutions.map((item, index) => <tr key={`${item.office}-${index}`} className="hover:bg-slate-50">
-
-              <td className="min-w-56 px-5 py-3 font-medium text-slate-900">{item.name || "Unnamed institution"}</td>
-              <td className="px-5 py-3 text-slate-600">{item.region || "Not specified"}</td>
-              <td className="min-w-48 px-5 py-3 text-slate-600">{item.office}</td>
-              <td className="w-40 min-w-40 whitespace-nowrap px-5 py-3"><span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${item.responded === true ? "bg-emerald-50 text-emerald-700" : item.responded === false ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}`}>{institutionStatus(item)}</span></td>
-            </tr>)}
-            {!visibleInstitutions.length && <tr><td colSpan={4} className="p-8 text-center text-slate-500">{emptyListMessage}</td></tr>}
-          </tbody>
-        </table>
-      </div>
-    </section>}
+      </>}
       <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 bg-slate-50/70 p-5 sm:px-6">
-        <p className="max-w-xs text-xs leading-5 text-slate-500">Export includes the official letterhead and report findings{active.id === "occ" ? ", with the filtered institution list." : "."}</p>
+        {active.id !== "occ" && <p className="max-w-xs text-xs leading-5 text-slate-500">Export includes the official letterhead and report findings.</p>}
         <div className="flex flex-wrap gap-2"><button type="button" onClick={previewPdf} disabled={exporting} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-wait disabled:opacity-60"><Eye size={16} />Preview PDF</button><button type="button" onClick={exportPdf} disabled={exporting} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#08264d] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0e427d] disabled:cursor-wait disabled:opacity-60">{exporting ? <LoaderCircle size={16} className="animate-spin" /> : <Download size={16} />}{exporting ? "Preparing..." : "Download PDF"}</button></div>
       </footer>
     </section>

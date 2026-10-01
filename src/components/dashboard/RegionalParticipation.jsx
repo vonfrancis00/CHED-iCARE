@@ -4,7 +4,7 @@ import { Building2, MapPinned, ArrowRight, Trophy, ClipboardList, X } from "luci
 import { useInstitutionGroups } from "../../hooks/useInstitutionGroups";
 import { summarizeParticipation } from "../../utils/regionalParticipation";
 
-function RankingRow({ item, showInstitutions, showRank = true }) {
+function RankingRow({ item, showInstitutions, category, showRank = true }) {
   return <div className="flex w-full items-center gap-3 rounded-xl p-3">
     {showRank ? <span aria-label={`Rank ${item.rank}`} className="w-8 shrink-0 text-center text-sm font-bold tabular-nums text-blue-700">#{item.rank}</span> : <span aria-hidden="true" className="w-8 shrink-0" />}
     {showInstitutions ? <Building2 size={17} className="shrink-0 text-blue-600" /> : <MapPinned size={17} className="shrink-0 text-blue-600" />}
@@ -12,7 +12,7 @@ function RankingRow({ item, showInstitutions, showRank = true }) {
       {showInstitutions && <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600">{item.type}</span>}
       <p className="text-sm font-medium text-slate-700">{item.name}</p>
     </div>
-    <span className="shrink-0 text-xs text-slate-500">{item.count} Yes {item.count === 1 ? "answer" : "answers"}</span>
+    <span className="shrink-0 text-xs text-slate-500">{item.count} existing {category}</span>
   </div>;
 }
 
@@ -53,8 +53,8 @@ export default function RegionalParticipation({ institutionType, region }) {
   }
   const pending = loading || backgroundLoading;
   const categories = [
-    { key: "facilities", label: "facilities", Icon: Building2 },
-    { key: "programs", label: "programs", Icon: ClipboardList },
+    { key: "facilities", label: "Facilities", Icon: Building2 },
+    { key: "programs", label: "Programs", Icon: ClipboardList },
   ];
 
   return <section aria-labelledby="regional-participation-title" className="space-y-5">
@@ -71,17 +71,16 @@ export default function RegionalParticipation({ institutionType, region }) {
               <div className="mb-5 flex items-center justify-between"><span className="rounded-xl bg-blue-50 p-3 text-blue-600"><Icon size={24} /></span><span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Regional coverage</span></div>
               <p className="text-4xl font-bold tabular-nums text-blue-700">{summary[key].regions.length}</p>
               <h3 className="mt-2 text-lg font-semibold text-slate-900">Regions with existing {label}</h3>
-              <p className="mt-2 text-sm text-slate-500">Regions with at least one Yes answer for {label}.</p>
             </div>
             <button type="button" disabled={!summary[key].regions.length} aria-haspopup="dialog" onClick={() => { setShowInstitutions(false); setRegionSearch(""); setExploring(key); }} className="flex items-center justify-between border-t border-blue-100 bg-blue-50/60 px-6 py-4 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50">Explore regions<ArrowRight size={17} /></button>
           </article>)}
           {categories.map(({ key, label }) => <article key={key} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <Trophy size={23} className="mb-4 text-amber-500" />
             <h3 className="text-lg font-semibold text-slate-900">SUC / LUC with the most reported {label}</h3>
-            <p className="mt-1 text-xs text-slate-500">Ranked by Yes answers across faculty, student and community questions.</p>
+            <p className="mt-1 text-xs text-slate-500">Ranked by reported existing {label} across faculty, student and community questions.</p>
             {summary[key].leaders.length ? <div className="mt-5 space-y-3">
               {summary[key].leaders.length > 1 && <p className="text-xs font-semibold text-blue-600">{summary[key].leaders.length} institutions tied for highest</p>}
-              {summary[key].leaders.map(item => <div key={`${item.type}:${item.name}`} className="flex items-start justify-between gap-4 rounded-xl bg-slate-50 p-4"><div><span className="text-[10px] font-bold uppercase tracking-wider text-blue-600">{item.type}</span><p className="mt-1 text-sm font-semibold text-slate-900">{item.name}</p></div><div className="shrink-0 text-right"><p className="text-2xl font-bold text-blue-700">{item.count.toLocaleString()}</p><p className="text-[10px] text-slate-500">Yes answers</p></div></div>)}
+              {summary[key].leaders.map(item => <div key={`${item.type}:${item.name}`} className="flex items-start justify-between gap-4 rounded-xl bg-slate-50 p-4"><div><span className="text-[10px] font-bold uppercase tracking-wider text-blue-600">{item.type}</span><p className="mt-1 text-sm font-semibold text-slate-900">{item.name}</p></div><div className="shrink-0 text-right"><p className="text-2xl font-bold text-blue-700">{item.count.toLocaleString()}</p><p className="text-[10px] text-slate-500">Existing {label}</p></div></div>)}
             </div> : <p className="mt-5 text-sm text-slate-500">No SUC or LUC reported existing {label} for this selection.</p>}
             <button type="button" disabled={!summary[key].rankings.length} aria-haspopup="dialog" onClick={() => { setShowInstitutions(true); setRegionSearch(""); setExploring(key); }} className="mt-5 flex w-full items-center justify-between rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50">View rankings<ArrowRight size={17} /></button>
           </article>)}
@@ -110,14 +109,14 @@ export default function RegionalParticipation({ institutionType, region }) {
           <div className="min-h-0 overflow-y-auto p-3 sm:p-4">
             <ul>
               {rankGroups.map(items => <li key={`${items[0].rank}:${items[0].name}:${regionSearch}`}>
-                <RankingRow item={items[0]} showInstitutions={showInstitutions} />
+                <RankingRow item={items[0]} showInstitutions={showInstitutions} category={exploring} />
                 {items.length > 1 && <details className="group mb-3">
                   <summary className="ml-14 w-fit cursor-pointer rounded-lg px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline-blue-600">
                     <span className="group-open:hidden">See more ({items.length - 1} more tied at #{items[0].rank})</span>
                     <span className="hidden group-open:inline">See less</span>
                   </summary>
                   <ul className="rounded-xl bg-slate-50">
-                    {items.slice(1).map(item => <li key={`${item.type}:${item.name}`}><RankingRow item={item} showInstitutions={showInstitutions} showRank={false} /></li>)}
+                    {items.slice(1).map(item => <li key={`${item.type}:${item.name}`}><RankingRow item={item} showInstitutions={showInstitutions} category={exploring} showRank={false} /></li>)}
                   </ul>
                 </details>}
               </li>)}
