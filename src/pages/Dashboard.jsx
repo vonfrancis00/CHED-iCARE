@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useDashboard } from "../hooks/useDashboard";
 import Loading from "../components/common/Loading";
-import StatCard from "../components/dashboard/StatCard";
+import PairedStatCard from "../components/dashboard/PairedStatCard";
 import OverviewCharts from "../components/dashboard/OverviewCharts";
 import { Building2, UsersRound, Users, FileCheck, ShieldCheck } from "lucide-react";
 
@@ -82,13 +82,44 @@ export default function Dashboard() {
         {!snapshot.filterViews && <p role="status" className="mt-3 text-xs text-amber-700">Fast filters are unavailable. Update the dashboard service, then refresh data.</p>}
       </section>
 
+      <div className="card mb-4 p-4 sm:p-5">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="flex items-center gap-3">
+            <div className="shrink-0 rounded-xl bg-teal-50 p-3 text-teal-700"><Building2 size={20} /></div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <p className="text-sm font-medium text-slate-500">Total Institutions Responded</p>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">LUCs: {o.lucResponses ?? 0} · SUCs: {o.sucResponses ?? 0}</p>
+            </div>
+            <p className="flex-1 self-center text-center text-3xl font-bold tracking-tight text-slate-900">{(Number(o.lucResponses ?? 0) + Number(o.sucResponses ?? 0)).toLocaleString()}</p>
+          </div>
+          <div className="flex items-center gap-3 border-t border-slate-200 pt-4 md:border-l md:border-t-0 md:pl-5 md:pt-0">
+            <div className="shrink-0 rounded-xl bg-blue-50 p-3 text-blue-700"><FileCheck size={20} /></div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <p className="text-sm font-medium text-slate-500">Survey Responses</p>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">Total Submitted Responses</p>
+            </div>
+            <p className="flex-1 self-center text-center text-3xl font-bold tracking-tight text-slate-900">{Number(o.totalResponses || 0).toLocaleString()}</p>
+          </div>
+        </div>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <StatCard label="Total Institutions Responded" value={Number(o.lucResponses ?? 0) + Number(o.sucResponses ?? 0)} hint={`LUCs: ${o.lucResponses ?? 0} · SUCs: ${o.sucResponses ?? 0}`} icon={Building2} />
-        <StatCard label="Survey Responses" value={o.totalResponses} hint="Total Submitted Responses" icon={FileCheck} tone="blue" />
-        <StatCard label="Personnel Facilities" value={o.facilityFacultyYes} hint='No. of "Yes" Responses' icon={UsersRound} tone="blue" />
-        <StatCard label="Student Facilities" value={o.facilityStudentsYes} hint='No. of "Yes" Responses' icon={Users} tone="teal" />
-        <StatCard label="Student Programs" value={o.programStudentsYes} hint='No. of "Yes" Responses' icon={FileCheck} tone="amber" />
-        <StatCard label="Enrolled Solo Parents" value={o.enrolledSoloParents} hint="Total Numeric Responses" icon={Users} tone="violet" />
+        <PairedStatCard metrics={[
+          { label: "Personnel Facilities", value: o.facilityFacultyYes, icon: UsersRound, tone: "bg-blue-50 text-blue-700" },
+          { label: "Personnel Programs", value: o.programFacultyYes, icon: FileCheck, tone: "bg-amber-50 text-amber-700" }
+        ]} />
+        <PairedStatCard metrics={[
+          { label: "Student Facilities", value: o.facilityStudentsYes, icon: Users, tone: "bg-teal-50 text-teal-700" },
+          { label: "Student Programs", value: o.programStudentsYes, icon: FileCheck, tone: "bg-amber-50 text-amber-700" }
+        ]} />
+        <PairedStatCard metrics={[
+          { label: "Community Members Facilities", value: o.facilityCommunityYes, icon: UsersRound, tone: "bg-teal-50 text-teal-700" },
+          { label: "Community Members Programs", value: o.programCommunityYes, icon: FileCheck, tone: "bg-amber-50 text-amber-700" }
+        ]} />
       </div>
 
       <OverviewCharts data={data} />

@@ -61,7 +61,7 @@ function SidebarUpdateStatus() {
         <span aria-live="polite">{refreshing ? "Refreshing data" : error ? "Refresh unavailable" : "Last updated"}</span>
         <time dateTime={validDate ? date.toISOString() : undefined} title={validDate ? date.toLocaleString() : undefined}>{label}</time>
       </div>
-      <button type="button" onClick={() => reload({ force: true })} disabled={refreshing} aria-label="Refresh dashboard data" title="Refresh dashboard data" className="sidebar-refresh">
+      <button type="button" onClick={() => reload({ force: true })} disabled={refreshing} aria-label="Refresh dashboard and institution directory" title="Refresh dashboard and institution directory" className="sidebar-refresh">
         <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} aria-hidden="true" />
       </button>
     </div>

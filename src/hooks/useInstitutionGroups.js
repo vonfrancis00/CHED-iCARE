@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { getInstitutions, getSheetDataRevision, peekInstitutionPage } from "../services/api";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { getInstitutions, getSheetDataRevision, peekInstitutionPage, subscribeSheetDataRevision } from "../services/api";
 
 const STORAGE_PREFIX = "childcare-institution-groups:v3:";
 const SOURCE = import.meta.env.VITE_SHEET_API_URL || "demo";
@@ -63,13 +63,14 @@ function loadGroups(key, params, revision, publish, force) {
     publish(available);
     return { listeners: new Set(), promise: Promise.resolve() };
   }
-  if (pending.has(key)) {
-    const job = pending.get(key);
+  const pendingKey = JSON.stringify([key, revision]);
+  if (pending.has(pendingKey)) {
+    const job = pending.get(pendingKey);
     job.listeners.add(publish);
     return job;
   }
   const job = { listeners: new Set([publish]) };
-  pending.set(key, job);
+  pending.set(pendingKey, job);
   job.promise = (async () => {
     // Publish the first batch immediately, then keep filling the cache.
     const requestParams = { pageSize: 50, ...params, _force: force };
@@ -87,6 +88,8 @@ function loadGroups(key, params, revision, publish, force) {
     requestParams.pageSize = pageSize || requestParams.pageSize;
     const pages = total ? Math.ceil(total / requestParams.pageSize) : 0;
     const publishData = complete => {
+      // A refresh may finish while an older directory request is still running.
+      if (revision !== getSheetDataRevision()) return;
       // Keep the complete directory visible until its replacement is ready.
       if (!complete && readEntry(key)?.complete) return;
       const entry = saveEntry(key, data, revision, complete);
@@ -104,7 +107,7 @@ function loadGroups(key, params, revision, publish, force) {
       data = { ...data, data: data.data.concat(next.data) };
       publishData(page === pages);
     }
-  })().finally(() => pending.delete(key));
+  })().finally(() => pending.delete(pendingKey));
   return job;
 }
 
@@ -127,7 +130,7 @@ export function useInstitutionGroups(query, institutionType, region, pageSize = 
   // competing Google reads or discard records already available locally.
   const params = { query: "", institutionType: "", region: "", pageSize };
   const key = JSON.stringify([SOURCE, params.query, params.institutionType, params.region, pageSize]);
-  const revision = getSheetDataRevision();
+  const revision = useSyncExternalStore(subscribeSheetDataRevision, getSheetDataRevision);
   const [attempt, setAttempt] = useState(0);
   const forceRefresh = useRef(false);
   const [state, setState] = useState(() => ({ key, data: readEntry(key, params)?.data, loading: !readEntry(key, params), error: "" }));

@@ -9,6 +9,12 @@ const RECORD_CACHE_MS = 5 * 60 * 1000;
 const responseCache = new Map();
 const pendingRequests = new Map();
 let sheetDataRevision = 0;
+const sheetDataListeners = new Set();
+
+export function subscribeSheetDataRevision(listener) {
+  sheetDataListeners.add(listener);
+  return () => sheetDataListeners.delete(listener);
+}
 
 async function request(action, params = {}) {
   if (!API_URL) {
@@ -40,6 +46,7 @@ async function request(action, params = {}) {
       responseCache.clear();
       pendingRequests.clear();
       sheetDataRevision += 1;
+      sheetDataListeners.forEach(listener => listener());
     }
     return result;
   }).finally(() => {

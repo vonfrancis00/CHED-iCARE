@@ -23,6 +23,27 @@ function setup(getInstitutions, stored = null) {
   return { context, writes };
 }
 
+test('refresh starts a new directory read and ignores an older in-flight result', async () => {
+  let releaseOld;
+  let revision = 0;
+  const { context, writes } = setup(() => new Promise(resolve => { releaseOld = resolve; }));
+  context.getSheetDataRevision = () => revision;
+  const oldPublished = [];
+  const oldJob = context.loadGroups('directory', {}, 0, entry => oldPublished.push(entry), false);
+  revision = 1;
+  context.getInstitutions = async () => ({ total: 1, data: [{ Institution: 'Updated University' }] });
+  const newPublished = [];
+  const newJob = context.loadGroups('directory', {}, 1, entry => newPublished.push(entry), false);
+  assert.notEqual(newJob, oldJob);
+  await newJob.promise;
+  releaseOld({ total: 1, data: [{ Institution: 'Old University' }] });
+  await oldJob.promise;
+  assert.equal(oldPublished.length, 0);
+  assert.equal(newPublished[0].data.data[0].Institution, 'Updated University');
+  assert.equal(writes.length, 1);
+  assert.equal(context.readEntry('directory').revision, 1);
+});
+
 test('search filters saved records even when Google is unavailable and keeps all region options', () => {
   const { context } = setup(() => { throw new Error('Google timed out'); });
   const directory = { total: 3, regions: ['Region 4A', 'Region 1'], data: [
