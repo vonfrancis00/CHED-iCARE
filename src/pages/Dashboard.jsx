@@ -47,7 +47,7 @@ export default function Dashboard() {
             <img src="/ched-logo.png" alt="Commission on Higher Education" className="mt-0.5 h-14 w-14 rounded-full bg-white/95 p-1.5 shadow-lg" />
             <div>
               <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-sky-200">CHED Central Office · Monitoring dashboard</p>
-              <h1 className="page-title font-extrabold !text-white">Childcare Development Overview</h1>
+              <h1 className="page-title font-extrabold !text-white uppercase">Childcare Development Overview</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-100">A single, reliable view of institutional responses, program readiness, and support for Filipino families.</p>
             </div>
           </div>
