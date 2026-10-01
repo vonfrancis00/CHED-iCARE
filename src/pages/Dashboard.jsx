@@ -109,15 +109,15 @@ export default function Dashboard() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <PairedStatCard metrics={[
-          { label: "Personnel Facilities", value: o.facilityFacultyYes, icon: UsersRound, tone: "bg-blue-50 text-blue-700" },
+          { label: "Personnel Facilities", value: o.facilityFacultyYes, icon: UsersRound, tone: "bg-green-50 text-green-700" },
           { label: "Personnel Programs", value: o.programFacultyYes, icon: FileCheck, tone: "bg-amber-50 text-amber-700" }
         ]} />
         <PairedStatCard metrics={[
-          { label: "Student Facilities", value: o.facilityStudentsYes, icon: Users, tone: "bg-teal-50 text-teal-700" },
+          { label: "Student Facilities", value: o.facilityStudentsYes, icon: Users, tone: "bg-green-50 text-green-700" },
           { label: "Student Programs", value: o.programStudentsYes, icon: FileCheck, tone: "bg-amber-50 text-amber-700" }
         ]} />
         <PairedStatCard metrics={[
-          { label: "Community Members Facilities", value: o.facilityCommunityYes, icon: UsersRound, tone: "bg-teal-50 text-teal-700" },
+          { label: "Community Members Facilities", value: o.facilityCommunityYes, icon: UsersRound, tone: "bg-green-50 text-green-700" },
           { label: "Community Members Programs", value: o.programCommunityYes, icon: FileCheck, tone: "bg-amber-50 text-amber-700" }
         ]} />
       </div>

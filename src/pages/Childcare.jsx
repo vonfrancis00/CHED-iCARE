@@ -11,6 +11,7 @@ const format = value => count(value).toLocaleString();
 const totalAnswers = item => count(item?.yes) + count(item?.no) + count(item?.planned);
 const rate = item => totalAnswers(item) ? Math.round(count(item.yes) / totalAnswers(item) * 100) : null;
 const totals = items => items.reduce((sum, item) => ({ yes: sum.yes + count(item.yes), no: sum.no + count(item.no), planned: sum.planned + count(item.planned) }), { yes: 0, no: 0, planned: 0 });
+const childcareGroupName = name => /^community$/i.test(name?.trim()) ? "Community Members" : name;
 const displayRate = value => value === null ? "?" : `${value}%`;
 
 function ReadinessBar({ label, item, tone }) {
@@ -29,8 +30,8 @@ export default function Childcare() {
   if (loading && !data) return <Loading label="Loading facility and program insights..." />;
   if (!data) return <div className="card p-8"><h2 className="font-semibold text-slate-900">Unable to load childcare analysis</h2><p className="mt-2 text-sm text-slate-500">{error || "No childcare data is available."}</p><button type="button" onClick={() => reload({ force: true })} className="mt-4 rounded-xl bg-[#08264d] px-4 py-2 text-sm font-semibold text-white">Retry</button></div>;
 
-  const allFacilities = Array.isArray(data.facilityQuestions) ? data.facilityQuestions : [];
-  const allPrograms = Array.isArray(data.programQuestions) ? data.programQuestions : [];
+  const allFacilities = Array.isArray(data.facilityQuestions) ? data.facilityQuestions.map(item => ({ ...item, name: childcareGroupName(item.name) })) : [];
+  const allPrograms = Array.isArray(data.programQuestions) ? data.programQuestions.map(item => ({ ...item, name: childcareGroupName(item.name) })) : [];
   const groups = [...new Set([...allFacilities, ...allPrograms].map(item => item.name).filter(Boolean))];
   const group = groups.includes(selectedGroup) ? selectedGroup : "all";
   const facility = allFacilities.filter(item => group === "all" || item.name === group);

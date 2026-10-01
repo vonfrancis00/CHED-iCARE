@@ -1,6 +1,7 @@
-﻿import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
-import { ArrowDownUp, ArrowRight, ArrowUpRight, Building2, CheckCircle2, CircleDashed, ClipboardList, Clock3, RefreshCw, Search } from "lucide-react";
+import { ArrowDownUp, ArrowRight, ArrowUpRight, Building2, CheckCircle2, CircleDashed, ClipboardList, Clock3, RefreshCw, Search, X } from "lucide-react";
 import { useDashboard } from "../hooks/useDashboard";
 import Loading from "../components/common/Loading";
 import OCCSheetView from "../components/dashboard/OCCSheetView";
@@ -22,12 +23,42 @@ const completedDate = office => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+function OfficeRegisterModal({ office, onClose }) {
+  const dialogRef = useRef(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    dialog.showModal();
+    document.body.style.overflow = "hidden";
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus();
+    };
+  }, []);
+
+  return createPortal(
+    <dialog ref={dialogRef} id="occ-institution-register" aria-label={`${office.name} institution register`}
+      onCancel={onClose} onClick={event => {
+        if (event.target !== event.currentTarget) return;
+        const bounds = event.currentTarget.getBoundingClientRect();
+        if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onClose();
+      }}
+      className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-7xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-slate-950/60">
+      <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-3">
+        <p className="text-sm font-semibold text-blue-700">Office institution register</p>
+        <button type="button" autoFocus onClick={onClose} aria-label="Close office register" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"><X size={20} /></button>
+      </div>
+      <OCCSheetView key={office.name} offices={[office]} selectedOfficeName={office.name} isOpen />
+    </dialog>, document.body
+  );
+}
 export default function OCC({ user }) {
   const [selectedOfficeName, setSelectedOfficeName] = useState("");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("progress");
   const [status, setStatus] = useState("all");
-  const registerRef = useRef(null);
   const { data, loading, refreshing, error, reload } = useDashboard();
   if (loading && !data) return <Loading label="Loading office monitoring..." />;
   if (!data) return <div className="card p-8"><h2 className="font-semibold">Unable to load OCC / Office data</h2><p className="mt-2 text-sm text-slate-500">{error || "No data received."}</p><button onClick={() => reload({ force: true })} className="mt-4 rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white">Try again</button></div>;
@@ -55,7 +86,6 @@ export default function OCC({ user }) {
   const refresh = () => reload({ force: true });
   const openOffice = name => {
     setSelectedOfficeName(name);
-    window.requestAnimationFrame(() => registerRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" }));
   };
   const completedOffices = offices.filter(office => officeStatus(office) === "complete").length;
   return (
@@ -113,7 +143,7 @@ export default function OCC({ user }) {
               </span>
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Search or filter offices, then select one to explore its register below.
+              Search or filter offices, then select one to open its institution register.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -152,7 +182,7 @@ export default function OCC({ user }) {
             const progress = percent(responded, value);
             const completedAt = completedDate(office);
             const active = selectedOfficeName === office.name;
-            return <button key={office.name} type="button" aria-pressed={active} aria-controls="occ-institution-register"
+            return <button key={office.name} type="button" aria-haspopup="dialog" aria-controls="occ-institution-register"
             onClick={() => openOffice(office.name)}
             className={`group overflow-hidden rounded-2xl border bg-white text-left transition duration-200 hover:border-blue-400 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${active ? "border-blue-600 ring-1 ring-blue-600" : "border-slate-200"}`}>
               <div className="p-5">
@@ -207,7 +237,8 @@ export default function OCC({ user }) {
         </div>
         {completedDate(selected) && <div className="flex items-center gap-1.5 border-t border-emerald-100 bg-emerald-50 px-5 py-3 text-xs font-medium text-emerald-700 sm:px-6"><Clock3 size={14} /><time dateTime={selected.completedAt}>Completed {formatDate(completedDate(selected)) + " (PHT)"}</time></div>}
       </section>}
-      <div ref={registerRef} id="occ-institution-register" className="scroll-mt-6">
+      {isSuperAdmin && selected && <OfficeRegisterModal office={selected} onClose={() => setSelectedOfficeName("")} />}
+      {!isSuperAdmin && <div id="occ-institution-register" className="scroll-mt-6">
         {selected ? <OCCSheetView key={selected.name} offices={[selected]} selectedOfficeName={selected.name} isOpen /> :
         <div className="flex items-center gap-4 rounded-xl border border-dashed border-slate-300 p-6 text-slate-500">
           <Building2 size={24} className="shrink-0 text-slate-400" />
@@ -221,7 +252,7 @@ export default function OCC({ user }) {
           </div>
         </div>
         }
-      </div>
+      </div>}
       <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-5"><div><h2 className="text-sm font-semibold text-[#08264d]">Share office monitoring progress</h2><p className="mt-1 text-xs leading-5 text-slate-500">Prepare an office report with institution assignments and survey status.</p></div><Link to="/reports" className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-blue-800 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">Open reports<ArrowUpRight size={16} /></Link></section>
     </div>
   );
