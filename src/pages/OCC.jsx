@@ -65,7 +65,7 @@ export default function OCC({ user }) {
         <div className={`relative grid gap-8 p-6 sm:p-8 ${isSuperAdmin ? "lg:grid-cols-[1fr_300px] lg:items-center" : ""}`}>
           <div>
             <div className="mb-4 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-100"><Building2 size={15} /> Office oversight</div>
-            <h1 className="text-2xl font-extrabold tracking-tight sm:text-4xl">OCC / Offices</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight sm:text-4xl uppercase">OCC / Offices</h1>
             <p className="mt-3 max-w-lg text-sm leading-6 text-blue-100">{isSuperAdmin ? "Overview of institutional assignments, survey completion, and monitoring progress across Chairperson and Commissioners offices." : "Your office's institutional assignments, survey completion, and monitoring progress."}</p>
             <p className="mt-4 text-xs text-blue-200">{isSuperAdmin ? `${completedOffices} of ${offices.length} offices completed` : "Monitoring your assigned office"}{data.source === "demo" ? " ? Demo data" : ""}</p>
             <button type="button" onClick={refresh} disabled={refreshing} className="mt-6 inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-3.5 py-2 text-xs font-semibold transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300 disabled:opacity-50"><RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />{refreshing ? "Refreshing…" : "Refresh data"}</button>

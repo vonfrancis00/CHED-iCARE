@@ -370,7 +370,7 @@ export default function Settings({ user }) {
         <div className="relative flex flex-wrap items-end justify-between gap-6">
           <div>
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-blue-100"><ShieldCheck size={14} />Super admin workspace</div>
-            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Settings</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl uppercase">Settings</h1>
             <p className="mt-3 max-w-xl text-sm leading-6 text-blue-100">Manage who can access the childcare dashboard and assign each person to an office.</p>
           </div>
           <button type="button" className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-[#0b2c5b] shadow-lg shadow-blue-950/20 transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white" onClick={openCreate} aria-haspopup="dialog">
