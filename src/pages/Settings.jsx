@@ -35,7 +35,7 @@ function initials(name, email) {
 
 function DetailCard({ icon: Icon, label, value, detail }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="settings-detail-card rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-[#0b2c5b]"><Icon size={20} aria-hidden="true" /></div>
       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
       <p className="mt-1 text-lg font-bold text-slate-900">{value}</p>
@@ -67,6 +67,7 @@ export default function Settings({ user }) {
   const [usersError, setUsersError] = useState("");
   const [usersRefresh, setUsersRefresh] = useState(0);
   const [usersQuery, setUsersQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
   const [requests, setRequests] = useState(() => session.requests || []);
   const [requestsLoading, setRequestsLoading] = useState(!session.requests);
   const [requestsError, setRequestsError] = useState("");
@@ -87,8 +88,9 @@ export default function Settings({ user }) {
   const officeOptions = [...new Set([...offices, ...(editingUser?.office ? [editingUser.office] : [])])].sort((a, b) => a.localeCompare(b));
   const currentUserEmail = String(user?.email || "").trim().toLowerCase();
   const directoryUsers = users.filter(account => String(account.email || "").trim().toLowerCase() !== currentUserEmail);
-  const visibleUsers = directoryUsers.filter(account => [account.name, account.email, account.office, account.role]
-    .some(value => String(value || "").toLowerCase().includes(usersQuery.trim().toLowerCase())));
+  const visibleUsers = directoryUsers.filter(account => (!roleFilter || account.role === roleFilter)
+    && [account.name, account.email, account.office, account.role]
+      .some(value => String(value || "").toLowerCase().includes(usersQuery.trim().toLowerCase())));
   const usersByOffice = new Map();
   for (const account of visibleUsers) {
     const office = String(account.office || "").trim() || "No office assigned";
@@ -361,14 +363,14 @@ export default function Settings({ user }) {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 pb-8">
-      <section className="relative overflow-hidden rounded-[28px] bg-[#0b2c5b] px-6 py-8 text-white shadow-xl shadow-blue-950/10 sm:px-9 sm:py-10">
+    <div className="settings-page mx-auto max-w-6xl space-y-6 pb-8">
+      <section className="settings-hero relative overflow-hidden rounded-[28px] bg-[#0b2c5b] px-6 py-8 text-white shadow-xl shadow-blue-950/10 sm:px-9 sm:py-10">
         <div className="pointer-events-none absolute -right-12 -top-24 h-72 w-72 rounded-full border border-white/10 bg-white/5" aria-hidden="true" />
         <div className="pointer-events-none absolute -bottom-32 right-24 h-64 w-64 rounded-full border border-white/10" aria-hidden="true" />
         <div className="relative flex flex-wrap items-end justify-between gap-6">
           <div>
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-blue-100"><ShieldCheck size={14} />Super admin workspace</div>
-            <h1 className="text-3xl font-extrabold uppercase tracking-tight sm:text-4xl">Settings</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Settings</h1>
             <p className="mt-3 max-w-xl text-sm leading-6 text-blue-100">Manage who can access the childcare dashboard and assign each person to an office.</p>
           </div>
           <button type="button" className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-[#0b2c5b] shadow-lg shadow-blue-950/20 transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white" onClick={openCreate} aria-haspopup="dialog">
@@ -377,10 +379,11 @@ export default function Settings({ user }) {
         </div>
       </section>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <DetailCard icon={ShieldCheck} label="Your access" value="Super Admin" detail={user?.email || "User management access"} />
         <DetailCard icon={Building2} label="Office directory" value={officesLoading && !offices.length ? "Loading..." : `${offices.length} offices`} detail="Options from the OCC register" />
         <DetailCard icon={Mail} label="Account email" value="@ched.gov.ph" detail="Required for every new dashboard user" />
+        <DetailCard icon={UserPlus} label="Access requests" value={requestsLoading && !requests.length ? "Loading..." : requests.length.toLocaleString()} detail={requestsError ? "Requests could not be refreshed" : requests.length ? "Awaiting your review and approval" : "No pending requests"} />
       </div>
 
       {success && createPortal(
@@ -456,14 +459,14 @@ export default function Settings({ user }) {
         document.body
       )}
 
-      <section className="overflow-hidden rounded-[24px] border border-amber-200 bg-white shadow-sm" aria-labelledby="requests-list-title">
+      <section className="settings-requests overflow-hidden rounded-[24px] border border-amber-200 bg-white shadow-sm" aria-labelledby="requests-list-title">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-amber-100 bg-amber-50/70 px-6 py-5 sm:px-8"><div><p className="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-700">Account access</p><h2 id="requests-list-title" className="mt-1 text-xl font-bold text-slate-900">Requesting Users</h2><p className="mt-1 text-sm text-slate-500">Review people who requested dashboard access.</p></div><span className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-amber-800">{requests.length} pending</span></div>
         <ul className="divide-y divide-slate-100">{requests.map(request => <li key={request.row} className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 sm:px-8"><div><p className="font-bold text-slate-900">{request.name}</p><p className="mt-1 text-sm text-slate-500">{request.email} &middot; {request.office}</p></div><button type="button" onClick={event => openApprove(event, request)} className="inline-flex items-center gap-2 rounded-xl bg-[#0b2c5b] px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-900"><CheckCircle2 size={16} />Review & Approve</button></li>)}</ul>
         {requestsError && <div className="px-6 py-4 text-sm text-red-800" role="alert">{requestsError} <button type="button" disabled={requestsLoading} onClick={() => setUsersRefresh(value => value + 1)} className="font-semibold underline">Retry</button></div>}
         {!requestsLoading && !requestsError && !requests.length && <p className="px-6 py-8 text-center text-sm text-slate-500">No account requests are pending.</p>}{requestsLoading && <p className="px-6 py-8 text-center text-sm text-slate-500">Loading requests...</p>}
       </section>
 
-      <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm" aria-labelledby="users-list-title">
+      <section className="settings-directory overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm" aria-labelledby="users-list-title">
         <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-blue-50/70 px-6 py-7 sm:px-8">
           <div className="flex flex-wrap items-start justify-between gap-5">
             <div className="flex items-start gap-4">
@@ -471,7 +474,7 @@ export default function Settings({ user }) {
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-blue-700">Directory</p>
                 <h2 id="users-list-title" className="mt-1 text-xl font-bold tracking-tight text-slate-900">Dashboard Users</h2>
-                <p className="mt-1 text-sm text-slate-500">Select an office to view its dashboard users.</p>
+                <p className="mt-1 text-sm text-slate-500">Manage other dashboard users by office. Your account appears in the access summary above.</p>
               </div>
             </div>
             <button ref={refreshButtonRef} type="button" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-[#0b2c5b] shadow-sm transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-60" onClick={() => setUsersRefresh(value => value + 1)} disabled={usersLoading}>
@@ -490,13 +493,19 @@ export default function Settings({ user }) {
               <Search size={18} className="pointer-events-none absolute left-3.5 top-3.5 text-slate-400" aria-hidden="true" />
               <input type="search" aria-label="Search users" value={usersQuery} onChange={event => setUsersQuery(event.target.value)} placeholder="Search by name, email, or office" className="settings-input settings-input-with-leading-icon settings-search-input" />
             </div>
+            <select aria-label="Filter users by access role" value={roleFilter} onChange={event => setRoleFilter(event.target.value)} className="settings-input settings-role-filter">
+              <option value="">All access roles</option>
+              <option value="admin">Admins</option>
+              <option value="super_admin">Super Admins</option>
+            </select>
+            {(usersQuery || roleFilter) && <button type="button" className="settings-clear-filters inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50" onClick={() => { setUsersQuery(""); setRoleFilter(""); }}><X size={14} aria-hidden="true" />Clear filters</button>}
             <p className="text-xs font-medium text-slate-500" aria-live="polite">Showing {visibleUsers.length} of {directoryUsers.length}</p>
           </div>
           {usersError && <div className="mt-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert"><AlertCircle size={18} className="shrink-0" />{usersError}</div>}
           <ul className="mt-5 space-y-3">
             {officeGroups.map(([office, officeUsers]) => (
               <li key={office}>
-                <details className="group/office overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/50">
+                <details className="settings-office-group group/office overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/50" open={usersQuery.trim() || roleFilter ? true : undefined}>
                   <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 text-[#0b2c5b] transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-blue-600 [&::-webkit-details-marker]:hidden">
                     <Building2 size={20} className="shrink-0" aria-hidden="true" />
                     <span className="min-w-0 flex-1 break-words text-sm font-bold">{office}</span>
@@ -523,7 +532,11 @@ export default function Settings({ user }) {
               </li>
             ))}
           </ul>
-          {!usersLoading && !usersError && !visibleUsers.length && <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">{usersQuery ? "No users match your search." : "No other users found in the Users sheet."}</div>}
+          {!usersLoading && !usersError && !visibleUsers.length && <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
+            <span className="rounded-xl bg-blue-100 p-3 text-blue-700"><UsersRound size={24} aria-hidden="true" /></span>
+            <h3 className="text-sm font-bold text-slate-800">{usersQuery || roleFilter ? "No matching users" : "No other users yet"}</h3>
+            <p className="text-sm text-slate-500">{usersQuery || roleFilter ? "Try a different search or access role." : "Add a user or approve an access request to grow the directory."}</p>
+          </div>}
           {usersLoading && !directoryUsers.length && <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500" role="status">Loading users...</div>}
         </div>
       </section>

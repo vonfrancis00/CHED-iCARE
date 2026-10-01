@@ -310,6 +310,22 @@ h1, h2, h3, h4, h5, h6 { font-family: "Plus Jakarta Sans", "DM Sans", ui-sans-se
 }
 
 /* Sidebar refinements and persistent desktop navigation. */
+.settings-page .settings-hero { border: 1px solid #315679; background: radial-gradient(ellipse at top right, rgb(14 165 233 / .18), transparent 60%), linear-gradient(125deg, #06162d, #123c6d); }
+.settings-page .settings-detail-card { position: relative; overflow: hidden; border-color: #dbe7f4; background: linear-gradient(145deg, white, #f6faff); box-shadow: 0 6px 20px rgb(15 45 85 / .05); }
+.settings-page .settings-detail-card::before { position: absolute; inset: 0 auto 0 0; width: 4px; content: ""; background: #0284c7; }
+.settings-page .settings-detail-card:nth-child(2)::before { background: #0d9488; }
+.settings-page .settings-detail-card:nth-child(3)::before { background: #6366f1; }
+.settings-page .settings-detail-card p { overflow-wrap: anywhere; }
+.settings-page .settings-directory, .settings-page .settings-requests { box-shadow: 0 8px 28px rgb(15 45 85 / .06); }
+.settings-page .settings-role-filter { width: auto; min-width: 170px; }
+.settings-page .settings-office-group[open] { border-color: #bfd7f3; background: #f4f8fd; }
+.settings-page .settings-office-group[open] > summary { background: #edf5ff; box-shadow: inset 3px 0 #2563eb; }
+.settings-page button:focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }
+.settings-page button[aria-label^="Edit "], .settings-page button[aria-label^="Delete "] { width: 44px; height: 44px; }
+@media (max-width: 639px) {
+  .settings-page .settings-role-filter { width: 100%; }
+  .settings-page .settings-requests li > div { min-width: 0; overflow-wrap: anywhere; }
+}
 .institutions-page .institution-metrics > .card { position: relative; overflow: hidden; border-color: #dbe7f4; border-radius: 20px; background: linear-gradient(145deg, #fff, #f6faff); box-shadow: 0 6px 20px rgb(15 45 85 / .05); }
 .institutions-page .institution-metrics > .card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: #0284c7; }
 .institutions-page .institution-metrics > .card:nth-child(2)::before { background: #0d9488; }
