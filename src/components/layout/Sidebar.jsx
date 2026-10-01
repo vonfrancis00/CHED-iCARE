@@ -130,7 +130,7 @@ export default function Sidebar({ mobileOpen, pinned, onTogglePin, onClose, user
             <section className="sidebar-section" key={group.label} aria-label={group.label}>
               <div className="sidebar-section-title sidebar-label">{group.label}</div>
               {group.items.map((item) => <SidebarLink key={item[1]} item={item} onClose={onClose} />)}
-              {group.label === "Records" && user.role === "super_admin" && <SidebarLink item={["Settings", "/settings", Settings, "Accounts & access"]} onClose={onClose} hasNotification={hasAccountRequests} />}
+              {group.label === "Records" && user.role === "super_admin" && <SidebarLink item={["Settings", "/settings", Settings, "Accounts & Access"]} onClose={onClose} hasNotification={hasAccountRequests} />}
             </section>
           ))}
         </nav>
