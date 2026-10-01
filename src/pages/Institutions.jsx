@@ -351,7 +351,7 @@ function DetailsModal({ row, headers, onClose }) {
                         <span aria-hidden="true" className="flex h-6 min-w-6 items-center justify-center rounded-md bg-slate-100 px-1 text-[10px] font-semibold tabular-nums text-slate-500">{String(index + 1).padStart(2, "0")}</span>
                         <p className="pt-0.5 text-sm font-semibold leading-5 text-slate-600">{header}</p>
                       </div>
-                      <div className="ml-9 mt-3 whitespace-pre-wrap break-words border-l-2 border-blue-100 pl-3 text-[15px] font-medium leading-7 text-slate-900">
+                      <div className="ml-9 mt-3 whitespace-pre-wrap break-words border-l-2 border-blue-100 pl-3 text-[15px] font-medium italic leading-7 text-slate-900">
                         {displayValue}
                       </div>
                     </div>
