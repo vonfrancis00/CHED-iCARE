@@ -153,11 +153,11 @@ h1, h2, h3, h4, h5, h6 { font-family: "Plus Jakarta Sans", "DM Sans", ui-sans-se
 @media (min-width: 1024px) {
   .sidebar { width: 112px; transform: none; visibility: visible; }
   .sidebar .sidebar-label { opacity: 0; pointer-events: none; }
-  .sidebar:is(:hover, :has(:focus-visible)) { width: 320px; box-shadow: 16px 0 32px rgb(2 6 23 / .15); }
-  .sidebar:is(:hover, :has(:focus-visible)) .sidebar-label { opacity: 1; pointer-events: auto; }
-  .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-update-icon,
-  .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-footer .sidebar-label { display: none; }
-  .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-update-status {
+  .sidebar:is(:hover, :has(:focus-visible), .is-pinned) { width: 320px; box-shadow: 16px 0 32px rgb(2 6 23 / .15); }
+  .sidebar:is(:hover, :has(:focus-visible), .is-pinned) .sidebar-label { opacity: 1; pointer-events: auto; }
+  .sidebar:not(:hover):not(:has(:focus-visible)):not(.is-pinned) .sidebar-update-icon,
+  .sidebar:not(:hover):not(:has(:focus-visible)):not(.is-pinned) .sidebar-footer .sidebar-label { display: none; }
+  .sidebar:not(:hover):not(:has(:focus-visible)):not(.is-pinned) .sidebar-update-status {
     width: 54px;
     min-height: 54px;
     margin-inline: auto;
@@ -167,9 +167,9 @@ h1, h2, h3, h4, h5, h6 { font-family: "Plus Jakarta Sans", "DM Sans", ui-sans-se
     background: transparent;
     box-shadow: none;
   }
-  .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-account,
-  .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-signout { justify-content: center; gap: 0; }
-  .sidebar:not(:hover):not(:has(:focus-visible)) .sidebar-refresh {
+  .sidebar:not(:hover):not(:has(:focus-visible)):not(.is-pinned) .sidebar-account,
+  .sidebar:not(:hover):not(:has(:focus-visible)):not(.is-pinned) .sidebar-signout { justify-content: center; gap: 0; }
+  .sidebar:not(:hover):not(:has(:focus-visible)):not(.is-pinned) .sidebar-refresh {
     width: 54px;
     height: 54px;
     justify-content: center;
@@ -182,6 +182,7 @@ h1, h2, h3, h4, h5, h6 { font-family: "Plus Jakarta Sans", "DM Sans", ui-sans-se
   .sidebar-close, .sidebar-backdrop { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .app-shell-content { transition: none; }
   .sidebar, .sidebar-label, .sidebar-link { transition: none; }
   .loading-orb, .loading-ring, .loading-icon, .loading-progress span { animation: none; }
   .loading-progress span { width: 100%; }
@@ -307,3 +308,37 @@ h1, h2, h3, h4, h5, h6 { font-family: "Plus Jakarta Sans", "DM Sans", ui-sans-se
   .occ-document-table { min-width: 540px; }
   .occ-print-content { min-height: 0; }
 }
+
+/* Sidebar refinements and persistent desktop navigation. */
+.institutions-page .institution-metrics > .card { position: relative; overflow: hidden; border-color: #dbe7f4; border-radius: 20px; background: linear-gradient(145deg, #fff, #f6faff); box-shadow: 0 6px 20px rgb(15 45 85 / .05); }
+.institutions-page .institution-metrics > .card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: #0284c7; }
+.institutions-page .institution-metrics > .card:nth-child(2)::before { background: #0d9488; }
+.institutions-page .institution-metrics > .card:nth-child(3)::before { background: #d97706; }
+.institutions-page .institution-metrics p { font-variant-numeric: tabular-nums; }
+.institutions-page .institution-metrics p + p { color: #12345f; font-size: 36px; font-weight: 800; letter-spacing: -.04em; }
+.institutions-page .institution-filters { border-radius: 20px; border-color: #dbe7f4; box-shadow: 0 6px 20px rgb(15 45 85 / .04); }
+.institutions-page .institution-filters input:focus-visible, .institutions-page .institution-filters select:focus-visible { outline: 2px solid #93c5fd; outline-offset: 2px; }
+.institutions-page :is(.institution-refresh, .institution-reset):focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }
+.institutions-page .institution-directory { border-radius: 20px; border-color: #dbe7f4; box-shadow: 0 8px 28px rgb(15 45 85 / .06); }
+.institution-type-badge { padding: 2px 7px; border: 1px solid #cce2f7; border-radius: 6px; color: #24518b; background: #eef6ff; font-size: 10px; font-weight: 700; line-height: 1.5; }
+.institution-region-badge { padding: 2px 0; color: #64748b; font-size: 11px; font-weight: 400; line-height: 1.5; }
+.sidebar { background: radial-gradient(ellipse at top left, #153961 0%, transparent 55%), #091c3e; }
+.sidebar-pin { display: none; }
+.sidebar-link { color: #b4c7df; }
+.sidebar-link.is-active { background: linear-gradient(110deg, #164b75, #12345f); color: #a5efff; box-shadow: inset 0 0 0 1px #35668c, 0 4px 12px rgb(0 9 27 / .16); }
+.sidebar-link.is-active small { color: #b0cde2; }
+.sidebar-link:not(.is-active) .sidebar-chevron { opacity: 0; }
+.sidebar-link:hover .sidebar-chevron { opacity: 1; }
+.sidebar-icon svg { stroke-width: 1.8; }
+.sidebar-account-avatar { font-size: 13px; font-weight: 800; letter-spacing: .04em; }
+.sidebar-update-status.has-error { border-color: #b88b48; }
+.sidebar-update-status.has-error .sidebar-update-copy span { color: #f7cf91; }
+@media (min-width: 1024px) {
+  .app-shell-content { transition: padding-left 220ms ease; }
+  .app-shell-content.sidebar-pinned-content { padding-left: 320px; }
+  .sidebar-pin { display: flex; align-items: center; gap: 18px; flex-shrink: 0; height: 36px; margin: 12px 16px 0; padding: 0 31px; overflow: hidden; border: 1px solid #294363; border-radius: 10px; color: #adc5e0; font-size: 11px; white-space: nowrap; }
+  .sidebar-pin svg { flex-shrink: 0; }
+  .sidebar-pin:hover, .sidebar-pin[aria-pressed="true"] { color: #a5efff; background: #12345f; border-color: #35668c; }
+}
+
+@media (prefers-reduced-motion: reduce) { .app-shell-content { transition: none; } }

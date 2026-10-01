@@ -207,7 +207,7 @@ export default function Geographic() {
           <p className="mt-2 text-sm text-slate-500">Add campus addresses to the source sheet to populate the geographic distribution.</p>
         </section>
       )}
-      <RegionalParticipation institutionType={institutionType} region={region} onSelectRegion={setRegion} />
+      <RegionalParticipation institutionType={institutionType} region={region} />
     </div>
   );
 }

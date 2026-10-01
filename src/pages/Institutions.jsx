@@ -1,6 +1,6 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { Building2, ChevronDown, ChevronLeft, ChevronRight, Eye, Search, X, Database, LoaderCircle } from "lucide-react";
+import { Building2, ChevronDown, ChevronLeft, ChevronRight, Eye, Search, X, Database, LoaderCircle, RefreshCw, SlidersHorizontal } from "lucide-react";
 import { useInstitutionGroups } from "../hooks/useInstitutionGroups";
 import { groupCampuses, groupInstitutions } from "../utils/institutionGroups";
 import Loading from "../components/common/Loading";
@@ -65,6 +65,11 @@ export default function Institutions() {
   const isFilterLoading = filterPending && !hasCurrentData && !error;
   const visibleGroups = !hasCurrentData ? [] : groups.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const loadInstitutions = reload;
+  const hasFilters = Boolean(q || institutionType || region);
+  const resetFilters = () => {
+    setFilterPending(true);
+    setQ(""); setInstitutionType(""); setRegion(""); setPage(1);
+  };
   const changePage = nextPage => { setPage(nextPage); tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
   const changePageSize = nextPageSize => { setPage(1); setPageSize(nextPageSize); };
 
@@ -79,7 +84,7 @@ export default function Institutions() {
   if (loading && !data && !error) return <Loading variant="institutions" label="Reading institution responses..." />;
 
   return (
-    <div className="space-y-6">
+    <div className="institutions-page space-y-6">
       <header className="overflow-hidden rounded-[28px] border border-blue-200/20 bg-gradient-to-br from-[#06162d] via-[#0d2342] to-[#1d4f91] p-6 text-white shadow-[0_20px_60px_rgba(15,23,42,0.25)] sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -87,12 +92,15 @@ export default function Institutions() {
               <Building2 size={14} />
               Institution registry
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight sm:text-4xl uppercase">Institutions</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight sm:text-4xl">Institutions</h1>
             <p className="mt-3 max-w-2xl text-sm text-blue-100 sm:text-base">
               Overview of participating institutions, campuses, facilities, and childcare development programs.
             </p>
           </div>
-
+          <button type="button" onClick={loadInstitutions} disabled={loading || backgroundLoading} className="institution-refresh inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl border border-white/25 bg-white/10 px-4 py-3 text-sm font-semibold hover:bg-white/20 disabled:cursor-wait disabled:opacity-60 lg:self-auto">
+            <RefreshCw size={17} className={loading || backgroundLoading ? "animate-spin" : ""} aria-hidden="true" />
+            {loading || backgroundLoading ? "Refreshing…" : "Refresh directory"}
+          </button>
         </div>
       </header>
 
@@ -106,7 +114,7 @@ export default function Institutions() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="institution-metrics grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -114,7 +122,7 @@ export default function Institutions() {
               <p className="mt-3 text-3xl font-semibold text-slate-900">{respondedCount}</p>
             </div>
             <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
-              <Search size={22} />
+              <Database size={22} />
             </div>
           </div>
         </div>
@@ -144,11 +152,15 @@ export default function Institutions() {
         </div>
       </div>
 
-      <div className="card mb-5 p-4">
+      <div className="institution-filters card p-4 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800"><SlidersHorizontal size={16} className="text-blue-600" aria-hidden="true" />Find institutions</h2>
+          {hasFilters && <button type="button" onClick={resetFilters} className="institution-reset inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"><X size={14} aria-hidden="true" />Clear filters</button>}
+        </div>
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_220px]">
           <div className="relative">
           <Search className="absolute left-3 top-3.5 text-slate-400" size={18}/>
-          <input value={q} onChange={e => { setFilterPending(true); setPage(1); setQ(e.target.value); }} placeholder="Search Institution..." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 outline-none focus:border-blue-500" aria-label="Search institutions" aria-busy={isSearching}/>
+          <input value={q} onChange={e => { setFilterPending(true); setPage(1); setQ(e.target.value); }} placeholder="Search by institution name?" className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 outline-none focus:border-blue-500" aria-label="Search institutions" aria-busy={isSearching}/>
           {isSearching && <LoaderCircle className="absolute right-3 top-3.5 animate-spin text-blue-600" size={18} aria-label="Searching"/>}
         </div>
           <div
@@ -170,7 +182,7 @@ export default function Institutions() {
           </div>
           <select value={region} onChange={event => { setFilterPending(true); setPage(1); setRegion(event.target.value); }} aria-label="Filter by region" className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 outline-none focus:border-blue-500"><option value="">All Regions</option>{regions.map(item => <option key={item} value={item}>{item}</option>)}</select>
         </div>
-        <p className="mt-2 text-xs text-slate-500">{total.toLocaleString()} matching response{total === 1 ? "" : "s"} · {institutionCount.toLocaleString()} institutions · showing {firstRow.toLocaleString()}–{lastRow.toLocaleString()}</p>
+        <p className="mt-3 text-xs text-slate-500" role="status">{total.toLocaleString()} matching response{total === 1 ? "" : "s"} · {institutionCount.toLocaleString()} institutions · showing {firstRow.toLocaleString()}–{lastRow.toLocaleString()}</p>
       </div>
 
       <div ref={tableRef} className="institution-directory card overflow-hidden scroll-mt-6">
@@ -194,7 +206,13 @@ export default function Institutions() {
                     <td className="px-5 py-4 font-semibold text-slate-900 sm:px-6">
                       <button type="button" aria-expanded={expanded === group.key} aria-controls={`institution-responses-${index}`} onClick={event => { event.stopPropagation(); setExpanded(expanded === group.key ? null : group.key); }} className="institution-toggle flex w-full items-center gap-3 text-left sm:gap-4">
                         <span className="institution-symbol hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:flex"><Building2 size={19} /></span>
-                        <span className="flex-1 leading-relaxed">{group.name}</span>
+                        <span className="min-w-0 flex-1 leading-relaxed">
+                          <span className="block">{group.name}</span>
+                          <span className="mt-1.5 flex flex-wrap gap-1.5">
+                            {[...new Set(group.rows.map(row => String(row["SUC/LUC"] || "").trim()).filter(Boolean))].map(type => <span key={type} className="institution-type-badge">{type}</span>)}
+                            {[...new Set(group.rows.map(row => String(row.Region || "").trim()).filter(Boolean))].map(item => <span key={item} className="institution-region-badge">{item}</span>)}
+                          </span>
+                        </span>
                         <ChevronDown size={17} className={`shrink-0 text-slate-400 transition-transform ${expanded === group.key ? "rotate-180 text-blue-600" : ""}`} />
                       </button>
                     </td>
@@ -210,7 +228,12 @@ export default function Institutions() {
             </tbody>
           </table>
         </div>
-        {!visibleGroups.length && !loading && !isFilterLoading && !error && <div className="p-10 text-center text-sm text-slate-500">No matching responses.</div>}
+        {!visibleGroups.length && !loading && !isFilterLoading && !error && <div className="flex flex-col items-center gap-3 px-5 py-12 text-center">
+          <span className="rounded-2xl bg-blue-50 p-4 text-blue-600"><Search size={25} aria-hidden="true" /></span>
+          <h3 className="font-semibold text-slate-800">No institutions found</h3>
+          <p className="max-w-sm text-sm text-slate-500">{hasFilters ? "Try a different institution name, type, or region." : "Institution responses will appear here when available."}</p>
+          {hasFilters && <button type="button" onClick={resetFilters} className="institution-reset rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-800">Clear filters</button>}
+        </div>}
         {total > 0 && <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="text-slate-500">Showing <span className="font-semibold text-slate-700">{firstRow}–{lastRow}</span> of {institutionCount.toLocaleString()} institutions</div>
           <div className="flex flex-wrap items-center gap-3"><label className="flex items-center gap-2 text-xs text-slate-500">Institutions per page<select value={pageSize} onChange={event => changePageSize(Number(event.target.value))} disabled={isPageLoading} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 focus:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-50"><option value={10}>10</option><option value={20}>20</option><option value={50}>50</option></select></label><div className="flex items-center gap-1"><button type="button" onClick={() => changePage(Math.max(1, currentPage - 1))} disabled={isPageLoading || currentPage === 1} aria-label="Previous page" className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={16} /></button><span className="min-w-20 text-center text-xs font-medium text-slate-600" aria-live="polite">{isPageLoading ? `Loading ${page}…` : `Page ${currentPage} of ${pageCount}`}</span><button type="button" onClick={() => changePage(Math.min(pageCount, currentPage + 1))} disabled={isPageLoading || currentPage === pageCount} aria-label="Next page" aria-busy={isPageLoading} className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40">{isPageLoading ? <LoaderCircle size={16} className="animate-spin" /> : <ChevronRight size={16} />}</button></div></div>

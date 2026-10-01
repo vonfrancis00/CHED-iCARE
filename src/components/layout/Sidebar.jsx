@@ -1,7 +1,7 @@
 import { accountFetch } from "../../services/accountApi";
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
-import { Baby, BarChart3, BriefcaseBusiness, Building2, ChevronRight, Clock3, FileText, LogOut, Map, RefreshCw, Settings, UserRound, Users, X } from "lucide-react";
+import { Baby, BarChart3, BriefcaseBusiness, Building2, ChevronRight, Clock3, FileText, LogOut, Map, Pin, PinOff, RefreshCw, Settings, Users, X } from "lucide-react";
 import { useDashboard } from "../../hooks/useDashboard";
 
 const navGroups = [
@@ -35,7 +35,7 @@ function SidebarLink({ item: [label, path, Icon, description], onClose, hasNotif
   };
 
   return (
-    <NavLink to={path} end={path === "/"} onClick={handleClick} aria-label={hasNotification ? `${label}: new access request` : label}
+    <NavLink to={path} end={path === "/"} onClick={handleClick} title={label} aria-label={hasNotification ? `${label}: new access request` : label}
       className={({ isActive }) => `sidebar-link${isActive ? " is-active" : ""}`}>
       <span className="sidebar-icon"><Icon size={22} aria-hidden="true" /></span>
       <span className="sidebar-label sidebar-link-copy">
@@ -48,27 +48,30 @@ function SidebarLink({ item: [label, path, Icon, description], onClose, hasNotif
 }
 
 function SidebarUpdateStatus() {
-  const { data, refreshing, reload } = useDashboard();
+  const { data, refreshing, error, reload } = useDashboard();
   const updatedAt = data?.cachedAt || data?.updatedAt;
-  const label = updatedAt ? new Date(updatedAt).toLocaleString() : "Checking for updates";
+  const date = updatedAt ? new Date(updatedAt) : null;
+  const validDate = date && !Number.isNaN(date.getTime());
+  const label = validDate ? date.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "Awaiting first update";
 
   return (
-    <div className="sidebar-update-status">
+    <div className={`sidebar-update-status${error ? " has-error" : ""}`}>
       <Clock3 size={17} aria-hidden="true" className="sidebar-update-icon" />
       <div className="sidebar-label sidebar-update-copy">
-        <span>Last updated</span>
-        <time dateTime={updatedAt || undefined}>{label}</time>
+        <span aria-live="polite">{refreshing ? "Refreshing data" : error ? "Refresh unavailable" : "Last updated"}</span>
+        <time dateTime={validDate ? date.toISOString() : undefined} title={validDate ? date.toLocaleString() : undefined}>{label}</time>
       </div>
       <button type="button" onClick={() => reload({ force: true })} disabled={refreshing} aria-label="Refresh dashboard data" title="Refresh dashboard data" className="sidebar-refresh">
         <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} aria-hidden="true" />
-        <span className="sidebar-label">Refresh</span>
       </button>
     </div>
   );
 }
 
-export default function Sidebar({ mobileOpen, onClose, user, onLogout }) {
+export default function Sidebar({ mobileOpen, pinned, onTogglePin, onClose, user, onLogout }) {
   const [hasAccountRequests, setHasAccountRequests] = useState(false);
+  const accountName = user.name || user.email || "Administrator";
+  const initials = accountName.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase();
 
   useEffect(() => {
     if (user?.role !== "super_admin") {
@@ -112,27 +115,31 @@ export default function Sidebar({ mobileOpen, onClose, user, onLogout }) {
   return (
     <>
       {mobileOpen && <button type="button" className="sidebar-backdrop" aria-label="Close navigation" onClick={onClose} />}
-      <aside id="main-sidebar" aria-label="Main navigation" onKeyDown={(event) => { if (event.key === "Escape") onClose(); }} className={`sidebar${mobileOpen ? " is-mobile-open" : ""}`}>
+      <aside id="main-sidebar" aria-label="Main navigation" onKeyDown={(event) => { if (event.key === "Escape") onClose(); }} className={`sidebar${mobileOpen ? " is-mobile-open" : ""}${pinned ? " is-pinned" : ""}`}>
         <header className="sidebar-brand">
           <img src="/ched-logo.png" alt="CHED logo" />
           <div className="sidebar-label sidebar-brand-copy"><small>CHED iCARE Program</small><strong>Monitoring Dashboard</strong></div>
           <button type="button" className="sidebar-close" onClick={onClose} aria-label="Close navigation"><X size={20} /></button>
         </header>
+        <button type="button" className="sidebar-pin" onClick={onTogglePin} aria-pressed={pinned} title={pinned ? "Unpin sidebar" : "Keep sidebar open"} aria-label={pinned ? "Unpin sidebar" : "Keep sidebar open"}>
+          {pinned ? <PinOff size={16} aria-hidden="true" /> : <Pin size={16} aria-hidden="true" />}
+          <span className="sidebar-label">{pinned ? "Unpin navigation" : "Keep navigation open"}</span>
+        </button>
         <nav className="sidebar-nav" aria-label="Dashboard sections">
           {navigationGroups.map((group) => (
             <section className="sidebar-section" key={group.label} aria-label={group.label}>
               <div className="sidebar-section-title sidebar-label">{group.label}</div>
               {group.items.map((item) => <SidebarLink key={item[1]} item={item} onClose={onClose} />)}
-              {group.label === "Records" && user.role === "super_admin" && <SidebarLink item={["Settings", "/settings", Settings]} onClose={onClose} hasNotification={hasAccountRequests} />}
+              {group.label === "Records" && user.role === "super_admin" && <SidebarLink item={["Settings", "/settings", Settings, "Accounts & access"]} onClose={onClose} hasNotification={hasAccountRequests} />}
             </section>
           ))}
         </nav>
         <footer className="sidebar-footer">
           <SidebarUpdateStatus />
-          <div className="sidebar-account" title={`${user.name || user.email}${user.office ? ` Â· ${user.office}` : ""}`}>
-            <span className="sidebar-account-avatar"><UserRound size={20} aria-hidden="true" /></span>
+          <div className="sidebar-account" title={`${accountName}${user.office ? ` ? ${user.office}` : ""}`}>
+            <span className="sidebar-account-avatar" aria-hidden="true">{initials}</span>
             <div className="sidebar-label sidebar-account-copy">
-              <strong>{user.name || user.email}</strong>
+              <strong>{accountName}</strong>
               <span>{user.role === "super_admin" ? "Super Admin" : "Admin"}</span>
               {user.office && <span>{user.office}</span>}
             </div>

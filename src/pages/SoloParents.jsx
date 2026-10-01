@@ -1,88 +1,60 @@
-
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowUpRight, HeartHandshake, RefreshCw, Users, GraduationCap, MapPin } from "lucide-react";
 import { useDashboard } from "../hooks/useDashboard";
 import Loading from "../components/common/Loading";
 import SoloParentChart from "../components/dashboard/SoloParentChart";
-import StatCard from "../components/dashboard/StatCard";
-import { Users, HeartHandshake, createLucideIcon } from "lucide-react";
 
-const Venus = createLucideIcon("Venus", [
-  ["circle", { cx: 12, cy: 8, r: 5, key: "circle" }],
-  ["path", { d: "M12 13v8M9 18h6", key: "cross" }]
-]);
+const count = value => Math.max(0, Number(value) || 0);
+const format = value => count(value).toLocaleString();
+const hasValue = value => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+const displayCount = value => hasValue(value) ? format(value) : "?";
 
-const Mars = createLucideIcon("Mars", [
-  ["circle", { cx: 10, cy: 14, r: 6, key: "circle" }],
-  ["path", { d: "m14.5 9.5 6.5-6.5M15 3h6v6", key: "arrow" }]
-]);
+function PopulationCard({ item, title, description, Icon }) {
+  const female = count(item.female), male = count(item.male), sexTotal = female + male;
+  return <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+    <div className="flex items-start gap-3"><span className="rounded-xl bg-blue-50 p-3 text-blue-700"><Icon size={22} /></span><div><h2 className="text-lg font-semibold text-slate-900">{title}</h2><p className="mt-1 text-xs leading-5 text-slate-500">{description}</p></div></div>
+    <dl className="mt-5 grid grid-cols-3 gap-2 rounded-2xl bg-slate-50 p-4">{[["Reported total", item.total], ["Female", item.female], ["Male", item.male]].map(([label, value]) => <div key={label}><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-2 break-words text-xl font-bold tabular-nums text-[#08264d] sm:text-2xl">{displayCount(value)}</dd></div>)}</dl>
+    <h3 className="mt-6 text-xs font-semibold uppercase tracking-widest text-slate-500">Composition by reported sex</h3>
+    {sexTotal > 0 ? <>
+      <div role="img" aria-label={`${title}: ${(female / sexTotal * 100).toFixed(1)}% female and ${(male / sexTotal * 100).toFixed(1)}% male`} className="mt-4 flex h-3 overflow-hidden rounded-full bg-slate-100"><div className="bg-red-500" style={{ width: `${female / sexTotal * 100}%` }} /><div className="bg-blue-600" style={{ width: `${male / sexTotal * 100}%` }} /></div>
+      <div className="mt-3 flex flex-wrap justify-between gap-3 text-xs"><span className="text-slate-600"><span className="mr-2 inline-block h-2 w-2 rounded-full bg-red-500" />Female <strong className="ml-1 text-slate-800">{(female / sexTotal * 100).toFixed(1)}%</strong></span><span className="text-slate-600"><span className="mr-2 inline-block h-2 w-2 rounded-full bg-blue-600" />Male <strong className="ml-1 text-slate-800">{(male / sexTotal * 100).toFixed(1)}%</strong></span></div>
+    </> : <p className="mt-4 rounded-xl bg-slate-50 p-4 text-xs leading-5 text-slate-500">No positive sex-specific counts are available for this group.</p>}
+    {hasValue(item.total) && hasValue(item.female) && hasValue(item.male) && count(item.total) !== sexTotal && <p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-800">The reported total differs from the sum of female and male counts. Composition uses the sex-specific counts.</p>}
+  </section>;
+}
 
 export default function SoloParents() {
-  const { data, loading, error } = useDashboard();
+  const { data, loading, refreshing, error, reload } = useDashboard();
+  const [scope, setScope] = useState("all");
+  if (loading && !data) return <Loading label="Loading solo parent insights..." />;
+  if (!data) return <div className="card p-8"><h2 className="font-semibold text-slate-900">Unable to load solo parent data</h2><p className="mt-2 text-sm text-slate-500">{error || "No solo parent data is available."}</p><button type="button" onClick={() => reload({ force: true })} className="mt-4 rounded-xl bg-[#08264d] px-4 py-2 text-sm font-semibold text-white">Retry</button></div>;
+  const rows = Array.isArray(data.soloParents) ? data.soloParents : [];
+  const campus = rows.find(item => item.name === "Enrolled") || {};
+  const community = rows.find(item => item.name === "Community") || {};
+  const populations = [
+    { name: "Enrolled", item: campus, title: "Enrolled solo parents", description: "Solo parents enrolled at participating institutions.", Icon: GraduationCap },
+    { name: "Community", item: community, title: "Community solo parents", description: "Solo parents reported in surrounding communities.", Icon: MapPin }
+  ];
+  const visible = populations.filter(item => scope === "all" || item.name === scope);
+  const chartData = visible.map(({ name, item }) => ({ ...item, name, female: count(item.female), male: count(item.male) }));
+  const hasSexCounts = chartData.some(item => item.female + item.male > 0);
+  const selectedItem = scope === "Enrolled" ? campus : community;
+  const summary = scope === "all"
+    ? [["Enrolled solo parents", campus.total, "Reported enrolled population", GraduationCap], ["Community solo parents", community.total, "Reported surrounding population", MapPin], ["Survey submissions", data.overview?.totalResponses, "Submissions in the survey dataset", Users]]
+    : [["Reported solo parents", selectedItem.total, `${scope} population`, Users], ["Female solo parents", selectedItem.female, `${scope} population`, HeartHandshake], ["Male solo parents", selectedItem.male, `${scope} population`, Users]];
 
-  if (loading) return <Loading label="Loading solo parent insights..." />;
-  if (error) {
-    return (
-      <div className="card p-8">
-        <h2 className="font-semibold text-slate-900">Unable to load solo parent data</h2>
-        <p className="mt-2 text-sm text-slate-500">{error}</p>
-      </div>
-    );
-  }
-
-  const soloParents = data?.soloParents ?? [];
-  const campus = soloParents.find((x) => x.name === "Enrolled") || {};
-  const community = soloParents.find((x) => x.name === "Community") || {};
-
-  return (
-    <div className="space-y-6">
-      <header className="overflow-hidden rounded-[28px] border border-blue-200/20 bg-gradient-to-br from-[#06162d] via-[#0d2342] to-[#1d4f91] p-6 text-white shadow-[0_20px_60px_rgba(15,23,42,0.25)] sm:p-8">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-blue-100">
-              <HeartHandshake size={14} />
-              Family support
-            </div>
-            <h1 className="text-2xl font-extrabold tracking-tight sm:text-4xl uppercase">Solo Parents</h1>
-            <p className="mt-3 max-w-2xl text-sm text-blue-100 sm:text-base">
-              Overview of solo parent enrollment, gender distribution, and community support across participating institutions.
-            </p>
-          </div>
-        </div>
-      </header>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Total Enrolled Students" value={campus.total} icon={Users} />
-        <StatCard label="Female" value={campus.female} icon={Venus} tone="violet" />
-        <StatCard label="Male" value={campus.male} icon={Mars} tone="blue" />
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-2">
-        <SoloParentChart data={soloParents} />
-
-        <div className="rounded-[30px] border border-slate-200 bg-[#edf2f5] p-7 shadow-[0_10px_30px_rgba(15,23,42,0.04)] sm:p-8">
-          <div className="space-y-2">
-            <h2 className="text-[clamp(2.1rem,2.5vw,3rem)] font-semibold leading-tight tracking-[-0.055em] text-slate-800">Community Snapshot</h2>
-            <p className="text-[1.05rem] leading-relaxed text-slate-500">Breakdown of reported community support counts.</p>
-          </div>
-
-          <div className="mt-7 grid gap-4 sm:grid-cols-3">
-            {[
-              { key: "total", label: "TOTAL" },
-              { key: "female", label: "FEMALE" },
-              { key: "male", label: "MALE" }
-            ].map(({ key, label }) => (
-              <div
-                key={key}
-                className="flex min-h-[150px] flex-col justify-center rounded-[20px] border border-slate-200 bg-[#f6f8fa] px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-all duration-200 hover:border-slate-300 hover:shadow-[0_6px_18px_rgba(15,23,42,0.04)]"
-              >
-                <div className="text-[0.73rem] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</div>
-                <div className="mt-4 font-mono text-[clamp(2.2rem,2.8vw,3.25rem)] font-black leading-none tracking-[-0.08em] text-slate-900 tabular-nums">
-                  {Number(community[key] || 0).toLocaleString()}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return <div className="space-y-6">
+    <header className="overflow-hidden rounded-[28px] border border-blue-200/20 bg-gradient-to-br from-[#06162d] via-[#0d2342] to-[#1d4f91] p-6 text-white shadow-lg sm:p-8">
+      <div className="flex flex-wrap items-start justify-between gap-6"><div><p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-blue-200"><HeartHandshake size={15} />Family support</p><h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Solo Parents</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-blue-100">Explore reported solo parent enrollment and community populations to inform childcare support.</p></div><button type="button" onClick={() => reload({ force: true })} disabled={refreshing} className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-60"><RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />{refreshing ? "Refreshing..." : "Refresh data"}</button></div>
+      <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 border-t border-white/15 pt-4 text-xs text-blue-200"><span>Enrolled & community populations</span><span>Female & male counts</span>{data.source === "demo" && <span className="rounded-full bg-amber-200/15 px-2 py-1 text-amber-100">Demo data</span>}</div>
+    </header>
+    {error && <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">Showing the most recently available data. {error}</div>}
+    <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5" aria-labelledby="solo-scope-title"><div><h2 id="solo-scope-title" className="text-sm font-semibold text-slate-900">Focus your analysis</h2><p className="mt-1 text-xs leading-5 text-slate-500">Compare both populations or explore a single group.</p></div><div className="w-full sm:w-64"><label htmlFor="solo-scope" className="sr-only">Population group</label><select id="solo-scope" value={scope} onChange={event => setScope(event.target.value)} className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"><option value="all">Both populations</option><option value="Enrolled">Enrolled solo parents</option><option value="Community">Community solo parents</option></select></div></section>
+    <section aria-label="Solo parent summary" className="grid gap-4 sm:grid-cols-3">{summary.map(([label, value, hint, Icon]) => <div key={label} className="card p-5"><div className="flex items-start justify-between gap-3"><p className="text-sm font-medium text-slate-500">{label}</p><span className="rounded-xl bg-blue-50 p-2.5 text-blue-700"><Icon size={20} /></span></div><p className="mt-3 text-3xl font-bold tabular-nums text-[#08264d]">{displayCount(value)}</p><p className="mt-2 text-xs leading-5 text-slate-500">{hint}</p></div>)}</section>
+    <div className={`grid gap-6 ${visible.length > 1 ? "xl:grid-cols-2" : ""}`}>{visible.map(population => <PopulationCard key={population.name} {...population} />)}</div>
+    {hasSexCounts ? <SoloParentChart data={chartData} /> : <section className="card px-6 py-10 text-center"><Users size={30} className="mx-auto text-slate-400" /><h2 className="mt-4 font-semibold text-slate-900">No sex-specific counts to chart</h2><p className="mt-2 text-sm text-slate-500">The comparison chart will appear when positive female or male counts are recorded for this selection.</p></section>}
+    <p className="px-1 text-xs leading-5 text-slate-500">Figures reflect reported survey counts. Female and male shares use the sum of sex-specific counts within each group. A dash indicates an unavailable count; enrolled and community populations are shown separately.</p>
+    <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-5"><div><h2 className="text-sm font-semibold text-[#08264d]">Share the solo parent findings</h2><p className="mt-1 text-xs leading-5 text-slate-500">Open Reports to prepare a solo parent PDF from the survey data.</p></div><Link to="/reports" className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-blue-800 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">Open reports<ArrowUpRight size={16} /></Link></section>
+  </div>;
 }

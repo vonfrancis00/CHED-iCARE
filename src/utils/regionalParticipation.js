@@ -42,6 +42,7 @@ export function summarizeParticipation(rows, institutionType = "", region = "") 
     return [kind, {
       regions: [...regions.values()].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })),
       leaders: ranked.filter(item => item.count === ranked[0]?.count),
+      rankings: ranked,
     }];
   }));
 }

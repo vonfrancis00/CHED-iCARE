@@ -5,6 +5,16 @@ import Footer from "./Footer";
 
 export default function AppShell({ children, user, onLogout }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarPinned, setSidebarPinned] = useState(() => {
+    try { return localStorage.getItem("icare-sidebar-pinned") === "true"; }
+    catch { return false; }
+  });
+  const toggleSidebarPin = () => {
+    const next = !sidebarPinned;
+    setSidebarPinned(next);
+    try { localStorage.setItem("icare-sidebar-pinned", String(next)); }
+    catch { /* Keep the preference for this session when storage is unavailable. */ }
+  };
   const [confirmLogout, setConfirmLogout] = useState(false);
   const menuRef = useRef(null);
   const contentRef = useRef(null);
@@ -48,8 +58,8 @@ export default function AppShell({ children, user, onLogout }) {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_85%_0%,rgba(30,64,175,0.25),transparent_32%),linear-gradient(135deg,#eaf0f8_0%,#dce6f3_48%,#f3f6fb_100%)]">
-      <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} user={user} onLogout={() => { setMobileOpen(false); setConfirmLogout(true); }} />
-      <div ref={contentRef} className="flex min-h-screen min-w-0 flex-col lg:pl-28">
+      <Sidebar mobileOpen={mobileOpen} pinned={sidebarPinned} onTogglePin={toggleSidebarPin} onClose={() => setMobileOpen(false)} user={user} onLogout={() => { setMobileOpen(false); setConfirmLogout(true); }} />
+      <div ref={contentRef} className={`app-shell-content flex min-h-screen min-w-0 flex-col lg:pl-28${sidebarPinned ? " sidebar-pinned-content" : ""}`}>
         <header className="mobile-app-header sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white/95 px-4 py-2 backdrop-blur lg:hidden">
           <button ref={menuRef} type="button" onClick={() => setMobileOpen(true)} aria-label="Open navigation" aria-controls="main-sidebar" aria-expanded={mobileOpen} className="shrink-0 rounded-xl bg-[#06162d] p-3 text-white">
             <Menu size={22} />

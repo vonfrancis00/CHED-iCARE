@@ -27,3 +27,15 @@ test('respects type and region filters and excludes planned answers', () => {
   assert.deepEqual(summary.programs.leaders, []);
   assert.deepEqual(summarizeParticipation([], '', '').facilities.regions, []);
 });
+
+test('returns all reporting SUCs and LUCs in descending rankings', () => {
+  const summary = summarizeParticipation([...rows,
+    { Institution: 'Gamma', Region: 'Region 1', 'SUC/LUC': 'SUC', [facility]: 'Yes' },
+    { Institution: 'Other', Region: 'Region 1', 'SUC/LUC': 'Private', [facility]: 'Yes' },
+  ]);
+  assert.deepEqual(summary.facilities.rankings.map(item => [item.name, item.type, item.count]), [
+    ['Alpha', 'SUC', 2], ['Beta', 'LUC', 2], ['Gamma', 'SUC', 1],
+  ]);
+  assert.deepEqual(summary.facilities.leaders.map(item => item.name), ['Alpha', 'Beta']);
+  assert.deepEqual(summarizeParticipation(rows, 'LUC').facilities.rankings.map(item => item.name), ['Beta']);
+});
