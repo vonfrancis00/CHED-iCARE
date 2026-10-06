@@ -24,7 +24,7 @@ function sortRegions(regions) {
 
 export default function Institutions() {
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(10);
   const tableRef = useRef(null);
   const [q, setQ] = useState("");
   const [institutionType, setInstitutionType] = useState("");
@@ -90,7 +90,7 @@ export default function Institutions() {
           <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-blue-100">
               <Building2 size={14} />
-              Institution registry
+              Institution Registry
             </div>
             <h1 className="text-2xl font-extrabold tracking-tight sm:text-4xl uppercase">Institutions</h1>
             <p className="mt-3 max-w-2xl text-sm text-blue-100 sm:text-base">
@@ -154,13 +154,13 @@ export default function Institutions() {
 
       <div className="institution-filters card p-4 sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800"><SlidersHorizontal size={16} className="text-blue-600" aria-hidden="true" />Find institutions</h2>
+          <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800"><SlidersHorizontal size={16} className="text-blue-600" aria-hidden="true" />Find Institutions</h2>
           {hasFilters && <button type="button" onClick={resetFilters} className="institution-reset inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"><X size={14} aria-hidden="true" />Clear filters</button>}
         </div>
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_220px]">
           <div className="relative">
           <Search className="absolute left-3 top-3.5 text-slate-400" size={18}/>
-          <input value={q} onChange={e => { setFilterPending(true); setPage(1); setQ(e.target.value); }} placeholder="Search by institution name?" className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 outline-none focus:border-blue-500" aria-label="Search institutions" aria-busy={isSearching}/>
+          <input value={q} onChange={e => { setFilterPending(true); setPage(1); setQ(e.target.value); }} placeholder="Search by institution name...." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 outline-none focus:border-blue-500" aria-label="Search institutions" aria-busy={isSearching}/>
           {isSearching && <LoaderCircle className="absolute right-3 top-3.5 animate-spin text-blue-600" size={18} aria-label="Searching"/>}
         </div>
           <div

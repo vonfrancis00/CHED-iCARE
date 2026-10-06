@@ -7,22 +7,22 @@ import { useDashboard } from "../../hooks/useDashboard";
 const navGroups = [
   {
     label: "Overview",
-    items: [["Dashboard", "/", BarChart3, "Live Summary"]]
+    items: [["Dashboard", "/", BarChart3, "Monitoring Overview"]]
   },
   {
     label: "Monitoring",
     items: [
-      ["Institutions", "/institutions", Building2, "Colleges and Universities"],
-      ["Childcare", "/childcare", Baby, "Facilities & Programs"],
-      ["Solo Parents", "/solo-parents", Users, "Beneficiaries"],
-      ["Regional Geographic", "/geographic", Map, "Overview"],
-      ["OCC / Office", "/occ", BriefcaseBusiness, "Office Comparison"]
+      ["Institution Responses", "/institutions", Building2, "Colleges & Universities"],
+      ["Childcare Readiness", "/childcare", Baby, "Facilities & Programs"],
+      ["Solo Parents Data", "/solo-parents", Users, "Population & Demographics"],
+      ["Regional Analysis", "/geographic", Map, "Geographic Overview"],
+      ["Office Monitoring", "/occ", BriefcaseBusiness, "Assignments & Progress"]
     ]
   },
   {
     label: "Records",
     items: [
-      ["Reports", "/reports", FileText, "Exports"]
+      ["Reports", "/reports", FileText, "Insights & Exports"]
     ]
   }
 ];

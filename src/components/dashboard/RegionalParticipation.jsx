@@ -17,7 +17,7 @@ function RankingRow({ item, showInstitutions, category, showRank = true }) {
 }
 
 export default function RegionalParticipation({ institutionType, region }) {
-  const { data, loading, backgroundLoading, error, reload } = useInstitutionGroups("", "", "");
+  const { data, loading, backgroundLoading, hasCompleteData, error, reload } = useInstitutionGroups("", "", "");
   const [exploring, setExploring] = useState(null);
   const [regionSearch, setRegionSearch] = useState("");
   const [showInstitutions, setShowInstitutions] = useState(false);
@@ -51,7 +51,7 @@ export default function RegionalParticipation({ institutionType, region }) {
     if (showInstitutions && previous?.[0].rank === item.rank) previous.push(item);
     else rankGroups.push([item]);
   }
-  const pending = loading || backgroundLoading;
+  const pending = !hasCompleteData && (loading || backgroundLoading);
   const categories = [
     { key: "facilities", label: "Facilities", Icon: Building2 },
     { key: "programs", label: "Programs", Icon: ClipboardList },

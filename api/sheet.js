@@ -235,7 +235,8 @@ export default async function handler(req, res, env = process.env) {
       }
       return res.status(payload.success ? 200 : action === 'login' ? 401 : 400).json(payload);
     }
-    const cacheable = prepareRecords || ['listRequestOffices', 'getDashboardData', 'getInstitutions'].includes(action);
+    const cacheable = input.searchParams.get('fresh') !== '1'
+      && (prepareRecords || ['listRequestOffices', 'getDashboardData', 'getInstitutions'].includes(action));
     if (action === 'clearDashboardCache') invalidateData();
     const payload = await readGoogleData(upstream, controller.signal, cacheable);
     if (prepareRecords) return res.status(payload.success ? 200 : 502).json({ success: Boolean(payload.success) });

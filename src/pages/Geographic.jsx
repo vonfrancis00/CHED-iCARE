@@ -76,7 +76,7 @@ export default function Geographic() {
       <section aria-label="Geographic analysis filters" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm font-semibold text-slate-800">Filter geographic analysis</p>
+            <p className="text-sm font-semibold text-slate-800">Filter Geographic Analysis</p>
             <p className="mt-0.5 text-xs text-slate-500">Choose an institution type, then narrow the coverage by region.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -87,7 +87,7 @@ export default function Geographic() {
             </div>
             <label className="sr-only" htmlFor="geographic-region">Region</label>
             <select id="geographic-region" value={region} disabled={!snapshot?.filterViews} onChange={(event) => setRegion(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100">
-              <option value="">All regions</option>
+              <option value="">All Regions</option>
               {availableRegions.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </div>
@@ -140,7 +140,7 @@ export default function Geographic() {
         <section aria-label="Geographic response volume" className="min-h-[560px] rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm sm:min-h-[700px] sm:p-8">
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Geographic overview</p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">Geographic Overview</p>
               <h2 className="mt-2 flex items-center gap-2 text-xl font-bold text-slate-950"><MapPinned size={23} className="shrink-0 text-blue-600" />Response Volume by {locationLabel}</h2>
               <p className="mt-2 text-sm text-slate-400">{institutionType || "All institution types"} / {region || "All regions"}. Compare submission volume and share across each {locationLabel.toLowerCase()}.</p>
             </div>

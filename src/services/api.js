@@ -75,6 +75,7 @@ function buildApiUrl_(action, params = {}, options = {}) {
     throw new Error("VITE_SHEET_API_URL must use the stable https://script.google.com/macros/s/.../exec deployment URL, not a script.googleusercontent.com redirect URL.");
   }
   url.searchParams.set("action", action);
+  if (params._force) url.searchParams.set("fresh", "1");
 
   Object.entries(params).forEach(([key, value]) => {
     if (key.startsWith("_") || key === "action" || key === "code") return;

@@ -168,7 +168,7 @@ test('background pages save progress in order with only one active read', async 
   assert.equal(published.at(-1).complete, true);
 });
 
-test('revisiting either record view reuses completed data beyond five minutes', async () => {
+test('revisiting a record view revalidates completed data after five minutes', async () => {
   let calls = 0;
   const { context } = setup(async () => {
     calls++;
@@ -178,12 +178,28 @@ test('revisiting either record view reuses completed data beyond five minutes', 
   context.readEntry('shared-view').savedAt = Date.now() - 3600000;
   let restored;
   await context.loadGroups('shared-view', { pageSize: 50 }, 0, entry => { restored = entry; }, false).promise;
-  assert.equal(calls, 1);
+  assert.equal(calls, 2);
   assert.equal(restored.data.data[0].Institution, 'Cached University');
   await context.loadGroups('shared-view', { pageSize: 50 }, 0, () => {}, true).promise;
-  assert.equal(calls, 2, 'Explicit refresh still requests records');
+  assert.equal(calls, 3, 'Explicit refresh still requests records');
   await context.loadGroups('shared-view', { pageSize: 50 }, 1, () => {}, false).promise;
-  assert.equal(calls, 3, 'A data revision invalidates the completed snapshot');
+  assert.equal(calls, 4, 'A data revision invalidates the completed snapshot');
+});
+
+test('directory refresh clears upstream caches before revised pages bypass server caches', async () => {
+  let revision = 0;
+  const calls = [];
+  const { context } = setup(async params => {
+    calls.push(params);
+    return { total: 1, data: [{ Institution: 'Corrected University' }] };
+  });
+  context.getSheetDataRevision = () => revision;
+  context.clearDashboardCache = async () => { revision++; };
+  await context.refreshDirectory();
+  await context.loadGroups('refreshed', {}, revision, () => {}, false).promise;
+  assert.equal(revision, 1);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0]._force, true);
 });
 
 test('a transient page failure retries only that page and preserves every response', async () => {

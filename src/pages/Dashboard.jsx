@@ -52,7 +52,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-            <div className="flex items-center gap-2 text-xs text-sky-100"><ShieldCheck size={16} className="text-cyan-200" /> Secure internal platform</div>
+            <div className="flex items-center gap-2 text-xs text-sky-100"><ShieldCheck size={16} className="text-cyan-200" /> Secure Internal Platform</div>
           </div>
         </div>
         {/* <div className="mt-4 shrink-0 rounded-full border border-sky-300/30 bg-white/10 px-4 py-2 text-xs font-semibold text-sky-100 shadow-sm backdrop-blur-sm sm:mt-0">
@@ -65,7 +65,7 @@ export default function Dashboard() {
       <section aria-label="Dashboard filters" className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm font-semibold text-slate-800">Filter dashboard</p>
+            <p className="text-sm font-semibold text-slate-800">Filter Dashboard</p>
             <p className="mt-0.5 text-xs text-slate-500">Choose an institution type, then narrow results by region.</p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -74,7 +74,7 @@ export default function Dashboard() {
             </div>
             <label className="sr-only" htmlFor="dashboard-region">Region</label>
             <select id="dashboard-region" disabled={!snapshot.filterViews} value={region} onChange={event => setRegion(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100">
-              <option value="">All regions</option>
+              <option value="">All Regions</option>
               {regions.map(item => <option key={item} value={item}>{item}</option>)}
             </select>
           </div>

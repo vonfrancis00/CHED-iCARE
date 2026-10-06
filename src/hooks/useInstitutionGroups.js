@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { getInstitutions, getSheetDataRevision, peekInstitutionPage, subscribeSheetDataRevision } from "../services/api";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { clearDashboardCache, getInstitutions, getSheetDataRevision, peekInstitutionPage, subscribeSheetDataRevision } from "../services/api";
 
 const STORAGE_PREFIX = "childcare-institution-groups:v3:";
 const SOURCE = import.meta.env.VITE_SHEET_API_URL || "demo";
+const DIRECTORY_CACHE_MS = 5 * 60 * 1000;
 const entries = new Map();
 const pending = new Map();
 
@@ -43,9 +44,14 @@ function readEntry(key, params) {
 }
 
 function canReuseEntry(entry, revision, force = false) {
-  // Keep completed results for this session. Explicit refresh/revision changes
-  // still fetch new data; saved snapshots revalidate after a browser reload.
-  return !force && entry?.complete && entry.revision === revision;
+  return !force && entry?.complete && entry.revision === revision
+    && Date.now() - entry.savedAt < DIRECTORY_CACHE_MS;
+}
+
+async function refreshDirectory() {
+  // Invalidate Google, server and client caches before starting any page reads.
+  // The resulting revision also prevents older in-flight pages being published.
+  await clearDashboardCache();
 }
 
 function saveEntry(key, data, revision, complete) {
@@ -73,7 +79,7 @@ function loadGroups(key, params, revision, publish, force) {
   pending.set(pendingKey, job);
   job.promise = (async () => {
     // Publish the first batch immediately, then keep filling the cache.
-    const requestParams = { pageSize: 50, ...params, _force: force };
+    const requestParams = { pageSize: 50, ...params, _force: force || revision > 0 };
     const first = await readPage({ ...requestParams, page: 1 });
     if (!Array.isArray(first.data)) throw new Error("The data service returned invalid records. Please retry.");
     const total = Number(first.total) || first.data.length;
@@ -131,8 +137,6 @@ export function useInstitutionGroups(query, institutionType, region, pageSize = 
   const params = { query: "", institutionType: "", region: "", pageSize };
   const key = JSON.stringify([SOURCE, params.query, params.institutionType, params.region, pageSize]);
   const revision = useSyncExternalStore(subscribeSheetDataRevision, getSheetDataRevision);
-  const [attempt, setAttempt] = useState(0);
-  const forceRefresh = useRef(false);
   const [state, setState] = useState(() => ({ key, data: readEntry(key, params)?.data, loading: !readEntry(key, params), error: "" }));
   const cached = readEntry(key, params);
 
@@ -140,8 +144,7 @@ export function useInstitutionGroups(query, institutionType, region, pageSize = 
     let active = true;
     let job;
     const available = readEntry(key);
-    const force = forceRefresh.current;
-    forceRefresh.current = false;
+    const force = false;
     setState({ key, data: available?.data, loading: true, error: "" });
     if (canReuseEntry(available, revision, force)) {
       setState({ key, data: available.data, loading: false, error: "" });
@@ -158,7 +161,7 @@ export function useInstitutionGroups(query, institutionType, region, pageSize = 
     }, params.query && !available ? 300 : 0);
     // Shared loading continues and saves results even after navigating away.
     return () => { active = false; clearTimeout(timer); job?.listeners.delete(publish); };
-  }, [key, revision, attempt]);
+  }, [key, revision]);
 
   const directory = cached?.data || (state.key === key ? state.data : null);
   const data = useMemo(() => filterDirectory(directory, query, institutionType, region), [directory, query, institutionType, region]);
@@ -168,6 +171,14 @@ export function useInstitutionGroups(query, institutionType, region, pageSize = 
     backgroundLoading: Boolean(data) && (state.key !== key || state.loading),
     error: state.key === key ? state.error : "",
     hasCurrentData: Boolean(data),
-    reload: () => { forceRefresh.current = true; setAttempt(value => value + 1); }
+    hasCompleteData: Boolean(cached?.complete),
+    reload: async () => {
+      setState(previous => ({ ...previous, loading: true, error: "" }));
+      try {
+        await refreshDirectory();
+      } catch (error) {
+        setState(previous => ({ ...previous, loading: false, error: error.message }));
+      }
+    }
   };
 }

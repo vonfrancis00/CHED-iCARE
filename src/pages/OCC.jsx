@@ -13,7 +13,7 @@ const officeStatus = office => {
   const assigned = Number(office.value) || 0, responded = Number(office.responded) || 0;
   return assigned <= 0 ? "unassigned" : responded >= assigned ? "complete" : responded > 0 ? "progress" : "waiting";
 };
-const statusLabels = { all: "All offices", complete: "Completed", progress: "In progress", waiting: "Awaiting responses", unassigned: "No assignments" };
+const statusLabels = { all: "All Offices", complete: "Completed", progress: "In Progress", waiting: "Awaiting responses", unassigned: "No assignments" };
 const statusTones = { complete: "bg-emerald-50 text-emerald-700", progress: "bg-blue-50 text-blue-700", waiting: "bg-amber-50 text-amber-700", unassigned: "bg-slate-100 text-slate-600" };
 const formatDate = date => date.toLocaleString("en-PH", { timeZone: "Asia/Manila", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 const normalizeOffice = value => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
@@ -101,8 +101,8 @@ export default function OCC({ user }) {
             <button type="button" onClick={refresh} disabled={refreshing} className="mt-6 inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-3.5 py-2 text-xs font-semibold transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300 disabled:opacity-50"><RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />{refreshing ? "Refreshing…" : "Refresh data"}</button>
           </div>
           {isSuperAdmin && <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
-            <div className="flex items-center justify-between text-xs font-medium text-blue-100"><span>Overall survey progress</span><CheckCircle2 size={16} className="text-blue-200" /></div>
-            <div className="mt-3 flex items-baseline gap-2"><span className="text-5xl font-semibold tracking-tight tabular-nums">{rate}<span className="text-2xl text-blue-200">%</span></span><span className="text-xs text-blue-100">accomplished</span></div>
+            <div className="flex items-center justify-between text-xs font-medium text-blue-100"><span>Overall Survey Progress</span><CheckCircle2 size={16} className="text-blue-200" /></div>
+            <div className="mt-3 flex items-baseline gap-2"><span className="text-5xl font-semibold tracking-tight tabular-nums">{rate}<span className="text-2xl text-blue-200">%</span></span><span className="text-xs text-blue-100">Accomplished</span></div>
             <div role="progressbar" aria-label="Overall survey progress" aria-valuenow={rate} aria-valuemin={0} aria-valuemax={100} className="my-4 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-blue-300 via-blue-400 to-indigo-400 transition-all" style={{ width: `${rate}%` }} /></div>
             <p className="text-xs text-blue-100">{number(accomplished)} of {number(total)} assigned institutions accomplished</p>
           </div>}
@@ -111,8 +111,8 @@ export default function OCC({ user }) {
       {error && <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">Showing saved data. Refresh failed: {error}</div>}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "Assigned institutions", value: total, detail: isSuperAdmin ? "Across your office register" : "Assigned to your office", icon: ClipboardList, tone: "bg-blue-100 text-blue-700" },
-          { label: isSuperAdmin ? "Offices monitored" : "Survey progress", value: isSuperAdmin ? offices.length : rate, detail: isSuperAdmin ? `${completedOffices} fully completed` : "Completion of assigned surveys", icon: Building2, tone: "bg-indigo-100 text-indigo-700" },
+          { label: "Assigned Institutions", value: total, detail: isSuperAdmin ? "Across your office register" : "Assigned to your office", icon: ClipboardList, tone: "bg-blue-100 text-blue-700" },
+          { label: isSuperAdmin ? "Offices Monitored" : "Survey progress", value: isSuperAdmin ? offices.length : rate, detail: isSuperAdmin ? `${completedOffices} fully completed` : "Completion of assigned surveys", icon: Building2, tone: "bg-indigo-100 text-indigo-700" },
           { label: "Accomplished Institutions", value: accomplished, detail: "Completed Institution Submissions", icon: CheckCircle2, tone: "bg-sky-100 text-sky-700" },
           { label: "Pending Institutions", value: pending, detail: "Remaining Institutions", icon: CircleDashed, tone: "bg-slate-100 text-slate-700" },
         ].map(({ label, value, detail, icon: Icon, tone }) =>
@@ -137,7 +137,7 @@ export default function OCC({ user }) {
         <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-slate-900">
-              Office overview
+              Office Overview
               <span className="ml-2 rounded-md border border-slate-200 bg-white px-2 py-0.5 align-middle text-xs text-slate-500">
                 {offices.length}
               </span>
@@ -158,16 +158,16 @@ export default function OCC({ user }) {
               <ArrowDownUp size={15} className="pointer-events-none absolute left-3 top-3.5 text-slate-400" />
               <select aria-label="Sort offices" value={sort} onChange={event => setSort(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-6 text-sm text-slate-600 focus:outline-blue-600">
                 <option value="progress">
-                  Highest survey progress
+                  Highest Survey Progress
                 </option>
                 <option value="assigned">
-                  Most assigned
+                  Most Assigned
                 </option>
                 <option value="pending">
-                  Most pending
+                  Most Pending
                 </option>
                 <option value="name">
-                  Office name
+                  Office Name
                 </option>
                 </select>
               </div>
@@ -203,7 +203,7 @@ export default function OCC({ user }) {
                     </div>
                     <div className="mb-2 mt-6 flex items-center justify-between text-xs">
                       <span className="text-slate-500">
-                        Survey progress
+                        Survey Progress
                       </span>
                       <span className="font-semibold tabular-nums text-slate-800">
                         {progress}%
@@ -253,7 +253,7 @@ export default function OCC({ user }) {
         </div>
         }
       </div>}
-      <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-5"><div><h2 className="text-sm font-semibold text-[#08264d]">Share office monitoring progress</h2><p className="mt-1 text-xs leading-5 text-slate-500">Prepare an office report with institution assignments and survey status.</p></div><Link to="/reports" className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-blue-800 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">Open reports<ArrowUpRight size={16} /></Link></section>
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-5"><div><h2 className="text-sm font-semibold text-[#08264d]">Share Office Monitoring Progress</h2><p className="mt-1 text-xs leading-5 text-slate-500">Prepare an office report with institution assignments and survey status.</p></div><Link to="/reports" className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-blue-800 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">Open Reports<ArrowUpRight size={16} /></Link></section>
     </div>
   );
 }

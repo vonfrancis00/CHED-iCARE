@@ -47,7 +47,7 @@ export default function RegionalChart({ data = [], groupedByInstitution = false,
     : "Institution/Campus counts grouped by Region";
 
   return (
-    <ChartCard title="Institution/Campus Location Distribution" subtitle={subtitle} className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/80"
+    <ChartCard title="Institution Location Distribution" subtitle={subtitle} className="overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/70 to-indigo-50/80"
       headerContent={splitByType && (
         <div className="mt-5 flex flex-wrap justify-center gap-3 text-sm">
           {segments.map(segment => (
