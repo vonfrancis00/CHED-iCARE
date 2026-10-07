@@ -107,6 +107,7 @@ test('SUC card counts twelve responses from the same institution once across cam
   const context = vm.createContext({});
   vm.runInContext(readFileSync(new URL('../apps-script/Utils.gs', import.meta.url), 'utf8'), context);
   vm.runInContext(readFileSync(new URL('../apps-script/Dashboard.gs', import.meta.url), 'utf8'), context);
+  vm.runInContext(readFileSync(new URL('../apps-script/PendingInstitutions.gs', import.meta.url), 'utf8'), context);
   const rows = Array.from({ length: 12 }, (_, index) => ({
     Institution: index % 2 ? ' University  of Rizal System ' : 'UNIVERSITY OF RIZAL SYSTEM',
     'SUC/LUC': 'SUC', Campus: `Campus ${index + 1}`, rowNumber: index + 2
@@ -124,10 +125,13 @@ test('Apps Script filters before pagination and retains totals', () => {
   const context = vm.createContext({});
   vm.runInContext(readFileSync(new URL('../apps-script/Utils.gs', import.meta.url), 'utf8'), context);
   vm.runInContext(readFileSync(new URL('../apps-script/Dashboard.gs', import.meta.url), 'utf8'), context);
+  vm.runInContext(readFileSync(new URL('../apps-script/PendingInstitutions.gs', import.meta.url), 'utf8'), context);
   context.getRawDataset_ = () => ({ headers: [], rows: [
     { 'Institution': 'Alpha', 'SUC/LUC': 'SUC', Region: 'I' },
     { 'Institution': 'Beta', 'SUC/LUC': 'LUC', Region: 'II' },
-    { 'Institution': 'Gamma', 'SUC/LUC': 'SUC', Region: 'I' }
+    { 'Institution': 'Gamma', 'SUC/LUC': 'SUC', Region: 'I' },
+    { 'Institution': '', 'SUC/LUC': 'SUC', Region: 'I' },
+    { 'Institution': 'Unnamed institution', 'SUC/LUC': 'LUC', Region: 'II' }
   ] });
   const result = context.buildInstitutionsPage_(2, 1, '', 'SUC', 'i');
   assert.equal(result.total, 2);

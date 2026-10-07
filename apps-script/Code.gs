@@ -9,6 +9,8 @@ function doGet(e) {
         return jsonResponse(getDashboardData(params));
       case "getInstitutions":
         return jsonResponse(getInstitutions(params));
+      case "getPendingInstitutions":
+        return jsonResponse(getPendingInstitutions_());
       case "listUsers":
         return jsonResponse(listUsers_(params));
       case "listAccountRequests":
@@ -193,6 +195,7 @@ function doPost(e) {
     const params = JSON.parse(e.postData.contents || "{}");
     const action = String(params.action || "login").trim();
     validateRequest_(action, params);
+    if (action === "completeInstitution") return jsonResponse(completeInstitution_(params));
     if (action === "checkAccountRequest") return checkAccountRequest_(params);
     if (action === "submitAccountRequest") return submitAccountRequest_(params);
     if (action === "createUser") return createUser_(params);
@@ -405,6 +408,8 @@ function validateRequest_(action, params) {
   const allowedActions = {
     getDashboardData: true,
     getInstitutions: true,
+    getPendingInstitutions: true,
+    completeInstitution: true,
     listUsers: true,
     clearDashboardCache: true,
     login: true,
@@ -419,7 +424,7 @@ function validateRequest_(action, params) {
   };
   if (!allowedActions[action]) throw new Error("Unknown action.");
 
-  if (["listUsers", "createUser", "updateUser", "deleteUser", "listAccountRequests", "approveAccountRequest"].includes(action) && !CONFIG.API_ACCESS_CODE) {
+  if (["completeInstitution", "listUsers", "createUser", "updateUser", "deleteUser", "listAccountRequests", "approveAccountRequest"].includes(action) && !CONFIG.API_ACCESS_CODE) {
     throw new Error("Configure API_ACCESS_CODE before managing users.");
   }
 

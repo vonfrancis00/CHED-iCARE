@@ -200,14 +200,14 @@ function getInstitutions(params) {
   // CacheService cannot delete entries by prefix. Include this revision in every
   // page key so a refresh immediately makes every paginated/search cache stale.
   const revision = getResponseCacheRevision_();
-  return getOrBuildCache_(cacheKey_("INSTITUTIONS_PAGE_V3_" + revision + "_" + page + "_" + pageSize + "_" + filterKey), () => buildInstitutionsPage_(page, pageSize, query, institutionType, region));
+  return getOrBuildCache_(cacheKey_("INSTITUTIONS_PAGE_V4_" + revision + "_" + page + "_" + pageSize + "_" + filterKey), () => buildInstitutionsPage_(page, pageSize, query, institutionType, region));
 }
 
 function buildInstitutionsPage_(page, pageSize, query, institutionType, region) {
   // Share the dashboard's cached dataset for browsing AND searching. Once warm,
   // paging needs no spreadsheet reads and all totals refer to the same snapshot.
   const dataset = getRawDataset_();
-  const rows = dataset.rows;
+  const rows = dataset.rows.filter(row => !isPendingInstitution_(row));
   const institutionCount = new Set(rows.map(row => String(headerValue_(row, H.institution) || "").trim()).filter(Boolean)).size;
   // Count each nonblank Campus value once, ignoring case and extra whitespace.
   const campusCount = new Set(rows.map(row => String(headerValue_(row, H.campus) || "").trim().replace(/\s+/g, " ").toLowerCase()).filter(Boolean)).size;

@@ -185,3 +185,10 @@ export function peekInstitutionPage(params) {
     return cached && Date.now() - cached.createdAt < RECORD_CACHE_MS ? cached.data : null;
   } catch { return null; }
 }
+
+export function invalidateSheetData() {
+  responseCache.clear();
+  pendingRequests.clear();
+  sheetDataRevision += 1;
+  sheetDataListeners.forEach(listener => listener());
+}

@@ -41,7 +41,7 @@ export default function Institutions() {
   }, [currentData]);
   // The API filters records as well, but keep this guard at the UI boundary so
   // a stale deployment or cached response can never show a LUC as a SUC.
-  const rows = (data?.data || []).filter(row => matchesFilters(row, institutionType, region)
+  const rows = (data?.data || []).filter(row => String(row.Institution || "").trim() && !/^unnamed institution$/i.test(String(row.Institution).trim()) && matchesFilters(row, institutionType, region)
     && String(row.Institution || "").toLowerCase().includes(q.trim().toLowerCase()));
   const headers = data?.headers || [];
   const total = Number(data?.total) || 0;
