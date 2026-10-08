@@ -1,4 +1,4 @@
-import { accountFetch } from "../../services/accountApi";
+import { accountFetch, ACCOUNT_REQUESTS_UPDATED } from "../../services/accountApi";
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { Baby, BarChart3, BriefcaseBusiness, Building2, ChevronRight, Clock3, FileText, LogOut, Map, Pin, PinOff, RefreshCw, Settings, Users, X } from "lucide-react";
@@ -81,9 +81,15 @@ export default function Sidebar({ mobileOpen, pinned, onTogglePin, onClose, user
 
     const controller = new AbortController();
     let checking = false;
+    let requestsVersion = 0;
+    const syncRequests = (event) => {
+      requestsVersion += 1;
+      setHasAccountRequests(event.detail.count > 0);
+    };
     const checkRequests = async () => {
       if (checking || document.visibilityState === 'hidden' || !navigator.onLine) return;
       checking = true;
+      const versionAtStart = requestsVersion;
       try {
         const response = await accountFetch("/api/sheet?action=listAccountRequests", {
           credentials: "same-origin",
@@ -91,17 +97,19 @@ export default function Sidebar({ mobileOpen, pinned, onTogglePin, onClose, user
           signal: controller.signal
         });
         const result = await response.json();
-        if (!controller.signal.aborted && response.ok && result.success) setHasAccountRequests((result.requests || []).length > 0);
+        if (!controller.signal.aborted && versionAtStart === requestsVersion && response.ok && result.success) setHasAccountRequests((result.requests || []).length > 0);
       } catch (error) {
         // Keep the last known notification during a temporary service failure.
       } finally { checking = false; }
     };
 
+    window.addEventListener(ACCOUNT_REQUESTS_UPDATED, syncRequests);
     checkRequests();
     const interval = window.setInterval(checkRequests, 60000);
     return () => {
       controller.abort();
       window.clearInterval(interval);
+      window.removeEventListener(ACCOUNT_REQUESTS_UPDATED, syncRequests);
     };
   }, [user?.role]);
 

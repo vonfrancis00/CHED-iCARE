@@ -1,3 +1,5 @@
+export const ACCOUNT_REQUESTS_UPDATED = "account-requests-updated";
+
 // Bound account reads and writes even if the host never returns a response.
 // Do not retry writes: the server may already have committed the change.
 export async function accountFetch(url, options = {}) {

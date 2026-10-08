@@ -1,4 +1,4 @@
-import { accountFetch } from "../services/accountApi";
+import { accountFetch, ACCOUNT_REQUESTS_UPDATED } from "../services/accountApi";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -105,7 +105,10 @@ export default function Settings({ user }) {
   }, [session, users, usersLoading, usersError]);
 
   useEffect(() => {
-    if (!requestsLoading && !requestsError) session.requests = requests;
+    if (!requestsLoading && !requestsError) {
+      session.requests = requests;
+      window.dispatchEvent(new CustomEvent(ACCOUNT_REQUESTS_UPDATED, { detail: { count: requests.length } }));
+    }
   }, [session, requests, requestsLoading, requestsError]);
 
   useEffect(() => {
