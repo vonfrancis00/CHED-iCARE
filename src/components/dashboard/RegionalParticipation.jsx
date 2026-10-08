@@ -21,6 +21,13 @@ export default function RegionalParticipation({ institutionType, region }) {
   const [exploring, setExploring] = useState(null);
   const [regionSearch, setRegionSearch] = useState("");
   const [showInstitutions, setShowInstitutions] = useState(false);
+  const [rankingInstitutionType, setRankingInstitutionType] = useState("");
+  const openRankings = (category, institutions) => {
+    setShowInstitutions(institutions);
+    setRegionSearch("");
+    setRankingInstitutionType(institutionType || "");
+    setExploring(category);
+  };
   const dialogRef = useRef(null);
   useEffect(() => {
     if (!exploring) return;
@@ -36,19 +43,20 @@ export default function RegionalParticipation({ institutionType, region }) {
     };
   }, [exploring]);
   const summary = useMemo(() => summarizeParticipation(data?.data || [], institutionType, region), [data, institutionType, region]);
+  const rankingSummary = useMemo(() => summarizeParticipation(data?.data || [], rankingInstitutionType, region), [data, rankingInstitutionType, region]);
   const rankedRegions = useMemo(() => {
-    const sorted = [...(summary[exploring]?.[showInstitutions ? "rankings" : "regions"] || [])].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, undefined, { numeric: true }) || (a.type || "").localeCompare(b.type || ""));
+    const sorted = [...(rankingSummary[exploring]?.[showInstitutions ? "rankings" : "regions"] || [])].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, undefined, { numeric: true }) || (a.type || "").localeCompare(b.type || ""));
     let rank = 0;
     return sorted.map((item, index) => {
       if (index === 0 || item.count !== sorted[index - 1].count) rank += 1;
       return { ...item, rank };
     });
-  }, [summary, exploring, showInstitutions]);
+  }, [rankingSummary, exploring, showInstitutions]);
   const visibleRegions = rankedRegions.filter(item => item.name.toLowerCase().includes(regionSearch.trim().toLowerCase()));
   const rankGroups = [];
   for (const item of visibleRegions) {
     const previous = rankGroups[rankGroups.length - 1];
-    if (showInstitutions && previous?.[0].rank === item.rank) previous.push(item);
+    if (previous?.[0].rank === item.rank) previous.push(item);
     else rankGroups.push([item]);
   }
   const pending = !hasCompleteData && (loading || backgroundLoading);
@@ -72,7 +80,7 @@ export default function RegionalParticipation({ institutionType, region }) {
               <p className="text-4xl font-bold tabular-nums text-blue-700">{summary[key].regions.length}</p>
               <h3 className="mt-2 text-lg font-semibold text-slate-900">Regions with existing {label}</h3>
             </div>
-            <button type="button" disabled={!summary[key].regions.length} aria-haspopup="dialog" onClick={() => { setShowInstitutions(false); setRegionSearch(""); setExploring(key); }} className="flex items-center justify-between border-t border-blue-100 bg-blue-50/60 px-6 py-4 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50">Explore regions<ArrowRight size={17} /></button>
+            <button type="button" disabled={!summary[key].regions.length} aria-haspopup="dialog" onClick={() => openRankings(key, false)} className="flex items-center justify-between border-t border-blue-100 bg-blue-50/60 px-6 py-4 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50">Explore regions<ArrowRight size={17} /></button>
           </article>)}
           {categories.map(({ key, label }) => <article key={key} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <Trophy size={23} className="mb-4 text-amber-500" />
@@ -82,7 +90,7 @@ export default function RegionalParticipation({ institutionType, region }) {
               {summary[key].leaders.length > 1 && <p className="text-xs font-semibold text-blue-600">{summary[key].leaders.length} institutions tied for highest</p>}
               {summary[key].leaders.map(item => <div key={`${item.type}:${item.name}`} className="flex items-start justify-between gap-4 rounded-xl bg-slate-50 p-4"><div><span className="text-[10px] font-bold uppercase tracking-wider text-blue-600">{item.type}</span><p className="mt-1 text-sm font-semibold text-slate-900">{item.name}</p></div><div className="shrink-0 text-right"><p className="text-2xl font-bold text-blue-700">{item.count.toLocaleString()}</p><p className="text-[10px] text-slate-500">Existing {label}</p></div></div>)}
             </div> : <p className="mt-5 text-sm text-slate-500">No SUC or LUC reported existing {label} for this selection.</p>}
-            <button type="button" disabled={!summary[key].rankings.length} aria-haspopup="dialog" onClick={() => { setShowInstitutions(true); setRegionSearch(""); setExploring(key); }} className="mt-5 flex w-full items-center justify-between rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50">View rankings<ArrowRight size={17} /></button>
+            <button type="button" disabled={!summary[key].rankings.length} aria-haspopup="dialog" onClick={() => openRankings(key, true)} className="mt-5 flex w-full items-center justify-between rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50">View rankings<ArrowRight size={17} /></button>
           </article>)}
         </div>
         <p className="text-xs leading-5 text-slate-500">Counts use Yes answers in survey submissions, not distinct physical facilities or programs. A submission can report availability for multiple user groups. Regions are counted once; repeated submissions contribute to institution rankings.</p>
@@ -104,7 +112,12 @@ export default function RegionalParticipation({ institutionType, region }) {
           <div className="shrink-0 border-b border-slate-100 px-5 py-4 sm:px-6">
             <label htmlFor="participation-region-search" className="mb-2 block text-sm font-medium text-slate-700">Filter by {showInstitutions ? "institution" : "region"}</label>
             <input id="participation-region-search" type="search" value={regionSearch} onChange={event => setRegionSearch(event.target.value)} placeholder={showInstitutions ? "Search institution name..." : "Search region name..."} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" />
-            <p role="status" className="mt-2 text-xs text-slate-500">{visibleRegions.length} of {rankedRegions.length} {showInstitutions ? "institutions" : "regions"} match the filter</p>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <div role="group" aria-label="Filter rankings by institution type" className="inline-flex shrink-0 items-center rounded-full border border-slate-200/80 bg-slate-50 p-0.5">
+                {[["", "All"], ["SUC", "SUC"], ["LUC", "LUC"]].map(([value, label]) => <button key={label} type="button" aria-pressed={rankingInstitutionType === value} onClick={() => setRankingInstitutionType(value)} className={`rounded-full px-3 py-1 text-[11px] font-semibold leading-5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${rankingInstitutionType === value ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:bg-slate-200/60 hover:text-slate-800"}`}>{label}</button>)}
+              </div>
+              <p role="status" className="text-[11px] text-slate-500">{visibleRegions.length} of {rankedRegions.length} {showInstitutions ? "institutions" : "regions"} match the filter</p>
+            </div>
           </div>
           <div className="min-h-0 overflow-y-auto p-3 sm:p-4">
             <ul>

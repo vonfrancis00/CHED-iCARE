@@ -30,6 +30,21 @@ async function readLoginResponse(sendPost, signal) {
 
 // Auth is checked before these shared, short-lived data caches are consulted.
 // Never cache login, account operations or errors.
+// Per-instance abuse guard; pair with a shared host/WAF rule in production.
+const abuseBuckets = new Map();
+function throttled(req, action) {
+  const now = Date.now();
+  for (const [key, value] of abuseBuckets) if (value.expires <= now) abuseBuckets.delete(key);
+  const address = req.headers?.['x-vercel-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+  const key = `${address}:${action}`;
+  let bucket = abuseBuckets.get(key);
+  if (!bucket) {
+    if (abuseBuckets.size >= 10000) return true;
+    bucket = { count: 0, expires: now + 60000 };
+    abuseBuckets.set(key, bucket);
+  }
+  return ++bucket.count > (action === 'login' ? 10 : 5);
+}
 const dataCache = new Map();
 const dataRequests = new Map();
 let dataRevision = 0;
@@ -70,17 +85,19 @@ async function readGoogleData(upstream, signal, cacheable) {
 function session(req, secret) {
   const token = (req.headers?.cookie || '').split(';').map(part => part.trim()).find(part => part.startsWith('childcare_session='))?.slice(18);
   if (!token || !secret) return null;
+  if (token.length > 4096 || token.split('.').length !== 2) return null;
   const [data, signature] = token.split('.');
   if (!data || !signature) return null;
   const expected = createHmac('sha256', secret).update(data).digest('hex');
   if (!/^[a-f0-9]{64}$/.test(signature) || !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
   try {
     const payload = JSON.parse(Buffer.from(data, 'base64url').toString());
-    return payload.expires > Date.now() ? payload.user : null;
+    return Number.isFinite(payload.expires) && payload.expires > Date.now() && payload.expires <= Date.now() + 8 * 3600000 && typeof payload.user?.email === 'string' ? payload.user : null;
   } catch { return null; }
 }
 
 function setSession(res, user, secret, secure) {
+  user = { email: user.email, name: user.name, office: user.office, role: user.role === 'super_admin' ? 'super_admin' : 'admin' };
   const data = Buffer.from(JSON.stringify({ user, expires: Date.now() + 8 * 3600000 })).toString('base64url');
   const signature = createHmac('sha256', secret).update(data).digest('hex');
   res.setHeader('Set-Cookie', `childcare_session=${data}.${signature}; HttpOnly; SameSite=Lax; Path=/api/sheet; Max-Age=28800${secure ? '; Secure' : ''}`);
@@ -90,11 +107,40 @@ function setSession(res, user, secret, secure) {
 export default async function handler(req, res, env = process.env) {
   const startedAt = performance.now();
   res.setHeader('Cache-Control', 'private, no-store');
-  const configuredCode = (env.SHEET_API_ACCESS_CODE || env.VITE_SHEET_API_ACCESS_CODE || '').trim();
-  const secret = (env.SESSION_SECRET || configuredCode).trim();
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  const configuredCode = (env.SHEET_API_ACCESS_CODE || '').trim();
+  const secret = (env.SESSION_SECRET || '').trim();
+  if (env.NODE_ENV === 'production' && (secret.length < 32 || configuredCode.length < 32 || secret === configuredCode)) {
+    return res.status(503).json({ success: false, message: 'Configure independent server secrets of at least 32 characters.' });
+  }
   const secure = env.NODE_ENV === 'production' || !!req.headers?.['x-forwarded-proto']?.includes('https');
   const input = new URL(req.url, 'https://local.invalid');
   const action = input.searchParams.get('action');
+  // Browser requests must originate from this exact site, including sibling domains.
+  const site = req.headers?.['sec-fetch-site'];
+  const origin = req.headers?.origin;
+  const host = req.headers?.host;
+  let originMatches = true;
+  if (origin) {
+    try { originMatches = new URL(origin).origin === `${secure ? 'https' : 'http'}://${host}`; }
+    catch { originMatches = false; }
+  }
+  if ((site && !['same-origin', 'none'].includes(site)) || !originMatches || (env.NODE_ENV === 'production' && req.method === 'POST' && !origin && site !== 'same-origin')) {
+    return res.status(403).json({ success: false, message: 'Cross-site requests are not allowed.' });
+  }
+  if (req.method === 'POST' && req.headers?.['content-type'] && !/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'])) {
+    return res.status(415).json({ success: false, message: 'Use an application/json request body.' });
+  }
+  for (const key of action === 'prepareRecords' ? [] : ['page', 'pageSize']) {
+    const value = input.searchParams.get(key);
+    if (value !== null && (!/^\d{1,6}$/.test(value) || Number(value) < 1 || (key === 'pageSize' && Number(value) > 500))) return res.status(400).json({ success: false, message: 'Invalid pagination.' });
+  }
+  if (['query', 'institutionType', 'region'].some(key => (input.searchParams.get(key) || '').length > 500)) return res.status(400).json({ success: false, message: 'Filter too long.' });
+  if (env.NODE_ENV === 'production' && ['login', 'submitAccountRequest', 'prepareRecords'].includes(action) && throttled(req, action)) {
+    res.setHeader('Retry-After', '60');
+    return res.status(429).json({ success: false, message: 'Too many requests. Please wait a minute.' });
+  }
   // This fixed warm-up only prepares server memory. It never returns records
   // or accepts filters/URLs from an unauthenticated visitor.
   const prepareRecords = action === 'prepareRecords';
@@ -168,6 +214,9 @@ export default async function handler(req, res, env = process.env) {
         if (!credentials || typeof credentials !== 'object' || Array.isArray(credentials)) throw new Error();
       } catch {
         return res.status(400).json({ success: false, message: 'Invalid JSON request body.' });
+      }
+      for (const key of ['email', 'targetEmail', 'password', 'name', 'office', 'role', 'identity', 'institutionType', 'region', 'institution', 'campus']) {
+        if (credentials[key] !== undefined && (typeof credentials[key] !== 'string' || credentials[key].length > (key === 'password' ? 128 : 500))) return res.status(400).json({ success: false, message: 'Invalid account or institution field.' });
       }
       if (action === 'submitAccountRequest') {
         credentials.name = String(credentials.name || '').trim();

@@ -12,8 +12,8 @@ Set these environment variables before building:
 - Optional `SHEET_API_URL`: server override for the same deployment.
 
 Do not put the access code or session secret in a `VITE_` variable. Existing
-`VITE_SHEET_API_ACCESS_CODE` is supported for compatibility; migrate it to
-`SHEET_API_ACCESS_CODE` and rebuild. Restart Vite after changing `.env`.
+`VITE_SHEET_API_ACCESS_CODE` is no longer supported. Rename it to
+`SHEET_API_ACCESS_CODE`, preserving the value that matches Apps Script. Restart Vite after changing `.env`.
 
 The Vercel function has a 60-second maximum duration. Reads have a shared
 55-second deadline. Account submissions reserve 15 seconds of that budget for

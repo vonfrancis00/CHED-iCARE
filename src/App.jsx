@@ -46,7 +46,16 @@ export default function App() {
     <Suspense fallback={<Loading label="Loading dashboard..." />}>
         <Routes>
           <Route path="/*" element={<AppShell user={user} onLogout={() => {
-            fetch('/api/sheet?action=logout', { method: 'POST' }).finally(() => setUser(null));
+            void fetch('/api/sheet?action=logout', { method: 'POST', credentials: 'same-origin' }).then(response => {
+              if (!response.ok) throw new Error('Sign-out failed. Please retry.');
+              // Discard browser snapshots and all module caches between accounts.
+              try {
+                for (const key of Object.keys(window.localStorage)) {
+                  if (key.startsWith('childcare-dashboard:') || key.startsWith('childcare-institution-groups:')) window.localStorage.removeItem(key);
+                }
+              } catch { /* Storage may be unavailable. */ }
+              window.location.replace('/');
+            }).catch(() => window.alert('Sign-out could not be confirmed. Please retry.'));
           }}><Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/institutions" element={<Institutions />} />

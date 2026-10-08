@@ -192,7 +192,13 @@ function listAccountRequests_(params) {
 
 function doPost(e) {
   try {
-    const params = JSON.parse(e.postData.contents || "{}");
+    const contents = e && e.postData ? e.postData.contents : "";
+    if (!contents || contents.length > 8192) throw new Error("Invalid request body.");
+    const params = JSON.parse(contents);
+    if (!params || typeof params !== "object" || Array.isArray(params)) throw new Error("Invalid request body.");
+    ["email", "targetEmail", "actorEmail", "password", "name", "office", "role"].forEach(function(key) {
+      if (params[key] !== undefined && (typeof params[key] !== "string" || params[key].length > (key === "password" ? 128 : 500))) throw new Error("Invalid account field.");
+    });
     const action = String(params.action || "login").trim();
     validateRequest_(action, params);
     if (action === "completeInstitution") return jsonResponse(completeInstitution_(params));
@@ -323,7 +329,7 @@ function createUser_(params) {
 }
 
 function safeCellText_(value) {
-  return /^[=+\-@]/.test(value) ? "'" + value : value;
+  return /^[\s\u0000-\u001f]*[=+\-@]/.test(value) ? "'" + value : value;
 }
 
 function updateUser_(params) {
@@ -422,11 +428,13 @@ function validateRequest_(action, params) {
     listRequestOffices: true,
     approveAccountRequest: true
   };
-  if (!allowedActions[action]) throw new Error("Unknown action.");
+  if (!Object.prototype.hasOwnProperty.call(allowedActions, action)) throw new Error("Unknown action.");
 
   if (["completeInstitution", "listUsers", "createUser", "updateUser", "deleteUser", "listAccountRequests", "approveAccountRequest"].includes(action) && !CONFIG.API_ACCESS_CODE) {
     throw new Error("Configure API_ACCESS_CODE before managing users.");
   }
+
+  if (!CONFIG.API_ACCESS_CODE) throw new Error("Configure API_ACCESS_CODE before enabling this service.");
 
   if (CONFIG.API_ACCESS_CODE) {
     const code = String(params.code || "");

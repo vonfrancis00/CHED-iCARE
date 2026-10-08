@@ -22,7 +22,7 @@ test('login rejects a bad service access code without a redundant Google request
     const req = Readable.from([JSON.stringify({ email: 'test@ched.gov.ph', password: 'test-password', code: 'untrusted-code' })]);
     Object.assign(req, { url: '/api/sheet?action=login', method: 'POST', headers: {} });
     const res = { headers: {}, setHeader(key, value) { this.headers[key] = value; }, status(code) { this.code = code; return this; }, json(payload) { this.payload = payload; return this; } };
-    return handler(req, res, { SHEET_API_ACCESS_CODE: 'server-code', SHEET_API_URL: 'https://script.google.com/macros/s/test/exec' });
+    return handler(req, res, { SESSION_SECRET: 'independent-test-session-secret', SHEET_API_ACCESS_CODE: 'server-code', SHEET_API_URL: 'https://script.google.com/macros/s/test/exec' });
   }
   try {
     const recovered = await login();
