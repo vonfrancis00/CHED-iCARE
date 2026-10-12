@@ -124,3 +124,33 @@ remain configured; there is no need to rerun setup. Run
 without creating or changing an account. Then publish a new deployment version
 to use the template for future approvals. Keep all sending and template helper
 functions; the editor-only preview function may be removed after review.
+
+
+## Pending response editing reservations
+
+Deploy the updated `Code.gs` and `PendingInstitutions.gs` together, then update
+ the existing web app to a new version. Deploy the frontend and `api/sheet.js`
+ together after the Apps Script update. The frontend now requires the reservation
+ endpoints before it opens an editor; older frontend versions cannot save without
+ a reservation and should be reloaded.
+
+Reservations are stored in Script Properties and protected by the script lock.
+Each editing tab has its own token, bound to the signed-in email by the server.
+The editor renews every 45 seconds; reservations expire after three minutes
+without renewal. Closing releases the reservation, while saving verifies ownership
+and the original response identity under the same script lock as the sheet write.
+Other users see the editor name on their next notification refresh. Even before
+that refresh, the server rejects a second claim. A failed renewal disables saving;
+close and reopen the response to acquire a new reservation.
+
+
+## SUC selection and Per OCC survey updates
+
+Copy the updated `PendingInstitutions.gs` and `Dashboard.gs` into the script project and publish a
+new version of the existing web app before deploying the updated frontend.
+New Responses loads SUC names and regions from the live Per OCC Region/SUC/Survey
+blocks. Select one SUC per response; saving writes its name and region into the
+response directory fields and sets its matching Per OCC Survey checkbox to true.
+LUC entries retain a text institution field and do not update Per OCC. All saves
+still require the editing reservation. Preserve the second-row block headers
+`Region`, `SUC`, and `Survey` and the existing four-column block spacing.

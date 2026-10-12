@@ -201,6 +201,7 @@ function doPost(e) {
     });
     const action = String(params.action || "login").trim();
     validateRequest_(action, params);
+    if (["claimInstitution", "renewInstitutionLock", "releaseInstitutionLock"].includes(action)) return jsonResponse(institutionLock_(action, params));
     if (action === "completeInstitution") return jsonResponse(completeInstitution_(params));
     if (action === "checkAccountRequest") return checkAccountRequest_(params);
     if (action === "submitAccountRequest") return submitAccountRequest_(params);
@@ -416,6 +417,9 @@ function validateRequest_(action, params) {
     getInstitutions: true,
     getPendingInstitutions: true,
     completeInstitution: true,
+    claimInstitution: true,
+    renewInstitutionLock: true,
+    releaseInstitutionLock: true,
     listUsers: true,
     clearDashboardCache: true,
     login: true,

@@ -251,7 +251,7 @@ function buildLocationDistribution_(rows, groupByInstitution) {
 }
 
 function getOCCOfficeGroups_() {
-  return getOrBuildCache_(cacheKey_("OCC"), () => buildOCCOfficeGroups_());
+  return getOrBuildCache_(cacheKey_("OCC") + "_" + getResponseCacheRevision_(), () => buildOCCOfficeGroups_());
 }
 
 function getRequestOffices_() {

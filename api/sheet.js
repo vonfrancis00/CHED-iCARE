@@ -150,15 +150,15 @@ export default async function handler(req, res, env = process.env) {
     return res.status(200).json({ success: true });
   }
   if (action === 'session' && req.method === 'GET') return res.status(200).json({ success: true, user: session(req, secret) });
-  if (!['prepareRecords', 'login', 'submitAccountRequest', 'createUser', 'updateUser', 'deleteUser', 'approveAccountRequest', 'listUsers', 'listAccountRequests', 'listRequestOffices', 'getDashboardData', 'getInstitutions', 'getPendingInstitutions', 'completeInstitution', 'clearDashboardCache'].includes(action)) {
+  if (!['prepareRecords', 'login', 'submitAccountRequest', 'createUser', 'updateUser', 'deleteUser', 'approveAccountRequest', 'listUsers', 'listAccountRequests', 'listRequestOffices', 'getDashboardData', 'getInstitutions', 'getPendingInstitutions', 'completeInstitution', 'claimInstitution', 'renewInstitutionLock', 'releaseInstitutionLock', 'clearDashboardCache'].includes(action)) {
     return res.status(400).json({ success: false, message: 'Unknown action.' });
   }
-  if (['login', 'submitAccountRequest', 'createUser', 'updateUser', 'deleteUser', 'approveAccountRequest', 'completeInstitution'].includes(action) ? req.method !== 'POST' : req.method !== 'GET') return res.status(405).json({ success: false, message: 'Method not allowed.' });
+  if (['login', 'submitAccountRequest', 'createUser', 'updateUser', 'deleteUser', 'approveAccountRequest', 'completeInstitution', 'claimInstitution', 'renewInstitutionLock', 'releaseInstitutionLock'].includes(action) ? req.method !== 'POST' : req.method !== 'GET') return res.status(405).json({ success: false, message: 'Method not allowed.' });
   const currentUser = session(req, secret);
   if (!['login', 'submitAccountRequest', 'listRequestOffices'].includes(action) && !prepareRecords && !currentUser) return res.status(401).json({ success: false, message: 'Please sign in.' });
   if (['createUser', 'updateUser', 'deleteUser', 'approveAccountRequest', 'listUsers', 'listAccountRequests'].includes(action) && currentUser.role !== 'super_admin') return res.status(403).json({ success: false, message: 'Only a super admin can manage users.' });
   if (['createUser', 'updateUser', 'deleteUser', 'approveAccountRequest', 'listUsers', 'listAccountRequests'].includes(action) && !configuredCode) return res.status(503).json({ success: false, message: 'Configure the server-side Apps Script access code before managing users.' });
-  if (action === 'completeInstitution' && !configuredCode) return res.status(503).json({ success: false, message: 'Configure the server-side Apps Script access code before saving institutions.' });
+  if (['completeInstitution', 'claimInstitution', 'renewInstitutionLock', 'releaseInstitutionLock'].includes(action) && !configuredCode) return res.status(503).json({ success: false, message: 'Configure the server-side Apps Script access code before saving institutions.' });
   let upstream;
   try {
     upstream = new URL((env.SHEET_API_URL || env.VITE_SHEET_API_URL || '').trim());
@@ -196,7 +196,7 @@ export default async function handler(req, res, env = process.env) {
     res.setHeader('Server-Timing', timings.join(', '));
   }
   try {
-    if (['login', 'submitAccountRequest', 'createUser', 'updateUser', 'deleteUser', 'approveAccountRequest', 'completeInstitution'].includes(action)) {
+    if (['login', 'submitAccountRequest', 'createUser', 'updateUser', 'deleteUser', 'approveAccountRequest', 'completeInstitution', 'claimInstitution', 'renewInstitutionLock', 'releaseInstitutionLock'].includes(action)) {
       // Vercel parses JSON bodies; Vite supplies the raw IncomingMessage.
       let body = req.body;
       if (body === undefined) {
@@ -215,7 +215,7 @@ export default async function handler(req, res, env = process.env) {
       } catch {
         return res.status(400).json({ success: false, message: 'Invalid JSON request body.' });
       }
-      for (const key of ['email', 'targetEmail', 'password', 'name', 'office', 'role', 'identity', 'institutionType', 'region', 'institution', 'campus']) {
+      for (const key of ['email', 'targetEmail', 'password', 'name', 'office', 'role', 'identity', 'lockToken', 'institutionType', 'region', 'institution', 'campus']) {
         if (credentials[key] !== undefined && (typeof credentials[key] !== 'string' || credentials[key].length > (key === 'password' ? 128 : 500))) return res.status(400).json({ success: false, message: 'Invalid account or institution field.' });
       }
       if (action === 'submitAccountRequest') {
@@ -232,7 +232,7 @@ export default async function handler(req, res, env = process.env) {
             targetEmail: credentials.targetEmail, email: credentials.email, password: credentials.password,
             name: credentials.name, office: credentials.office, role: credentials.role, requestRow: credentials.requestRow };
       if (action === 'submitAccountRequest') Object.assign(upstreamBody, { action, name: credentials.name, office: credentials.office });
-      if (action === 'completeInstitution') Object.assign(upstreamBody, { rowNumber: credentials.rowNumber, identity: credentials.identity, institutionType: credentials.institutionType, region: credentials.region, institution: credentials.institution, campus: credentials.campus });
+      if (['completeInstitution', 'claimInstitution', 'renewInstitutionLock', 'releaseInstitutionLock'].includes(action)) Object.assign(upstreamBody, { rowNumber: credentials.rowNumber, identity: credentials.identity, lockToken: credentials.lockToken, actorName: currentUser.name || currentUser.email, institutionType: credentials.institutionType, region: credentials.region, institution: credentials.institution, campus: credentials.campus });
       upstreamStartedAt = performance.now();
       const sendPost = () => fetchAppsScript(upstream, {
         method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
