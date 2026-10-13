@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { LogOut, Menu, X } from "lucide-react";
+import ThemeToggle from "../common/ThemeToggle";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
 import PendingInstitutions from "../institutions/PendingInstitutions";
@@ -58,7 +59,7 @@ export default function AppShell({ children, user, onLogout }) {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_85%_0%,rgba(30,64,175,0.25),transparent_32%),linear-gradient(135deg,#eaf0f8_0%,#dce6f3_48%,#f3f6fb_100%)]">
+    <div className="app-shell min-h-screen bg-[radial-gradient(circle_at_85%_0%,rgba(30,64,175,0.25),transparent_32%),linear-gradient(135deg,#eaf0f8_0%,#dce6f3_48%,#f3f6fb_100%)]">
       <Sidebar mobileOpen={mobileOpen} pinned={sidebarPinned} onTogglePin={toggleSidebarPin} onClose={() => setMobileOpen(false)} user={user} onLogout={() => { setMobileOpen(false); setConfirmLogout(true); }} />
       <div ref={contentRef} className={`app-shell-content flex min-h-screen min-w-0 flex-col lg:pl-28${sidebarPinned ? " sidebar-pinned-content" : ""}`}>
         <header className="mobile-app-header sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white/95 px-4 py-2 backdrop-blur lg:hidden">
@@ -67,6 +68,7 @@ export default function AppShell({ children, user, onLogout }) {
           </button>
           <div className="min-w-0 text-sm font-bold text-[#0b2c5b]">CHED iCARE<p className="text-xs font-normal text-slate-500">Monitoring Dashboard</p></div>
         </header>
+        <div className="theme-toolbar"><ThemeToggle floating /></div>
         <main className="app-content mx-auto w-full min-w-0 max-w-[1600px] flex-1 p-3 sm:p-6 lg:p-8">{children}</main>
         <Footer />
         <PendingInstitutions />
