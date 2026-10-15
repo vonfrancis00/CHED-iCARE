@@ -1,18 +1,14 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import AppShell from "./components/layout/AppShell";
 import Loading from "./components/common/Loading";
 import Login from "./pages/Login";
-import { getInstitutions } from "./services/api";
+import AppErrorBoundary from "./components/common/AppErrorBoundary";
 
 const loadInstitutions = () => import("./pages/Institutions");
+const loadDashboard = () => import("./pages/Dashboard");
 
-function prefetchRecords() {
-  // Warm the first 50 rows used by the institutions directory.
-  void getInstitutions({ page: 1, pageSize: 50, query: "", institutionType: "", region: "" }).catch(() => {});
-}
-
-const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Dashboard = lazy(loadDashboard);
 const Institutions = lazy(loadInstitutions);
 const Childcare = lazy(() => import("./pages/Childcare"));
 const SoloParents = lazy(() => import("./pages/SoloParents"));
@@ -23,25 +19,26 @@ const Settings = lazy(() => import("./pages/Settings"));
 
 export default function App() {
   const [user, setUser] = useState(undefined);
+  const navigate = useNavigate();
   useEffect(() => {
-    // Download page code during session checking/login without fetching records.
-    // A failed preload must not block sign-in or the later route import.
-    void loadInstitutions().catch(() => {});
-    fetch('/api/sheet?action=session', { credentials: 'same-origin', cache: 'no-store' })
+    // Warm the landing page while signing in, without fetching private data.
+    void loadDashboard().catch(() => {});
+    const controller = new AbortController();
+    fetch('/api/sheet?action=session', { credentials: 'same-origin', cache: 'no-store', signal: controller.signal })
       .then(response => response.json()).then(result => {
-        if (result.user) prefetchRecords();
-        setUser(result.user || null);
-      }).catch(() => setUser(null));
+        if (!controller.signal.aborted) setUser(result.user || null);
+      }).catch(() => { if (!controller.signal.aborted) setUser(null); });
+    return () => controller.abort();
   }, []);
   // Fetch records after authentication so a cold data load does not compete
   // with the user's first sign-in request.
   if (user === undefined) return <Loading label="Checking session..." />;
-  if (!user) return <Login onLogin={() => {
-    // Login has saved the HttpOnly session cookie. Start a fresh document so
-    // deployment assets and authenticated state are loaded together.
-    window.location.replace("/");
+  if (!user) return <Login onLogin={(signedInUser) => {
+    setUser(signedInUser);
+    navigate("/", { replace: true });
   }} />;
   return (
+    <AppErrorBoundary>
     <Suspense fallback={<Loading label="Loading dashboard..." />}>
         <Routes>
           <Route path="/*" element={<AppShell user={user} onLogout={() => {
@@ -68,5 +65,6 @@ export default function App() {
           </Routes></AppShell>} />
         </Routes>
     </Suspense>
+    </AppErrorBoundary>
   );
 }
