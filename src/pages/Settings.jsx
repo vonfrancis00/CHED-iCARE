@@ -497,7 +497,7 @@ export default function Settings({ user }) {
               <input type="search" aria-label="Search users" value={usersQuery} onChange={event => setUsersQuery(event.target.value)} placeholder="Search by name, email, or office" className="settings-input settings-input-with-leading-icon settings-search-input" />
             </div>
             <select aria-label="Filter users by access role" value={roleFilter} onChange={event => setRoleFilter(event.target.value)} className="settings-input settings-role-filter">
-              <option value="">All access roles</option>
+              <option value="">All Access Roles</option>
               <option value="admin">Admins</option>
               <option value="super_admin">Super Admins</option>
             </select>
