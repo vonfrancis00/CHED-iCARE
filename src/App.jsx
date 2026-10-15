@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import AppShell from "./components/layout/AppShell";
 import Loading from "./components/common/Loading";
 import Login from "./pages/Login";
@@ -23,7 +23,6 @@ const Settings = lazy(() => import("./pages/Settings"));
 
 export default function App() {
   const [user, setUser] = useState(undefined);
-  const navigate = useNavigate();
   useEffect(() => {
     // Download page code during session checking/login without fetching records.
     // A failed preload must not block sign-in or the later route import.
@@ -37,10 +36,10 @@ export default function App() {
   // Fetch records after authentication so a cold data load does not compete
   // with the user's first sign-in request.
   if (user === undefined) return <Loading label="Checking session..." />;
-  if (!user) return <Login onLogin={(signedInUser) => {
-    prefetchRecords();
-    setUser(signedInUser);
-    navigate("/", { replace: true });
+  if (!user) return <Login onLogin={() => {
+    // Login has saved the HttpOnly session cookie. Start a fresh document so
+    // deployment assets and authenticated state are loaded together.
+    window.location.replace("/");
   }} />;
   return (
     <Suspense fallback={<Loading label="Loading dashboard..." />}>
