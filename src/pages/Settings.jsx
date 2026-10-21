@@ -62,6 +62,7 @@ export default function Settings({ user }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [emailWarning, setEmailWarning] = useState("");
   const [users, setUsers] = useState(() => session.users || []);
   const [usersLoading, setUsersLoading] = useState(!session.users);
   const [usersError, setUsersError] = useState("");
@@ -292,6 +293,7 @@ export default function Settings({ user }) {
     event.preventDefault();
     setError("");
     setSuccess("");
+    setEmailWarning("");
     if (form.password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -331,7 +333,13 @@ export default function Settings({ user }) {
           .map(item => item.row > approvalRequest.row ? { ...item, row: item.row - 1 } : item));
       }
       closeForm();
-      setSuccess(editingUser ? "User edited successfully." : result.message || (approvalRequest ? "Request approved." : "User added successfully."));
+      if (approvalRequest && result.emailSent !== true) {
+        setEmailWarning(result.emailSent === false && result.message
+          ? result.message
+          : "Account created, but credentials email delivery was not confirmed. Check the Apps Script approval email setup and update the live deployment to the latest version. Do not create the account again.");
+      } else {
+        setSuccess(editingUser ? "User edited successfully." : result.message || (approvalRequest ? "Request approved. Login credentials sent." : "User added successfully."));
+      }
     } catch (cause) {
       setError(cause.message || "Unable to add user. Please retry.");
     } finally {
@@ -389,6 +397,11 @@ export default function Settings({ user }) {
         <DetailCard icon={UserPlus} label="Access requests" value={requestsLoading && !requests.length ? "Loading..." : requests.length.toLocaleString()} detail={requestsError ? "Requests could not be refreshed" : requests.length ? "Awaiting your review and approval" : "No pending requests"} />
       </div>
 
+      {emailWarning && <div role="alert" className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+        <AlertCircle size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
+        <div className="flex-1"><p className="font-semibold">Account saved — credentials email needs attention</p><p className="mt-1">{emailWarning}</p></div>
+        <button type="button" onClick={() => setEmailWarning("")} aria-label="Dismiss email warning" className="shrink-0 rounded p-1 hover:bg-amber-100"><X size={16} /></button>
+      </div>}
       {success && createPortal(
         <div className="fixed right-4 top-4 z-[110] flex w-[calc(100%-2rem)] max-w-md items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 shadow-lg">
           <div role="status" className="flex flex-1 items-start gap-3">
