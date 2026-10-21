@@ -8,7 +8,8 @@ export function matchesInstitutionSearch(name, query) {
   return institutionNameKey(name).includes(institutionNameKey(query));
 }
 
-export function filterOfficeResponses(rows, institutions) {
+export function filterOfficeResponses(rows, institutions, includeLuc = false) {
   const assigned = new Set(institutions.map(item => institutionNameKey(typeof item === "string" ? item : item?.name)).filter(Boolean));
-  return rows.filter(row => assigned.has(institutionNameKey(row.Institution)));
+  return rows.filter(row => assigned.has(institutionNameKey(row.Institution))
+    || (includeLuc && String(row["SUC/LUC"] || "").trim().toUpperCase() === "LUC"));
 }

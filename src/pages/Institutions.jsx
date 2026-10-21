@@ -5,19 +5,20 @@ import { useInstitutionGroups } from "../hooks/useInstitutionGroups";
 import { groupCampuses, groupInstitutions } from "../utils/institutionGroups";
 import Loading from "../components/common/Loading";
 import { useDashboard } from "../hooks/useDashboard";
-import { filterOfficeResponses, matchesInstitutionSearch } from "../utils/institutionNames";
+import { filterOfficeResponses, institutionNameKey, matchesInstitutionSearch } from "../utils/institutionNames";
 
 const normalizeAssignment = value => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
 
 function OfficeInstitutionResponses({ user }) {
   const { data, loading, error, reload } = useDashboard();
   const officeName = normalizeAssignment(user?.office);
+  const includeLuc = institutionNameKey(user?.office) === institutionNameKey("Office of Commissioner Michelle A. Ong");
   const offices = data?.occOffices?.length ? data.occOffices : data?.occDistribution || [];
   const office = officeName && offices.find(item => normalizeAssignment(item.name) === officeName);
   if (!data && loading) return <Loading label="Loading your office assignments..." />;
   if (!data) return <div className="card p-8"><p>{error || "Unable to load office assignments."}</p><button onClick={() => reload({ force: true })} className="mt-4 text-blue-700">Try again</button></div>;
-  if (!office || !Array.isArray(office.institutions) || !office.institutions.length) return <div className="card p-8"><h2 className="font-semibold">No institution assignments available</h2><p className="mt-2 text-sm text-slate-500">No institutions are listed for your assigned office in OCC / Offices. Please contact your administrator if this is unexpected.</p></div>;
-  return <InstitutionResponses key={officeName} office={office} />;
+  if (!includeLuc && (!office || !Array.isArray(office.institutions) || !office.institutions.length)) return <div className="card p-8"><h2 className="font-semibold">No institution assignments available</h2><p className="mt-2 text-sm text-slate-500">No institutions are listed for your assigned office in OCC / Offices. Please contact your administrator if this is unexpected.</p></div>;
+  return <InstitutionResponses key={officeName} office={office || { institutions: [] }} includeLuc={includeLuc} />;
 }
 
 function matchesFilters(row, institutionType, region) {
@@ -83,7 +84,7 @@ function InstitutionIllustration() {
   );
 }
 
-function InstitutionResponses({ office }) {
+function InstitutionResponses({ office, includeLuc = false }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const tableRef = useRef(null);
@@ -99,9 +100,9 @@ function InstitutionResponses({ office }) {
   const directory = currentData || lastData;
   const data = useMemo(() => {
     if (!directory || !office) return directory;
-    const rows = filterOfficeResponses(directory.data, office.institutions);
+    const rows = filterOfficeResponses(directory.data, office.institutions || [], includeLuc);
     return { ...directory, data: rows, total: rows.length, regions: [...new Set(rows.map(row => String(row.Region || "").trim()).filter(Boolean))] };
-  }, [directory, office]);
+  }, [directory, office, includeLuc]);
   useEffect(() => {
     if (currentData) setLastData(currentData);
   }, [currentData]);
