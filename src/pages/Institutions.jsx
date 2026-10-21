@@ -9,16 +9,15 @@ import { filterOfficeResponses, institutionNameKey, matchesInstitutionSearch } f
 
 const normalizeAssignment = value => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
 
-function OfficeInstitutionResponses({ user }) {
+function OfficeInstitutionResponses({ user, fullView = false }) {
   const { data, loading, error, reload } = useDashboard();
   const officeName = normalizeAssignment(user?.office);
-  const includeLuc = institutionNameKey(user?.office) === institutionNameKey("Office of Commissioner Michelle A. Ong");
   const offices = data?.occOffices?.length ? data.occOffices : data?.occDistribution || [];
   const office = officeName && offices.find(item => normalizeAssignment(item.name) === officeName);
   if (!data && loading) return <Loading label="Loading your office assignments..." />;
   if (!data) return <div className="card p-8"><p>{error || "Unable to load office assignments."}</p><button onClick={() => reload({ force: true })} className="mt-4 text-blue-700">Try again</button></div>;
-  if (!includeLuc && (!office || !Array.isArray(office.institutions) || !office.institutions.length)) return <div className="card p-8"><h2 className="font-semibold">No institution assignments available</h2><p className="mt-2 text-sm text-slate-500">No institutions are listed for your assigned office in OCC / Offices. Please contact your administrator if this is unexpected.</p></div>;
-  return <InstitutionResponses key={officeName} office={office || { institutions: [] }} includeLuc={includeLuc} />;
+  if (!fullView && (!office || !Array.isArray(office.institutions) || !office.institutions.length)) return <div className="card p-8"><h2 className="font-semibold">No institution assignments available</h2><p className="mt-2 text-sm text-slate-500">No institutions are listed for your assigned office in OCC / Offices. Please contact your administrator if this is unexpected.</p></div>;
+  return <InstitutionResponses key={officeName} office={office || { institutions: [] }} fullView={fullView} />;
 }
 
 function matchesFilters(row, institutionType, region) {
@@ -39,7 +38,10 @@ function sortRegions(regions) {
 }
 
 export default function Institutions({ user }) {
-  if (user?.role === "admin") return <OfficeInstitutionResponses user={user} />;
+  // Super Admins and Commissioner Ong's office use the original full layout.
+  const fullView = user?.role === "super_admin"
+    || institutionNameKey(user?.office) === institutionNameKey("Office of Commissioner Michelle A. Ong");
+  if (user?.role === "admin") return <OfficeInstitutionResponses user={user} fullView={fullView} />;
   if (user?.role !== "super_admin") {
     return (
       <div className="institution-preview">
@@ -59,7 +61,7 @@ export default function Institutions({ user }) {
     );
   }
 
-  return <InstitutionResponses />;
+  return <InstitutionResponses key={fullView ? "full" : "suc"} fullView={fullView} />;
 }
 
 function InstitutionIllustration() {
@@ -84,25 +86,28 @@ function InstitutionIllustration() {
   );
 }
 
-function InstitutionResponses({ office, includeLuc = false }) {
+function InstitutionResponses({ office, fullView = false }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const tableRef = useRef(null);
   const [q, setQ] = useState("");
-  const [institutionType, setInstitutionType] = useState("");
+  const [typeFilter, setInstitutionType] = useState("");
+  const institutionType = fullView ? typeFilter : "SUC";
   const [region, setRegion] = useState("");
   const [filterPending, setFilterPending] = useState(false);
   const [selected, setSelected] = useState(null);
   const [expanded, setExpanded] = useState(null);
-  const { data: currentData, loading, error, reload, hasCurrentData, backgroundLoading } = useInstitutionGroups(q, institutionType, region);
+  const { data: currentData, loading, error, reload, hasCurrentData, backgroundLoading } = useInstitutionGroups("", "", "");
   const [lastData, setLastData] = useState(null);
-  // Keep the page and region options mounted while a new filter request runs.
+  // Build region options from the full accessible directory, before search
+  // and region filtering, so selecting a region never removes other options.
   const directory = currentData || lastData;
   const data = useMemo(() => {
-    if (!directory || !office) return directory;
-    const rows = filterOfficeResponses(directory.data, office.institutions || [], includeLuc);
+    if (!directory) return directory;
+    const assignedRows = office ? filterOfficeResponses(directory.data, office.institutions || [], fullView) : directory.data;
+    const rows = assignedRows.filter(row => matchesFilters(row, institutionType, ""));
     return { ...directory, data: rows, total: rows.length, regions: [...new Set(rows.map(row => String(row.Region || "").trim()).filter(Boolean))] };
-  }, [directory, office, includeLuc]);
+  }, [directory, office, institutionType, fullView]);
   useEffect(() => {
     if (currentData) setLastData(currentData);
   }, [currentData]);
@@ -111,7 +116,7 @@ function InstitutionResponses({ office, includeLuc = false }) {
   const rows = (data?.data || []).filter(row => String(row.Institution || "").trim() && !/^unnamed institution$/i.test(String(row.Institution).trim()) && matchesFilters(row, institutionType, region)
     && matchesInstitutionSearch(row.Institution, q));
   const headers = data?.headers || [];
-  const total = Number(data?.total) || 0;
+  const total = rows.length;
   const regions = sortRegions(data?.regions || []);
   const groups = useMemo(() => groupInstitutions(rows, "Institution"), [data, institutionType, region, q]);
   // Count named institutions once, regardless of their number of responses.
@@ -132,7 +137,7 @@ function InstitutionResponses({ office, includeLuc = false }) {
   const isFilterLoading = filterPending && !hasCurrentData && !error;
   const visibleGroups = !hasCurrentData ? [] : groups.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const loadInstitutions = reload;
-  const hasFilters = Boolean(q || institutionType || region);
+  const hasFilters = Boolean(q || (fullView && institutionType) || region);
   const resetFilters = () => {
     setFilterPending(true);
     setQ(""); setInstitutionType(""); setRegion(""); setPage(1);
@@ -151,7 +156,7 @@ function InstitutionResponses({ office, includeLuc = false }) {
   if (loading && !data && !error) return <Loading variant="institutions" label="Reading institution responses..." />;
 
   return (
-    <div className="institutions-page space-y-6">
+    <div className={`institutions-page space-y-6 ${fullView ? "" : "institutions-suc-page"}`}>
       <header className="overflow-hidden rounded-[28px] border border-blue-200/20 bg-gradient-to-br from-[#06162d] via-[#0d2342] to-[#1d4f91] p-6 text-white shadow-[0_20px_60px_rgba(15,23,42,0.25)] sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -161,7 +166,7 @@ function InstitutionResponses({ office, includeLuc = false }) {
             </div>
             <h1 className="text-2xl font-extrabold tracking-tight sm:text-4xl uppercase">Institution Responses</h1>
             <p className="mt-3 max-w-2xl text-sm text-blue-100 sm:text-base">
-              Overview of participating institutions, campuses, facilities, and childcare development programs.
+              {fullView ? "Overview of participating institutions, campuses, facilities, and childcare development programs." : "Explore campus responses and childcare programs across State Universities and Colleges."}
             </p>
           </div>
           <button type="button" onClick={loadInstitutions} disabled={loading || backgroundLoading} className="institution-refresh inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl border border-white/25 bg-white/10 px-4 py-3 text-sm font-semibold hover:bg-white/20 disabled:cursor-wait disabled:opacity-60 lg:self-auto">
@@ -181,8 +186,9 @@ function InstitutionResponses({ office, includeLuc = false }) {
         </div>
       )}
 
-      <div className="institution-metrics grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="card p-5">
+      <div className={fullView ? "space-y-6" : "institution-workspace"}>
+      <div className={`institution-metrics grid grid-cols-1 gap-4 ${fullView ? "md:grid-cols-3" : ""}`}>
+        {fullView && <><div className="card p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-500">Total Institutions Responded</p>
@@ -206,7 +212,9 @@ function InstitutionResponses({ office, includeLuc = false }) {
           </div>
         </div>
 
-        <div className="card p-5">
+        </>}
+        <div className={fullView ? "card p-5" : "card p-5 suc-summary-card"}>
+          {!fullView && <div className="suc-summary-eyebrow"><span />SUC DIRECTORY</div>}
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-500">State Universities and Colleges</p>
@@ -224,13 +232,13 @@ function InstitutionResponses({ office, includeLuc = false }) {
           <h2 className="flex items-center gap-2 text-sm font-bold text-slate-800"><SlidersHorizontal size={16} className="text-blue-600" aria-hidden="true" />Find Institutions</h2>
           {hasFilters && <button type="button" onClick={resetFilters} className="institution-reset inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"><X size={14} aria-hidden="true" />Clear filters</button>}
         </div>
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_220px]">
+        <div className={`grid gap-3 ${fullView ? "lg:grid-cols-[minmax(0,1fr)_auto_220px]" : "lg:grid-cols-[minmax(0,1fr)_220px]"}`}>
           <div className="relative">
           <Search className="absolute left-3 top-3.5 text-slate-400" size={18}/>
-          <input value={q} onChange={e => { setFilterPending(true); setPage(1); setQ(e.target.value); }} placeholder="Search by institution name...." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 outline-none focus:border-blue-500" aria-label="Search institutions" aria-busy={isSearching}/>
+          <input value={q} onChange={e => { setFilterPending(true); setPage(1); setQ(e.target.value); }} placeholder={fullView ? "Search by institution name...." : "Search by institution name..."} className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 outline-none focus:border-blue-500" aria-label="Search institutions" aria-busy={isSearching}/>
           {isSearching && <LoaderCircle className="absolute right-3 top-3.5 animate-spin text-blue-600" size={18} aria-label="Searching"/>}
         </div>
-          <div
+          {fullView && <div
             role="group"
             aria-label="Filter by institution type"
             className="inline-flex rounded-xl bg-slate-100 p-1"
@@ -246,10 +254,12 @@ function InstitutionResponses({ office, includeLuc = false }) {
                 {label}
               </button>
             ))}
-          </div>
+          </div>}
           <select value={region} onChange={event => { setFilterPending(true); setPage(1); setRegion(event.target.value); }} aria-label="Filter by region" className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 outline-none focus:border-blue-500"><option value="">All Regions</option>{regions.map(item => <option key={item} value={item}>{item}</option>)}</select>
         </div>
         <p className="mt-3 text-xs text-slate-500" role="status">{total.toLocaleString()} matching response{total === 1 ? "" : "s"} · {institutionCount.toLocaleString()} institutions · showing {firstRow.toLocaleString()}–{lastRow.toLocaleString()}</p>
+      </div>
+
       </div>
 
       <div ref={tableRef} className="institution-directory card overflow-hidden scroll-mt-6">

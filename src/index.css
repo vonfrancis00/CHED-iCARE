@@ -688,3 +688,41 @@ h1, h2, h3, h4, h5, h6 { font-family: "Plus Jakarta Sans", "DM Sans", ui-sans-se
 [data-theme="dark"] .institution-preview-breadcrumb span:last-child { color: #d3e3fa; }
 [data-theme="dark"] .institution-preview-contact summary { color: #9bceff; }
 @media (max-width: 640px) { .institution-preview-card { width: 100%; margin-top: 30px; padding: 24px 18px 28px; } .institution-preview { min-height: 0; padding: 20px 16px 28px; border-radius: 20px; } .institution-preview-heading p { line-height: 1.65; } }
+
+/* Compact workspace for the SUC-only institution directory. */
+.institutions-suc-page { --suc-border: #dce5ef; }
+.institutions-suc-page > header { padding: 24px 28px; border-radius: 20px; background: linear-gradient(115deg, #0b213f, #173f6c); box-shadow: 0 8px 24px rgb(15 45 85 / .12); }
+.institutions-suc-page > header h1 { font-size: clamp(24px, 2.3vw, 32px); text-transform: none; letter-spacing: -.035em; }
+.institutions-suc-page > header p { max-width: 620px; font-size: 14px; line-height: 1.7; margin-top: 8px; }
+.institutions-suc-page > header > div { align-items: center; }
+.institutions-suc-page > header .institution-refresh { font-size: 12px; padding: 10px 14px; }
+.institutions-suc-page .institution-workspace { display: grid; grid-template-columns: minmax(260px, .8fr) minmax(0, 2fr); gap: 20px; align-items: stretch; }
+.institutions-suc-page .institution-metrics { display: flex; min-width: 0; }
+.institutions-suc-page .institution-metrics > .suc-summary-card { width: 100%; padding: 22px 24px; border-radius: 16px; background: linear-gradient(120deg, #fff, #f0f7ff); box-shadow: 0 3px 12px rgb(15 45 85 / .04); }
+.institutions-suc-page .institution-metrics > .card::before { display: none; }
+.institutions-suc-page .suc-summary-eyebrow { display: flex; align-items: center; gap: 7px; margin-bottom: 16px; color: #52708e; font-size: 10px; font-weight: 700; letter-spacing: .13em; }
+.institutions-suc-page .suc-summary-eyebrow span { width: 6px; height: 6px; border-radius: 50%; background: #0891b2; }
+.institutions-suc-page .suc-summary-card .text-sm { max-width: 190px; font-size: 12px; line-height: 1.6; color: #526881; }
+.institutions-suc-page .suc-summary-card p + p { margin-top: 4px; font-size: 38px; line-height: 1.2; }
+.institutions-suc-page .suc-summary-card .bg-amber-100 { background: #e1effb; color: #246291; border-radius: 14px; }
+.institutions-suc-page .institution-filters { min-width: 0; padding: 22px 24px; border-radius: 16px; border-color: var(--suc-border); box-shadow: 0 3px 12px rgb(15 45 85 / .04); }
+.institutions-suc-page .institution-filters input, .institutions-suc-page .institution-filters select { min-width: 0; font-size: 13px; background-color: #f8fafc; border-color: #dde6ef; border-radius: 10px; }
+.institutions-suc-page .institution-filters > p { padding-top: 12px; margin-top: 14px; border-top: 1px solid #edf1f6; font-size: 11px; }
+.institutions-suc-page .institution-directory { border-radius: 16px; box-shadow: 0 4px 18px rgb(15 45 85 / .04); }
+.institutions-suc-page .institution-directory > div:first-child { padding-top: 20px; padding-bottom: 20px; }
+.institutions-suc-page .institution-group-row:hover { background: #f5f9fe; }
+.institutions-suc-page .institution-toggle:focus-visible { outline: 2px solid #38bdf8; outline-offset: 4px; border-radius: 6px; }
+[data-theme="dark"] .institutions-suc-page .institution-metrics > .suc-summary-card { background: linear-gradient(120deg, #152236, #192e48); }
+[data-theme="dark"] .institutions-suc-page .suc-summary-eyebrow, [data-theme="dark"] .institutions-suc-page .suc-summary-card .text-sm { color: #a7bfd8; }
+[data-theme="dark"] .institutions-suc-page .institution-filters > p { border-color: #33465f; }
+[data-theme="dark"] .institutions-suc-page .institution-filters input, [data-theme="dark"] .institutions-suc-page .institution-filters select { background: #101d30; border-color: #33465f; }
+[data-theme="dark"] .institutions-suc-page .institution-group-row:hover { background: #1c3049; }
+@media (max-width: 1100px) {
+  .institutions-suc-page .institution-workspace { grid-template-columns: 1fr; gap: 16px; }
+  .institutions-suc-page .suc-summary-card .text-sm { max-width: none; }
+}
+@media (max-width: 639px) {
+  .institutions-suc-page > header { padding: 22px 20px; }
+  .institutions-suc-page > header > div { align-items: stretch; gap: 18px; }
+  .institutions-suc-page .institution-filters, .institutions-suc-page .institution-metrics > .suc-summary-card { padding: 20px; }
+}
