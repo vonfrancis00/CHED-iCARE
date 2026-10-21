@@ -1,9 +1,24 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { Building2, ChevronDown, ChevronLeft, ChevronRight, Eye, Search, X, Database, LoaderCircle, RefreshCw, SlidersHorizontal } from "lucide-react";
+import { Building2, ChevronDown, ChevronLeft, ChevronRight, Eye, Search, X, Database, LoaderCircle, RefreshCw, SlidersHorizontal, Mail } from "lucide-react";
 import { useInstitutionGroups } from "../hooks/useInstitutionGroups";
 import { groupCampuses, groupInstitutions } from "../utils/institutionGroups";
 import Loading from "../components/common/Loading";
+import { useDashboard } from "../hooks/useDashboard";
+import { filterOfficeResponses, matchesInstitutionSearch } from "../utils/institutionNames";
+
+const normalizeAssignment = value => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+
+function OfficeInstitutionResponses({ user }) {
+  const { data, loading, error, reload } = useDashboard();
+  const officeName = normalizeAssignment(user?.office);
+  const offices = data?.occOffices?.length ? data.occOffices : data?.occDistribution || [];
+  const office = officeName && offices.find(item => normalizeAssignment(item.name) === officeName);
+  if (!data && loading) return <Loading label="Loading your office assignments..." />;
+  if (!data) return <div className="card p-8"><p>{error || "Unable to load office assignments."}</p><button onClick={() => reload({ force: true })} className="mt-4 text-blue-700">Try again</button></div>;
+  if (!office || !Array.isArray(office.institutions) || !office.institutions.length) return <div className="card p-8"><h2 className="font-semibold">No institution assignments available</h2><p className="mt-2 text-sm text-slate-500">No institutions are listed for your assigned office in OCC / Offices. Please contact your administrator if this is unexpected.</p></div>;
+  return <InstitutionResponses key={officeName} office={office} />;
+}
 
 function matchesFilters(row, institutionType, region) {
   const type = String(row["SUC/LUC"] || "").trim().toUpperCase();
@@ -22,7 +37,53 @@ function sortRegions(regions) {
   });
 }
 
-export default function Institutions() {
+export default function Institutions({ user }) {
+  if (user?.role === "admin") return <OfficeInstitutionResponses user={user} />;
+  if (user?.role !== "super_admin") {
+    return (
+      <div className="institution-preview">
+        <header className="institution-preview-heading">
+          <div><h1>INSTITUTION RESPONSES</h1><p>View and manage responses submitted by participating institutions.</p></div>
+        </header>
+        <section className="institution-preview-card" aria-labelledby="institution-access-title">
+          <InstitutionIllustration />
+          <h2 id="institution-access-title">Institution responses are coming soon</h2>
+          <p>This section is being prepared. For access or assistance,<br className="hidden sm:block" /> please contact the Office of Commissioner Desiderio R. Apag III.</p>
+          <details className="institution-preview-contact">
+            <summary><Mail size={18} aria-hidden="true" />Contact Office</summary>
+            <p>Please contact the Office of Commissioner Desiderio R. Apag III through your office's established communication channels for access assistance.</p>
+          </details>
+        </section>
+      </div>
+    );
+  }
+
+  return <InstitutionResponses />;
+}
+
+function InstitutionIllustration() {
+  return (
+    <svg className="institution-preview-art" viewBox="0 0 420 190" fill="none" aria-hidden="true">
+      <defs><linearGradient id="institution-cloud" x2="380" y2="180" gradientUnits="userSpaceOnUse"><stop stopColor="#c8e2ff"/><stop offset="1" stopColor="#edf5ff"/></linearGradient><linearGradient id="institution-roof" x1="145" y1="60" x2="230" y2="125" gradientUnits="userSpaceOnUse"><stop stopColor="#234d89"/><stop offset="1" stopColor="#81ace8"/></linearGradient></defs>
+      <path d="M57 166C23 141 36 105 75 99C74 52 116 23 161 43C185 10 240 22 257 58C297 39 335 63 333 97C382 93 398 143 366 166Z" fill="url(#institution-cloud)"/>
+      <path d="M18 174H402" stroke="#d5e6fc"/>
+      <path d="M202 58V21" stroke="#426da9" strokeWidth="3"/><path d="M204 22H230V38H216V35H204Z" fill="#5d9de7"/>
+      <path d="M94 105H256V169H94Z" fill="#9fc5f3"/><path d="M88 101H261V108H88Z" fill="#d6eaff"/>
+      {[108,132,156,228].map(x => <g key={x}><path d={`M${x} 119h9v15h-9zM${x} 143h9v15h-9z`} fill="#6597d4"/></g>)}
+      <path d="M143 91L202 51L265 91Z" fill="url(#institution-roof)"/><path d="M157 89L202 60L249 89Z" fill="#8ab6ed"/><circle cx="202" cy="78" r="7" fill="#6494d2" stroke="white" strokeWidth="3"/>
+      <path d="M150 102H255V167H150Z" fill="#4a76b0"/>
+      {[153,180,207,234].map(x => <g key={x}><path d={`M${x} 102h11v65h-11z`} fill="#ecf6ff"/><path d={`M${x-2} 101h15v6h-15zM${x-2} 161h15v6h-15z`} fill="#c0dcfa"/></g>)}
+      <path d="M143 94H262V102H143ZM139 168H268V174H139Z" fill="#deeeff"/>
+      <rect x="246" y="77" width="80" height="97" rx="9" fill="#fff"/><path d="M260 94H295" stroke="#87b3ea" strokeWidth="4"/>
+      {[106,117,128,139].map(y=><path key={y} d={`M260 ${y}H313`} stroke="#c1d9f8" strokeWidth="3"/>)}
+      <circle cx="307" cy="154" r="9" fill="#639fe9"/><path d="m303 154 3 3 5-6" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+      <path d="M72 174V133M72 151l-12-10M72 160l13-12M345 174v-40m0 17-10-10m10 19 12-12" stroke="#6599d8" strokeWidth="4" strokeLinecap="round"/>
+      <path d="m291 32 42-10-19 29-6-15Z" fill="#94bff5"/><path d="m291 32 17 4 25-14-30 19" fill="#d8eaff"/><path d="M322 56C366 87 341 114 329 113" stroke="#a6cafa" strokeDasharray="5 5"/>
+    </svg>
+  );
+}
+
+function InstitutionResponses({ office }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const tableRef = useRef(null);
@@ -35,14 +96,19 @@ export default function Institutions() {
   const { data: currentData, loading, error, reload, hasCurrentData, backgroundLoading } = useInstitutionGroups(q, institutionType, region);
   const [lastData, setLastData] = useState(null);
   // Keep the page and region options mounted while a new filter request runs.
-  const data = currentData || lastData;
+  const directory = currentData || lastData;
+  const data = useMemo(() => {
+    if (!directory || !office) return directory;
+    const rows = filterOfficeResponses(directory.data, office.institutions);
+    return { ...directory, data: rows, total: rows.length, regions: [...new Set(rows.map(row => String(row.Region || "").trim()).filter(Boolean))] };
+  }, [directory, office]);
   useEffect(() => {
     if (currentData) setLastData(currentData);
   }, [currentData]);
   // The API filters records as well, but keep this guard at the UI boundary so
   // a stale deployment or cached response can never show a LUC as a SUC.
   const rows = (data?.data || []).filter(row => String(row.Institution || "").trim() && !/^unnamed institution$/i.test(String(row.Institution).trim()) && matchesFilters(row, institutionType, region)
-    && String(row.Institution || "").toLowerCase().includes(q.trim().toLowerCase()));
+    && matchesInstitutionSearch(row.Institution, q));
   const headers = data?.headers || [];
   const total = Number(data?.total) || 0;
   const regions = sortRegions(data?.regions || []);

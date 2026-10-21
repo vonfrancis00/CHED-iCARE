@@ -2,10 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { matchesInstitutionSearch } from '../src/utils/institutionNames.js';
 
 function setup(getInstitutions, stored = null) {
   const writes = [];
   const context = vm.createContext({
+    matchesInstitutionSearch,
     setTimeout: callback => setImmediate(callback),
     getInstitutions,
     peekInstitutionPage: () => null,

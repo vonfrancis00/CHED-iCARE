@@ -54,7 +54,7 @@ export default function App() {
             }).catch(() => window.alert('Sign-out could not be confirmed. Please retry.'));
           }}><Routes>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/institutions" element={<Institutions />} />
+            <Route path="/institutions" element={<Institutions user={user} />} />
             <Route path="/childcare" element={<Childcare />} />
             <Route path="/solo-parents" element={<SoloParents />} />
             <Route path="/geographic" element={<Geographic />} />

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { clearDashboardCache, getInstitutions, getSheetDataRevision, peekInstitutionPage, subscribeSheetDataRevision } from "../services/api";
+import { matchesInstitutionSearch } from "../utils/institutionNames";
 
 const STORAGE_PREFIX = "childcare-institution-groups:v3:";
 const SOURCE = import.meta.env.VITE_SHEET_API_URL || "demo";
@@ -124,7 +125,7 @@ function filterDirectory(data, query, institutionType, region) {
   const area = region.trim().toLowerCase();
   if (!name && !type && !area) return data;
   const rows = data.data.filter(row =>
-    (!name || String(row.Institution || "").toLowerCase().includes(name)) &&
+    (!name || matchesInstitutionSearch(row.Institution, name)) &&
     (!type || String(row["SUC/LUC"] || "").trim().toUpperCase() === type) &&
     (!area || String(row.Region || "").trim().toLowerCase() === area)
   );

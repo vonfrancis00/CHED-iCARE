@@ -82,7 +82,7 @@ export default function Login({ onLogin }) {
     finally { window.clearTimeout(timeout); window.clearTimeout(slowTimer); setLoading(false); setSlowLogin(false); }
   }
 
-  return <main className="login-page"><div className="login-theme-toggle"><ThemeToggle /></div><div className="login-shell">
+  return <main className="login-page login-reference"><div className="login-theme-toggle"><ThemeToggle /><span className="login-theme-switch" aria-hidden="true" /></div><div className="login-shell">
     <section className="login-intro" aria-label="Childcare Development Dashboard">
       <div className="login-intro-brand">
         <img src="/ched-logo.png" alt="CHED logo" />
@@ -119,8 +119,8 @@ export default function Login({ onLogin }) {
         <div className="login-icon">
           <ShieldCheck size={26} />
         </div>
-          <h2>Sign in</h2>
-          <p className="login-description">Use your CHED account to access the dashboard.</p>
+          <h2>Welcome back</h2>
+          <p className="login-description">Sign in with your CHED account to continue.</p>
         <form className="login-form" onSubmit={submit}>
           <div className="login-field">
             <label htmlFor="login-email">Email address</label>
@@ -146,7 +146,7 @@ export default function Login({ onLogin }) {
             </div>
           {error && <p className="login-error" role="alert">{error}</p>}
           {loading && slowLogin && <p className="login-description" role="status">Verifying your account… You will be signed in automatically when verification finishes.</p>}
-          <button className="login-submit" type="submit" disabled={loading}>
+          <button className="login-submit" type="submit" disabled={loading} aria-busy={loading}>
             {loading ? 'Signing in…' : <>Access Dashboard <ArrowRight size={18} aria-hidden="true" /></>}
           </button>
         </form>
@@ -158,7 +158,7 @@ export default function Login({ onLogin }) {
       </div>
       <p className="login-security-note">
           <LockKeyhole size={14} aria-hidden="true" /> 
-          Authorized personnel only.
+          Authorized personnel only
         </p>
       <p className="login-panel-footer">© {new Date().getFullYear()} Commission on Higher Education</p>
     </section>
@@ -173,7 +173,7 @@ export default function Login({ onLogin }) {
         <div className="login-field"><label htmlFor="request-office">Office</label><select id="request-office" required value={request.office} onChange={e => setRequest(v => ({ ...v, office: e.target.value }))}><option value="">Select an office</option>{offices.map(office => <option key={office} value={office}>{office}</option>)}</select></div>
         {requestError && <p className="login-error" role="alert">{requestError}</p>}{requestSuccess && <p className="login-request-success" role="status">{requestSuccess}</p>}
         {requestLoading && slowRequest && <p className="login-description" role="status">Your request is still being processed. Please keep this window open.</p>}
-        <button className="login-submit" disabled={requestLoading || Boolean(requestSuccess)} type="submit">{requestLoading ? 'Sending…' : requestSuccess ? 'Request sent' : 'Send request'}</button>
+        <button className="login-submit" disabled={requestLoading || Boolean(requestSuccess)} aria-busy={requestLoading} type="submit">{requestLoading ? 'Sending…' : requestSuccess ? 'Request sent' : 'Send request'}</button>
       </form>
     </section>
   </div>}
