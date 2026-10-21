@@ -154,7 +154,7 @@ export default function PendingInstitutions() {
     <button ref={button} type="button" 
     onClick={() => { setOpen(true); refresh(); }} 
     aria-label={`Notifications: ${rows.length} pending responses${error ? ", unable to refresh" : ""}`} 
-    className="fixed bottom-[92px] right-6 z-40 rounded-full bg-[#08264d] p-4 text-white shadow-xl hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700">
+    className="fixed bottom-[108px] right-6 z-40 rounded-full bg-[#08264d] p-4 text-white shadow-xl hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-700">
       <Bell size={24} />
       {(rows.length > 0 || error) && <span className="absolute -right-1 -top-1 min-w-6 rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-bold">{rows.length || "!"}</span>}
     </button>

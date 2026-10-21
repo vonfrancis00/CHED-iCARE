@@ -378,7 +378,7 @@ h1, h2, h3, h4, h5, h6 { font-family: "Plus Jakarta Sans", "DM Sans", ui-sans-se
 @media (prefers-reduced-motion: reduce) { .app-shell-content { transition: none; } }
 
 /* Shared appearance controls and screen-only dark palette. */
-.theme-toolbar { position: fixed; bottom: 24px; right: 24px; z-index: 40; }
+.theme-toolbar { position: fixed; bottom: 40px; right: 24px; z-index: 40; }
 .theme-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 9px 14px; border: 1px solid #cbd5e1; border-radius: 12px; background: #fff; color: #173b67; font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px rgb(15 23 42 / .06); }
 .theme-toggle:hover { background: #eff6ff; }
 .theme-toggle:focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }
