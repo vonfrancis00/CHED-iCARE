@@ -24,7 +24,7 @@ export default function Dashboard() {
   const filterView = snapshot?.filterViews?.[JSON.stringify([institutionType, region.toLowerCase()])];
   const data = filterView ? { ...snapshot, ...filterView } : snapshot;
 
-  if (loading && !data) return <Loading label="Reading Google Sheet data..." />;
+  if (loading && !data) return <Loading label="Loading Childcare Data" />;
   if (!data) return <div className="card p-8"><h2 className="font-semibold">Unable to load dashboard</h2><p className="mt-2 text-sm text-slate-500">{error}</p><button onClick={reload} className="mt-4 rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white">Retry</button></div>;
 
   const o = data.overview;
