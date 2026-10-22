@@ -44,7 +44,7 @@ export default function Dashboard() {
         <div className="pointer-events-none absolute right-16 top-8 h-28 w-28 rounded-full bg-cyan-300/10 blur-2xl" />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex items-start gap-4">
-            <img src="/ched-logo.png" alt="Commission on Higher Education" className="mt-0.5 h-14 w-14 rounded-full bg-white/95 p-1.5 shadow-lg" />
+            <img src="/ched-logo.png" alt="Commission on Higher Education" className="mt-[-7px] h-24 w-24 rounded-full p-1.5 shadow-lg" />
             <div>
               <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-sky-200">CHED Central Office · Monitoring dashboard</p>
               <h1 className="page-title font-extrabold !text-white uppercase">Childcare Development Overview</h1>

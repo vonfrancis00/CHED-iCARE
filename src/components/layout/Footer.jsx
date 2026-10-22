@@ -9,6 +9,11 @@ export default function Footer() {
             alt="Commission on Higher Education"
             className="h-24 w-auto object-contain"
           />
+           <img
+            src="/ACHIEVE-logo.png"
+            alt="ACHIEVE"
+            className="h-24 w-auto object-contain"
+          />
           <img
             src="/BAGONG-PILIPINAS.png"
             alt="Bagong Pilipinas"

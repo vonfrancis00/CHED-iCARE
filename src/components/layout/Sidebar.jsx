@@ -138,12 +138,12 @@ export default function Sidebar({ mobileOpen, pinned, onTogglePin, onClose, user
             <section className="sidebar-section" key={group.label} aria-label={group.label}>
               <div className="sidebar-section-title sidebar-label">{group.label}</div>
               {group.items.map((item) => <SidebarLink key={item[1]} item={item} onClose={onClose} />)}
-              {group.label === "Records" && user.role === "super_admin" && <SidebarLink item={["Settings", "/settings", Settings, "Accounts & Access"]} onClose={onClose} hasNotification={hasAccountRequests} />}
+              {group.label === "Records" && <SidebarUpdateStatus />}
             </section>
           ))}
         </nav>
         <footer className="sidebar-footer">
-          <SidebarUpdateStatus />
+          {user.role === "super_admin" && <SidebarLink item={["Settings", "/settings", Settings, "Accounts & Access"]} onClose={onClose} hasNotification={hasAccountRequests} />}
           <div className="sidebar-account" title={`${accountName}${user.office ? ` ? ${user.office}` : ""}`}>
             <span className="sidebar-account-avatar" aria-hidden="true">{initials}</span>
             <div className="sidebar-label sidebar-account-copy">
