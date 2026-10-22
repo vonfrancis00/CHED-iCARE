@@ -82,7 +82,8 @@ export default function Login({ onLogin }) {
     finally { window.clearTimeout(timeout); window.clearTimeout(slowTimer); setLoading(false); setSlowLogin(false); }
   }
 
-  return <main className="login-page login-reference"><div className="login-theme-toggle"><ThemeToggle /><span className="login-theme-switch" aria-hidden="true" /></div><div className="login-shell">
+  return <main className="login-page login-reference">
+    <div className="login-theme-toggle"><ThemeToggle /><span className="login-theme-switch" aria-hidden="true" /></div><div className="login-shell">
     <section className="login-intro" aria-label="Childcare Development Dashboard">
       <div className="login-intro-brand">
         <img src="/ched-logo.png" alt="CHED logo" />
