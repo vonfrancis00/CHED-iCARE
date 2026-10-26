@@ -118,7 +118,9 @@ function InstitutionResponses({ office, fullView = false }) {
   const headers = data?.headers || [];
   const total = rows.length;
   const regions = sortRegions(data?.regions || []);
-  const groups = useMemo(() => groupInstitutions(rows, "Institution"), [data, institutionType, region, q]);
+  const groups = useMemo(() => groupInstitutions(rows, "Institution")
+    .sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base", numeric: true })),
+  [data, institutionType, region, q]);
   // Count named institutions once, regardless of their number of responses.
   const namedGroups = groups.filter(group => group.key.startsWith("name:"));
   const respondedCount = namedGroups.length;

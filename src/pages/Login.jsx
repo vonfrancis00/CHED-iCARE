@@ -121,7 +121,7 @@ export default function Login({ onLogin }) {
           <ShieldCheck size={26} />
         </div>
           <h2>Welcome back</h2>
-          <p className="login-description">Sign in with your CHED account to continue.</p>
+          <p className="login-description">Sign in using your CHED Email to continue.</p>
         <form className="login-form" onSubmit={submit}>
           <div className="login-field">
             <label htmlFor="login-email">Email address</label>
@@ -155,26 +155,26 @@ export default function Login({ onLogin }) {
         {!showRequest && requestLoading && slowRequest && <p className="login-description" role="status">Your account request is being processed. Once approved, your login credentials will be emailed to you.</p>}
         {!showRequest && requestSuccess && <p className="login-request-success" role="status">{requestSuccess}</p>}
         {!showRequest && requestError && <p className="login-error" role="alert">{requestError}</p>}
-        <button type="button" className="login-request-link" onClick={openRequest} disabled={requestLoading}><UserPlus size={15} />{requestLoading ? 'Processing request…' : 'Request an account'}</button>
+        <button type="button" className="login-request-link" onClick={openRequest} disabled={requestLoading}><UserPlus size={15} />{requestLoading ? 'Processing request…' : 'Request an Account'}</button>
       </div>
       <p className="login-security-note">
           <LockKeyhole size={14} aria-hidden="true" /> 
-          Authorized personnel only
+          Authorized Personnel Only
         </p>
       <p className="login-panel-footer">© {new Date().getFullYear()} Commission on Higher Education</p>
     </section>
   {showRequest && <div className="login-request-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !requestLoading) setShowRequest(false); }}>
     <section className="login-request-modal" role="dialog" aria-modal="true" aria-labelledby="request-account-title">
       <button type="button" className="login-request-close" onClick={() => setShowRequest(false)} disabled={requestLoading} aria-label="Close"><X size={20} /></button>
-      <div className="login-icon"><UserPlus size={24} /></div><h2 id="request-account-title">Request an account</h2>
-      <p className="login-description">Your request will be reviewed by a Super Admin.</p>
+      <div className="login-icon"><UserPlus size={24} /></div><h2 id="request-account-title">Request an Account</h2>
+      <p className="login-description">Your request will be reviewed by the authorized personnel.</p>
       <form className="login-form" onSubmit={submitRequest}>
         <div className="login-field"><label htmlFor="request-name">Name</label><div className="login-input-wrap"><input id="request-name" required maxLength={120} value={request.name} onChange={e => setRequest(v => ({ ...v, name: e.target.value }))} placeholder="Enter your full name" /></div></div>
         <div className="login-field"><label htmlFor="request-email">CHED Email</label><div className="login-input-wrap"><Mail size={18} /><input id="request-email" type="email" required value={request.email} onChange={e => setRequest(v => ({ ...v, email: e.target.value }))} placeholder="name@ched.gov.ph" /></div></div>
         <div className="login-field"><label htmlFor="request-office">Office</label><select id="request-office" required value={request.office} onChange={e => setRequest(v => ({ ...v, office: e.target.value }))}><option value="">Select an office</option>{offices.map(office => <option key={office} value={office}>{office}</option>)}</select></div>
         {requestError && <p className="login-error" role="alert">{requestError}</p>}{requestSuccess && <p className="login-request-success" role="status">{requestSuccess}</p>}
         {requestLoading && slowRequest && <p className="login-description" role="status">Your request is still being processed. Please keep this window open.</p>}
-        <button className="login-submit" disabled={requestLoading || Boolean(requestSuccess)} aria-busy={requestLoading} type="submit">{requestLoading ? 'Sending…' : requestSuccess ? 'Request sent' : 'Send request'}</button>
+        <button className="login-submit" disabled={requestLoading || Boolean(requestSuccess)} aria-busy={requestLoading} type="submit">{requestLoading ? 'Sending…' : requestSuccess ? 'Request sent' : 'Send Request'}</button>
       </form>
     </section>
   </div>}
