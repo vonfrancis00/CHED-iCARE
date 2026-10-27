@@ -71,7 +71,7 @@ export default function AppShell({ children, user, onLogout }) {
         <div className="theme-toolbar"><ThemeToggle floating /></div>
         <main className="app-content mx-auto w-full min-w-0 max-w-[1600px] flex-1 p-3 sm:p-6 lg:p-8">{children}</main>
         <Footer />
-        <PendingInstitutions />
+        {user?.role === "super_admin" && <PendingInstitutions />}
       </div>
       {confirmLogout && (
         <div className="logout-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setConfirmLogout(false); }}>

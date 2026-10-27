@@ -102,12 +102,17 @@ function InstitutionResponses({ office, fullView = false }) {
   // Build region options from the full accessible directory, before search
   // and region filtering, so selecting a region never removes other options.
   const directory = currentData || lastData;
+  const accessibleRows = useMemo(() => {
+    const assignedRows = office ? filterOfficeResponses(directory?.data || [], office.institutions || [], fullView) : directory?.data || [];
+    return assignedRows.filter(row => String(row.Institution || "").trim()
+      && !/^unnamed institution$/i.test(String(row.Institution).trim())
+      && (fullView || matchesFilters(row, "SUC", "")));
+  }, [directory, office, fullView]);
   const data = useMemo(() => {
     if (!directory) return directory;
-    const assignedRows = office ? filterOfficeResponses(directory.data, office.institutions || [], fullView) : directory.data;
-    const rows = assignedRows.filter(row => matchesFilters(row, institutionType, ""));
+    const rows = accessibleRows.filter(row => matchesFilters(row, institutionType, ""));
     return { ...directory, data: rows, total: rows.length, regions: [...new Set(rows.map(row => String(row.Region || "").trim()).filter(Boolean))] };
-  }, [directory, office, institutionType, fullView]);
+  }, [directory, accessibleRows, institutionType]);
   useEffect(() => {
     if (currentData) setLastData(currentData);
   }, [currentData]);
@@ -121,8 +126,9 @@ function InstitutionResponses({ office, fullView = false }) {
   const groups = useMemo(() => groupInstitutions(rows, "Institution")
     .sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base", numeric: true })),
   [data, institutionType, region, q]);
-  // Count named institutions once, regardless of their number of responses.
-  const namedGroups = groups.filter(group => group.key.startsWith("name:"));
+  // Summary cards use all accessible institutions, independent of directory filters.
+  const namedGroups = useMemo(() => groupInstitutions(accessibleRows, "Institution")
+    .filter(group => group.key.startsWith("name:")), [accessibleRows]);
   const respondedCount = namedGroups.length;
   const countType = type => namedGroups.filter(group => group.rows.some(row =>
     String(row["SUC/LUC"] || "").trim().toUpperCase() === type
@@ -268,7 +274,7 @@ function InstitutionResponses({ office, fullView = false }) {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-5 sm:px-6">
           <div>
             <h2 className="text-base font-bold text-slate-900">Institutions Directory</h2>
-            <p className="mt-1 text-xs text-slate-500">Select an institution to view its campuses, then select a campus to view its responses.</p>
+            <p className="mt-1 text-xs text-slate-500">Select an institution to view its responses. For SUCs, select a campus first.</p>
           </div>
           <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">{institutionCount.toLocaleString()} institutions</span>
         </div>
@@ -325,7 +331,20 @@ function InstitutionResponses({ office, fullView = false }) {
 }
 
 function CampusDirectory({ rows, onSelect }) {
-  const campuses = groupCampuses(rows);
+  const isLuc = rows.every(row => String(row["SUC/LUC"] || "").trim().toUpperCase() === "LUC");
+  if (isLuc) {
+    return (
+      <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+        {rows.map((row, index) => (
+          <div key={row.rowNumber ?? index} className="px-4 py-3 hover:bg-slate-50">
+            <button type="button" onClick={() => onSelect(row)} aria-label={`View response ${index + 1} from ${row.Institution}`} className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50"><Eye size={17} />View response{rows.length > 1 ? ` ${index + 1}` : ""}</button>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  const campuses = groupCampuses(rows)
+    .sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base", numeric: true }));
   return (
     <div className="space-y-3">
       <p className="text-xs font-semibold text-slate-500">{campuses.length} {campuses.length === 1 ? "campus" : "campuses"}</p>
