@@ -23,7 +23,11 @@ export default function Geographic() {
   const [region, setRegion] = useState("");
   const { data: snapshot, loading, error } = useDashboard();
   const filterView = snapshot?.filterViews?.[JSON.stringify([institutionType, region.toLowerCase()])];
-  const data = filterView ? { ...snapshot, ...filterView } : snapshot;
+  // Missing filter combinations have no responses; never show the unfiltered totals.
+  const hasActiveFilter = Boolean(institutionType || region);
+  const data = snapshot?.filterViews && hasActiveFilter
+    ? { ...snapshot, regions: [], locationDistributionGroup: region ? "institution" : "region", ...filterView }
+    : snapshot;
 
   if (loading) return <Loading label="Loading geographic insights..." />;
   if (error) {
@@ -134,9 +138,9 @@ export default function Geographic() {
 
       </section>
 
-      <RegionalChart data={chartRegions} groupedByInstitution={groupedByInstitution} splitByType={Boolean(snapshot?.filterViews)} />
+      {totalCampuses > 0 && <RegionalChart data={chartRegions} groupedByInstitution={groupedByInstitution} splitByType={Boolean(snapshot?.filterViews)} />}
 
-      {regions.length > 0 ? (
+      {totalCampuses > 0 ? (
         <section aria-label="Geographic response volume" className="min-h-[560px] rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm sm:min-h-[700px] sm:p-8">
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
             <div>
@@ -199,12 +203,11 @@ export default function Geographic() {
           </div>
         </section>
       ) : (
-        <section className="card p-8 text-center">
+        <section role="status" className="card p-8 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
             <MapPinned size={24} />
           </div>
-          <h2 className="mt-4 text-lg font-semibold text-slate-900">No regional data available</h2>
-          <p className="mt-2 text-sm text-slate-500">Add campus addresses to the source sheet to populate the geographic distribution.</p>
+          <h2 className="mt-4 text-lg font-semibold text-slate-900">No Institution responded to this region.</h2>
         </section>
       )}
       <RegionalParticipation institutionType={institutionType} region={region} />
